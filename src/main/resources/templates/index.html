@@ -1263,9 +1263,20 @@
             </div>
           </div>
 
-          <!-- Screen Configuration -->
+          <!-- Screen & Line Configuration -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Screen Configuration</span></div>
+            <div class="section-card-header">
+              <span class="section-label">Screen &amp; Line Configuration</span>
+              <div style="display:flex;align-items:center;gap:0.5rem">
+                <span class="rtp-line-count" id="rtp-line-count">0</span>
+                <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </button>
+                <button class="icon-btn add" onclick="addLineDef()" title="Add line">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+            </div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
@@ -1281,26 +1292,10 @@
                   <input type="number" id="rtp-min-match" value="3" min="1" max="20" oninput="onScreenSizeChange()"/>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Line Definitions -->
-          <div class="section-card">
-            <div class="section-card-header">
-              <span class="section-label">Line Definitions</span>
-              <div style="display:flex;align-items:center;gap:0.5rem">
-                <span class="rtp-line-count" id="rtp-line-count">0</span>
-                <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                </button>
-                <button class="icon-btn add" onclick="addLineDef()" title="Add line">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                </button>
+              <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem">
+                <div class="rtp-lines-grid" id="rtp-lines-list"></div>
+                <button class="add-btn" onclick="addLineDef()">+ Add payline</button>
               </div>
-            </div>
-            <div class="section-card-body" style="gap:0.4rem">
-              <div class="rtp-lines-grid" id="rtp-lines-list"></div>
-              <button class="add-btn" onclick="addLineDef()">+ Add payline</button>
             </div>
           </div>
 
@@ -2530,23 +2525,26 @@ function toggleLineDefs() {
     inputs.forEach(inp => { inp.value = ''; });
     updateLineDefsToggleBtn();
   } else {
-    const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
     const DEFAULT_LINES = [
-      Array.from({length: w}, (_, i) => (i === 1 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i === 2 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i === 0 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i === 1 || i === 0 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i === 1 || i === 2 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i < 2 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i >= w - 2 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i % 2 === 0 ? 1 : 0)),
-      Array.from({length: w}, (_, i) => (i % 2 === 1 ? 1 : 0)),
-      Array.from({length: w}, () => 1),
+      '0, 0, 0, 0, 0',
+      '1, 1, 1, 1, 1',
+      '2, 2, 2, 2, 2',
+      '0, 1, 0, 1, 0',
+      '1, 0, 1, 0, 1',
+      '2, 1, 2, 1, 2',
+      '1, 2, 1, 2, 1',
+      '0, 1, 1, 1, 0',
+      '2, 1, 1, 1, 2',
+      '0, 2, 0, 2, 0',
     ];
     const container = document.getElementById('rtp-lines-list');
     container.innerHTML = '';
     _lineCounter = 0;
-    DEFAULT_LINES.forEach(line => addLineDef(line.join(', ')));
+    DEFAULT_LINES.forEach(placeholder => {
+      addLineDef('');
+      const inputs = container.querySelectorAll('.rtp-line-input');
+      inputs[inputs.length - 1].placeholder = placeholder;
+    });
     updateLineDefsToggleBtn();
   }
 }
@@ -2917,6 +2915,8 @@ function applyImportCounts() {
 
   closeImportCounts();
 }
+
+toggleLineDefs();
 </script>
 
 <!-- ══ INFO MODAL ══ -->
