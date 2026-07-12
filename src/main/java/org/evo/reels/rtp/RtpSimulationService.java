@@ -83,14 +83,15 @@ public class RtpSimulationService {
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
             double rtp = grandWin / totalSpins * 100.0;
-            double avgWin = grandWin / totalSpins * betSize;
+            double avgWinPerSpin = grandWin / totalSpins * betSize;
+            double avgWin = grandHits > 0 ? (grandWin / grandHits) * betSize : 0.0;
             double maxWin = grandMaxWin * betSize;
             double variance = (grandSumSquared / totalSpins) - Math.pow(grandWin / totalSpins, 2);
             double stdDev = Math.sqrt(Math.max(0, variance)) * betSize;
             double medianWin = globalMedian.median() * betSize;
 
-            // Volatility index: stdDev / avgWin (coefficient of variation)
-            double volatilityIndex = avgWin > 0 ? stdDev / avgWin : 0.0;
+            // Volatility index: stdDev / avgWinPerSpin (coefficient of variation over all spins)
+            double volatilityIndex = avgWinPerSpin > 0 ? stdDev / avgWinPerSpin : 0.0;
             String volatilityLabel = volatilityIndex < 2.0 ? "Low"
                     : volatilityIndex < 5.0 ? "Medium"
                     : volatilityIndex < 10.0 ? "High"

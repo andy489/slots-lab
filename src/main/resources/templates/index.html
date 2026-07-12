@@ -2995,6 +2995,7 @@ function renderRtpResult(container, r, payload) {
     ? (r.elapsedMs / 1000).toFixed(1) + 's'
     : r.elapsedMs + 'ms';
 
+  const fmt1 = v => v.toFixed(1);
   const fmt2 = v => v.toFixed(2);
   const fmt4 = v => v.toFixed(4);
 
@@ -3033,16 +3034,16 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Distribution</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Avg win</span>
+            <span class="rtp-stat-label">Avg win<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">Average payout per winning spin only. Zero-win spins are excluded.<div class="tip-rule">totalWin ÷ hitCount × betSize</div></span></span></span>
             <span class="rtp-stat-value">${fmt4(r.avgWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Median</span>
+            <span class="rtp-stat-label">Median<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">Median payout of winning spins only. Zero-win spins are excluded.<div class="tip-rule">Knuth reservoir sampling · 100k sample</div></span></span></span>
             <span class="rtp-stat-value">${fmt4(r.medianWin)}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Max</span>
-            <span class="rtp-stat-value">${fmt4(r.maxWin)}</span>
+            <span class="rtp-stat-value">${fmt1(r.maxWin)}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Std deviation</span>
@@ -3055,7 +3056,7 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Volatility</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:190px">stdDev ÷ avgWin<div class="tip-rule"><div class="tip-row"><span>Low</span><span>&lt; 2.0</span></div><div class="tip-row"><span>Medium</span><span>2.0 – 5.0</span></div><div class="tip-row"><span>High</span><span>5.0 – 10.0</span></div><div class="tip-row"><span>Extreme</span><span>≥ 10.0</span></div></div></span></span></span>
+            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">stdDev ÷ avgWinPerSpin<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">avgWinPerSpin = totalWin ÷ allSpins × betSize</div><div class="tip-row"><span>Low</span><span>&lt; 2.0</span></div><div class="tip-row"><span>Medium</span><span>2.0 – 5.0</span></div><div class="tip-row"><span>High</span><span>5.0 – 10.0</span></div><div class="tip-row"><span>Extreme</span><span>≥ 10.0</span></div></div></span></span></span>
             <span class="rtp-stat-value">${fmt2(r.volatilityIndex)}</span>
           </div>
           <div class="rtp-stat-card">
