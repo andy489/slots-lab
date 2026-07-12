@@ -191,7 +191,7 @@
       flex: 1;
       min-height: 0;
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 500px 1fr;
       overflow: hidden;
       gap: 0;
     }
@@ -1008,6 +1008,20 @@
       border-top-color: transparent;
       border-right-color: var(--tip-tip);
     }
+    .stat-tip-box.tip-below {
+      bottom: auto;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .stat-tip-box.tip-below::after {
+      bottom: auto;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-top-color: transparent;
+      border-bottom-color: var(--tip-tip);
+    }
     .stat-tip-wrap:hover .stat-tip-box,
     .stat-tip-wrap:focus-within .stat-tip-box { display: block; }
     .rtp-stat-group-title {
@@ -1056,30 +1070,37 @@
     .rtp-chance-row {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.3rem 0;
+      gap: 0.3rem;
+      padding: 0.25rem 0;
+      min-width: 0;
     }
     #rtp-chances-list {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      column-gap: 0.75rem;
+      grid-template-columns: repeat(2, 1fr);
+      column-gap: 0.5rem;
+      row-gap: 0;
     }
     .rtp-chance-row + .rtp-chance-row { border-top: none; }
     .rtp-chance-label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: var(--text2);
       font-weight: 600;
       flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .rtp-chance-input {
-      width: 90px !important;
+      width: 62px !important;
       font-family: 'JetBrains Mono','Fira Code',monospace;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+      flex-shrink: 0;
     }
     .rtp-chance-pct {
       font-size: 0.7rem;
       color: var(--text3);
-      width: 14px;
+      width: 10px;
       flex-shrink: 0;
     }
 
@@ -1128,6 +1149,22 @@
       border-bottom: 1px solid var(--border);
     }
     .combo-table th:first-child { text-align: left; }
+    .combo-th-btn {
+      background: none; border: none; cursor: pointer;
+      font: inherit; color: inherit; letter-spacing: inherit;
+      text-transform: inherit; padding: 0;
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      white-space: nowrap;
+    }
+    .combo-th-btn:hover { color: var(--text); }
+    .combo-th-btn.active { color: var(--accent); }
+    .combo-sort-arrow { font-size: 0.65rem; opacity: 0.7; display:inline-flex; align-items:center; }
+    .combo-sort-pri {
+      font-size: 0.5rem; font-weight: 800;
+      background: var(--accent); color: var(--surface);
+      border-radius: 3px; padding: 0 0.2rem; line-height: 1.3;
+      vertical-align: middle;
+    }
     .combo-table td {
       padding: 0.3rem 0.6rem;
       text-align: right;
@@ -1137,6 +1174,8 @@
     }
     .combo-table td:first-child { text-align: left; }
     .combo-table tbody tr:hover td { background: var(--surface2); }
+    .combo-table tbody tr.combo-sym-odd td { background: var(--surface2); }
+    .combo-table tbody tr.combo-sym-odd:hover td { background: var(--border); }
     .combo-sym-badge {
       display: inline-block;
       font-size: 0.65rem;
@@ -1164,7 +1203,64 @@
     }
     .combo-bar-pct { font-size: 0.7rem; color: var(--text2); min-width: 38px; text-align: right; }
 
-    /* Symbol table */
+    .combo-sort-bar {
+      display: none;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      padding: 0.4rem 0.2rem 0.5rem;
+      min-height: 2rem;
+    }
+    .combo-sort-bar-label {
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text3);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .combo-sort-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.4rem 0.15rem 0.5rem;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      font-size: 0.63rem;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: default;
+      white-space: nowrap;
+    }
+    .combo-sort-pill-dir {
+      cursor: pointer;
+      opacity: 0.8;
+      font-size: 0.6rem;
+    }
+    .combo-sort-pill-dir:hover { opacity: 1; }
+    .combo-sort-pill-rm {
+      cursor: pointer;
+      opacity: 0.55;
+      font-size: 0.7rem;
+      line-height: 1;
+      margin-left: 0.1rem;
+    }
+    .combo-sort-pill-rm:hover { opacity: 1; color: var(--danger); }
+    .combo-sort-clear {
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      font-weight: 600;
+      color: var(--text3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.15rem 0.3rem;
+      border-radius: 4px;
+      margin-left: 0.1rem;
+    }
+    .combo-sort-clear:hover { color: var(--danger); background: var(--danger-dim); }
     .rtp-sym-header {
       display: grid;
       grid-template-columns: 36px 110px 1fr 28px;
@@ -1310,20 +1406,20 @@
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
     Generate
   </button>
+  <button class="tab-btn" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <rect x="0"  y="20" width="4" height="3"/>
+      <rect x="5"  y="15" width="4" height="8"/>
+      <rect x="10" y="6"  width="4" height="17"/>
+      <rect x="15" y="15" width="4" height="8"/>
+      <rect x="20" y="20" width="4" height="3"/>
+      <rect x="0"  y="23" width="24" height="1" fill="currentColor" opacity=".4"/>
+    </svg>
+    SIMULATION
+  </button>
   <button class="tab-btn" onclick="switchTab('convert', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     Convert
-  </button>
-  <button class="tab-btn" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-      <rect x="1"  y="19" width="4" height="3"/>
-      <rect x="6"  y="15" width="3" height="7"/>
-      <rect x="10" y="6"  width="4" height="16"/>
-      <rect x="15" y="11" width="3" height="11"/>
-      <rect x="19" y="17" width="4" height="5"/>
-      <rect x="0"  y="22" width="23" height="1.5" fill="currentColor" opacity=".4"/>
-    </svg>
-    SIMULATION
   </button>
 </div>
 
@@ -1373,7 +1469,7 @@
           <!-- Reel Sets -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Reel Sets</span>
+              <span class="section-label">Reel Sets<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:260px">Each reel set is an independent strip configuration that can be selected during gameplay.<div class="tip-rule"><strong>Reels (Tiles Count)</strong> — comma-separated tile counts per symbol for each reel. Each reel strip is generated by distributing symbols according to these counts then shuffling.</div><div class="tip-rule">Multiple reel sets allow weighted selection (see Reel Set Chances in the Simulation tab). Use different sets for base game, bonus rounds, etc.</div></span></span></span>
               <div style="display:flex;gap:0.35rem">
                 <button class="icon-btn" onclick="openImportCounts()" title="Import from COUNT output">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="12 15 12 11"/><polyline points="10 13 12 15 14 13"/></svg>
@@ -1439,7 +1535,7 @@
 
           <!-- Simulation Settings -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Simulation Settings</span></div>
+            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box" style="width:260px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win direction (LTR / RTL / both)</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
@@ -1461,8 +1557,8 @@
               </div>
               <div class="field-grid">
                 <div class="field-item">
-                  <label for="rtp-threads">Threads (1–64)</label>
-                  <input type="number" id="rtp-threads" value="4" min="1" max="64"/>
+                  <label for="rtp-threads">Threads (1–8)</label>
+                  <input type="number" id="rtp-threads" value="4" min="1" max="8"/>
                 </div>
                 <div class="field-item">
                   <label for="rtp-bet-size" title="Stake per spin (0.1–200.0, divisible by 0.1)">Bet Size</label>
@@ -1488,7 +1584,7 @@
           <!-- Screen & Line Configuration -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Screen &amp; Line Configuration</span>
+              <span class="section-label">Screen &amp; Line Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box" style="width:270px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
               <div style="display:flex;align-items:center;gap:0.5rem">
                 <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -1563,12 +1659,12 @@
         <div class="rtp-result-body" id="rtp-result-body">
           <div class="rtp-placeholder">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" stroke="none" opacity=".3">
-              <rect x="1"  y="19" width="4" height="3"/>
-              <rect x="6"  y="15" width="3" height="7"/>
-              <rect x="10" y="6"  width="4" height="16"/>
-              <rect x="15" y="11" width="3" height="11"/>
-              <rect x="19" y="17" width="4" height="5"/>
-              <rect x="0"  y="22" width="23" height="1.5" opacity=".5"/>
+              <rect x="0"  y="20" width="4" height="3"/>
+              <rect x="5"  y="15" width="4" height="8"/>
+              <rect x="10" y="6"  width="4" height="17"/>
+              <rect x="15" y="15" width="4" height="8"/>
+              <rect x="20" y="20" width="4" height="3"/>
+              <rect x="0"  y="23" width="24" height="1" opacity=".5"/>
             </svg>
             <span>Configure symbols and run the simulation</span>
           </div>
@@ -1705,7 +1801,7 @@ function addReelSet(data, scroll) {
       </div>
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
-          <div class="reels-section-label">Restrictions</div>
+          <div class="reels-section-label">Restrictions<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:290px">Controls how symbols are stacked on each reel.<div class="tip-rule"><strong>Stack Sizes</strong> — how many consecutive identical symbols to place (e.g. 1, 2, 3).<br><strong>Chances</strong> — weighted probability for each stack size.<br><strong>Min Distance</strong> — minimum number of <em>other</em> symbols (different tile IDs) that must appear between two stacks of the same symbol. e.g. dist=4 means after a stack of symbol A, at least 4 non-A symbols must follow before A can appear again. The gap positions are filled with symbols whose ID differs from both the symbol ending the previous stack and the symbol starting the next one.</div><div class="tip-rule"><strong>Mapping:</strong> restrictions cycle across reels. 1 restriction → same rule for every reel. 2 restrictions → first applies to reels 1, 3, 5… and second to reels 2, 4, 6… and so on for more.</div><div class="tip-rule" style="font-family:monospace;font-size:0.65rem">e.g. sizes=[1,2,3] chances=[50,30,20] dist=4<br>→ 50% single, 30% double, 20% triple<br>→ A A _ _ _ _ A A A (✓ 4 gaps between stacks)</div></span></span></div>
           <button class="icon-btn add" onclick="addRestrictionGuarded('${id}-restrictions', '${id}-reels')" title="Add restriction">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
@@ -2216,7 +2312,9 @@ function renderRtpHistory(entries) {
       renderRtpHistory(await res.json());
     };
     item.onclick = () => {
-      document.getElementById('rtp-result-body').innerHTML = entry.result;
+      const body = document.getElementById('rtp-result-body');
+      body.innerHTML = entry.result;
+      _initComboSections(body);
       if (entry.config) {
         try { restoreRtpForm(JSON.parse(entry.config)); } catch(e) {}
       }
@@ -2289,7 +2387,7 @@ function detectInputFormat(text) {
   return first.startsWith('"') ? 'csv' : 'json';
 }
 
-/* Parses CSV produced by CayConverter into [{setName, reelSet}].
+/* Parses CSV produced by CsvConverter into [{setName, reelSet}].
    Each row: "setName","reelIndex","position","gameIdTile"
    Returns {ok: true, reelSets} or {ok: false, error} */
 function parseCsvInput(text) {
@@ -3021,8 +3119,8 @@ function collectRtpRequest() {
   const betSize     = parseFloat(document.getElementById('rtp-bet-size').value);
 
   if (isNaN(spins) || spins <= 0) errors.push('Spins must be selected');
-  if (isNaN(threadCount) || threadCount < 1 || threadCount > 64)
-    errors.push('Thread count must be between 1 and 64');
+  if (isNaN(threadCount) || threadCount < 1 || threadCount > 8)
+    errors.push('Thread count must be between 1 and 8');
   if (isNaN(betSize) || betSize < 0.1 || betSize > 200.0)
     errors.push('Bet size must be between 0.10 and 200.00');
   else if (Math.round(betSize * 10) !== betSize * 10)
@@ -3197,9 +3295,9 @@ function renderRtpResult(container, r, payload) {
         if (!combos || combos.length === 0) return '';
         const maxPay = combos[0].totalPayout;
         const rows = combos.map(c => {
-          const hitRate = (c.hitCount / r.totalSpins * 100).toFixed(3);
+          const hitRate    = (c.hitCount / r.totalSpins * 100).toFixed(3);
           const rtpContrib = (c.totalPayout / r.totalSpins * 100).toFixed(4);
-          const avgPayout = (c.totalPayout * payload.betSize / c.hitCount).toFixed(4);
+          const avgPayout  = (c.totalPayout * payload.betSize / c.hitCount).toFixed(4);
           const pct = maxPay > 0 ? Math.round(c.totalPayout / maxPay * 100) : 0;
           return `<tr>
             <td><span class="combo-sym-badge">S${c.symbolId}</span></td>
@@ -3210,22 +3308,29 @@ function renderRtpResult(container, r, payload) {
             <td class="combo-bar-cell"><div class="combo-bar-wrap"><div class="combo-bar"><div class="combo-bar-fill" style="width:${pct}%"></div></div><span class="combo-bar-pct">${rtpContrib}%</span></div></td>
           </tr>`;
         }).join('');
-        const uid = 'cb' + Date.now();
-        return `<div class="combo-section">
+        const uid  = 'cb' + Date.now();
+        const tid  = uid + 't';
+        const cols = ['Symbol','Length','Hits','Hit Rate','Multiplier','RTP Contrib'];
+        const ths  = cols.map((label, i) =>
+          `<th><button class="combo-th-btn" onclick="_comboSort('${tid}',${i})">${label} <span class="combo-sort-arrow"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 4h18l-7 9v7l-4-2v-5z"/></svg></span></button></th>`
+        ).join('');
+        const dataJson = JSON.stringify(combos).replace(/</g,'\\u003c');
+        return `<div class="combo-section" data-combo-tid="${tid}" data-combo-json='${dataJson}' data-combo-spins="${r.totalSpins}" data-combo-bet="${payload.betSize}">
           <button class="combo-toggle" onclick="(function(btn){
             const wrap=document.getElementById('${uid}');
+            const sb=document.getElementById('${uid}sb');
             const chev=btn.querySelector('.combo-chevron');
             const open=wrap.classList.toggle('open');
             chev.classList.toggle('open',open);
+            if(sb) sb.style.display=open?'flex':'none';
           })(this)">
             <span class="combo-chevron">&#9658;</span>
             Combination Breakdown <span style="opacity:0.5;font-weight:400;text-transform:none;letter-spacing:0">(${combos.length} combinations)</span>
           </button>
+          <div class="combo-sort-bar" id="${uid}sb"></div>
           <div class="combo-table-wrap" id="${uid}">
-            <table class="combo-table">
-              <thead><tr>
-                <th>Symbol</th><th>Length</th><th>Hits</th><th>Hit Rate</th><th>Avg Payout</th><th>RTP Contrib</th>
-              </tr></thead>
+            <table class="combo-table" id="${tid}">
+              <thead><tr>${ths}</tr></thead>
               <tbody>${rows}</tbody>
             </table>
           </div>
@@ -3234,10 +3339,157 @@ function renderRtpResult(container, r, payload) {
 
     </div>
   `;
+  // Init combo tables after innerHTML is set (inline <script> doesn't execute via innerHTML)
+  _initComboSections(container);
+}
+
+function _initComboSections(container) {
+  container.querySelectorAll('.combo-section[data-combo-tid]').forEach(section => {
+    const tid   = section.dataset.comboTid;
+    const tbl   = document.getElementById(tid);
+    if (!tbl) return;
+    tbl._data       = JSON.parse(section.dataset.comboJson);
+    tbl._totalSpins = parseInt(section.dataset.comboSpins);
+    tbl._betSize    = parseFloat(section.dataset.comboBet);
+    tbl._sortKeys   = [{col: 0, asc: true}, {col: 1, asc: true}];
+    tbl._barEl      = document.getElementById(tid.replace(/t$/, '') + 'sb');
+    tbl._cols       = ['Symbol','Length','Hits','Hit Rate','Avg Payout','RTP Contrib'];
+    _comboRender(tbl);
+  });
 }
 
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Combo table multi-sort ── */
+function _comboInfoBtn() {
+  return `<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:280px;text-transform:none;letter-spacing:0;font-weight:400">Multi-column sort for the combination breakdown table.<div class="tip-rule"><strong>Add criterion</strong> — click any column header. It is appended as the lowest priority.</div><div class="tip-rule"><strong>Toggle direction</strong> — click ▲ or ▼ on a pill to flip between ascending and descending.</div><div class="tip-rule"><strong>Remove one</strong> — click × on a pill to drop that column from the sort.</div><div class="tip-rule"><strong>Clear all</strong> — click the Clear button to remove all criteria. Rows stay in their last sorted order.</div><div class="tip-rule">Priority goes left → right. The leftmost pill is the primary sort; ties are broken by the next pill, and so on.</div></span></span>`;
+}
+
+function _comboSort(tid, colIdx) {
+  const tbl = document.getElementById(tid);
+  if (!tbl) return;
+  const keys = tbl._sortKeys || [];
+  const existing = keys.findIndex(k => k.col === colIdx);
+  if (existing === 0) {
+    keys[0].asc = !keys[0].asc;
+  } else if (existing > 0) {
+    const [k] = keys.splice(existing, 1);
+    keys.unshift(k);
+  } else {
+    keys.push({ col: colIdx, asc: true });  // add as lowest priority
+  }
+  tbl._sortKeys = keys;
+  _comboRender(tbl);
+}
+
+function _comboRemove(tid, colIdx) {
+  const tbl = document.getElementById(tid);
+  if (!tbl) return;
+  tbl._sortKeys = (tbl._sortKeys || []).filter(k => k.col !== colIdx);
+  _comboRender(tbl);
+}
+
+function _comboClear(tid) {
+  const tbl = document.getElementById(tid);
+  if (!tbl) return;
+  tbl._sortKeys = [];
+  _comboRender(tbl);
+}
+
+function _comboToggleDir(tid, colIdx) {
+  const tbl = document.getElementById(tid);
+  if (!tbl) return;
+  const k = (tbl._sortKeys || []).find(k => k.col === colIdx);
+  if (k) k.asc = !k.asc;
+  _comboRender(tbl);
+}
+
+function _comboRender(tbl) {
+  const keys       = tbl._sortKeys || [];
+  const data       = tbl._data;
+  const totalSpins = tbl._totalSpins;
+  const betSize    = tbl._betSize;
+  const cols       = tbl._cols || ['Symbol','Length','Hits','Hit Rate','Avg Payout','RTP Contrib'];
+  const tid        = tbl.id;
+  const maxPay     = Math.max(...data.map(c => c.totalPayout));
+
+  // Update pill bar
+  const bar = tbl._barEl;
+  if (bar) {
+    if (keys.length === 0) {
+      bar.innerHTML = '<span class="combo-sort-bar-label">Sort by:</span>' + _comboInfoBtn() + '<span style="font-size:0.65rem;color:var(--text3);font-style:italic">click a column header</span>';
+    } else {
+      const pills = keys.map((k, i) =>
+        `<span class="combo-sort-pill">
+          <span style="opacity:0.6;font-size:0.55rem;margin-right:0.1rem">${i+1}.</span>${cols[k.col]}
+          <span class="combo-sort-pill-dir" onclick="_comboToggleDir('${tid}',${k.col})" title="Toggle direction">${k.asc ? '▲' : '▼'}</span>
+          <span class="combo-sort-pill-rm" onclick="_comboRemove('${tid}',${k.col})" title="Remove">×</span>
+        </span>`
+      ).join('');
+      bar.innerHTML = `<span class="combo-sort-bar-label">Sort by:</span>${_comboInfoBtn()}${pills}<button class="combo-sort-clear" onclick="_comboClear('${tid}')">Clear</button>`;
+    }
+  }
+
+  // Update column header active state
+  tbl.querySelectorAll('th').forEach((th, i) => {
+    const btn = th.querySelector('.combo-th-btn');
+    if (!btn) return;
+    const ki = keys.findIndex(k => k.col === i);
+    const arrEl = btn.querySelector('.combo-sort-arrow');
+    if (ki >= 0) {
+      btn.classList.add('active');
+      arrEl.innerHTML = keys[ki].asc ? '▲' : '▼';
+    } else {
+      btn.classList.remove('active');
+      arrEl.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 4h18l-7 9v7l-4-2v-5z"/></svg>';
+    }
+  });
+
+  // Sort a copy
+  const sorted = [...data].sort((a, b) => {
+    for (const { col, asc } of keys) {
+      const va = _comboVal(a, col, totalSpins, betSize);
+      const vb = _comboVal(b, col, totalSpins, betSize);
+      if (va < vb) return asc ? -1 : 1;
+      if (va > vb) return asc ? 1 : -1;
+    }
+    return 0;
+  });
+
+  // Re-render tbody
+  const tbody = tbl.querySelector('tbody');
+  // Build a stable odd/even group map so visual grouping survives any sort order
+  const symIds = [...new Set(sorted.map(c => c.symbolId))];
+  const symParity = new Map(symIds.map((id, i) => [id, i % 2]));
+  tbody.innerHTML = sorted.map(c => {
+    const hitRate    = (c.hitCount / totalSpins * 100).toFixed(3);
+    const rtpContrib = (c.totalPayout / totalSpins * 100).toFixed(4);
+    const avgPayout  = (c.totalPayout * betSize / c.hitCount).toFixed(1);
+    const pct = maxPay > 0 ? Math.round(c.totalPayout / maxPay * 100) : 0;
+    const cls = symParity.get(c.symbolId) === 1 ? ' class="combo-sym-odd"' : '';
+    return `<tr${cls}>
+      <td><span class="combo-sym-badge">S${c.symbolId}</span></td>
+      <td>${c.matchCount}</td>
+      <td>${c.hitCount.toLocaleString()}</td>
+      <td>${hitRate}%</td>
+      <td>${avgPayout}</td>
+      <td class="combo-bar-cell"><div class="combo-bar-wrap"><div class="combo-bar"><div class="combo-bar-fill" style="width:${pct}%"></div></div><span class="combo-bar-pct">${rtpContrib}%</span></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function _comboVal(c, col, totalSpins, betSize) {
+  switch (col) {
+    case 0: return c.symbolId;
+    case 1: return c.matchCount;
+    case 2: return c.hitCount;
+    case 3: return c.hitCount / totalSpins;
+    case 4: return c.totalPayout * betSize / c.hitCount;
+    case 5: return c.totalPayout / totalSpins;
+    default: return 0;
+  }
 }
 
 /* ── Import from COUNT ── */
