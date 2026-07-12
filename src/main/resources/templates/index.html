@@ -1280,15 +1280,15 @@
               <div class="field-grid">
                 <div class="field-item">
                   <label for="rtp-screen-width">Width (reels)</label>
-                  <input type="number" id="rtp-screen-width" value="5" min="1" max="20" oninput="onScreenSizeChange()"/>
+                  <input type="number" id="rtp-screen-width" placeholder="5" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
                 </div>
                 <div class="field-item">
                   <label for="rtp-screen-height">Height (rows)</label>
-                  <input type="number" id="rtp-screen-height" value="3" min="1" max="10" oninput="onScreenSizeChange()"/>
+                  <input type="number" id="rtp-screen-height" placeholder="3" min="1" max="10" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
                 </div>
                 <div class="field-item">
                   <label for="rtp-min-match" title="Minimum consecutive matching symbols on a line to count as a win">Min Match</label>
-                  <input type="number" id="rtp-min-match" value="3" min="1" max="20" oninput="onScreenSizeChange()"/>
+                  <input type="number" id="rtp-min-match" placeholder="3" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
                 </div>
               </div>
               <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem">
@@ -2510,7 +2510,9 @@ function updateLineCount() {
 function updateLineDefsToggleBtn() {
   const btn = document.getElementById('linedefs-toggle-btn');
   if (!btn) return;
-  const hasValues = Array.from(document.querySelectorAll('.rtp-line-input')).some(inp => inp.value.trim() !== '');
+  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+    || Array.from(document.querySelectorAll('.rtp-line-input')).some(inp => inp.value.trim() !== '');
   btn.innerHTML = hasValues
     ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
     : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
@@ -2519,12 +2521,18 @@ function updateLineDefsToggleBtn() {
 }
 
 function toggleLineDefs() {
-  const inputs = document.querySelectorAll('.rtp-line-input');
-  const hasValues = Array.from(inputs).some(inp => inp.value.trim() !== '');
+  const lineInputs = document.querySelectorAll('.rtp-line-input');
+  const screenIds = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
+  const screenInputs = screenIds.map(id => document.getElementById(id));
+  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+    || Array.from(lineInputs).some(inp => inp.value.trim() !== '');
   if (hasValues) {
-    inputs.forEach(inp => { inp.value = ''; });
+    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
+    lineInputs.forEach(inp => { inp.value = ''; });
     updateLineDefsToggleBtn();
   } else {
+    // Fill screen defaults from placeholders
+    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
     const DEFAULT_LINES = [
       '0, 0, 0, 0, 0',
       '1, 1, 1, 1, 1',
