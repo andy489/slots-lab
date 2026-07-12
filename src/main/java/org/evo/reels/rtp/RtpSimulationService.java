@@ -85,7 +85,7 @@ public class RtpSimulationService {
             double rtp = grandWin / totalSpins * 100.0;
             double avgWinPerSpin = grandWin / totalSpins * betSize;
             double avgWin = grandHits > 0 ? (grandWin / grandHits) * betSize : 0.0;
-            double maxWin = grandMaxWin * betSize;
+            double maxWin = grandMaxWin;
             double variance = (grandSumSquared / totalSpins) - Math.pow(grandWin / totalSpins, 2);
             double stdDev = Math.sqrt(Math.max(0, variance)) * betSize;
             double medianWin = globalMedian.median() * betSize;
