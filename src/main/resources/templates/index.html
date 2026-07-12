@@ -3078,11 +3078,11 @@ function renderRtpResult(container, r, payload) {
             <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Screen size</span>
+            <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>
             <span class="rtp-stat-value">${payload.screenWidth}×${payload.screenHeight}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Min Match</span>
+            <span class="rtp-stat-label">Min Match<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Minimum number of consecutive identical symbols on a payline required to count as a win.<div class="tip-rule">e.g. Min Match 3 on a 5-reel game → paytable has 3 entries: x3, x4, x5</div></span></span></span>
             <span class="rtp-stat-value">${payload.minMatch}</span>
           </div>
         </div>
