@@ -1321,6 +1321,9 @@
             <div class="section-card-header">
               <span class="section-label">Symbol Configuration</span>
               <div style="display:flex;gap:0.35rem">
+                <button class="icon-btn" onclick="showSymConfigInfo()" title="About paytable multipliers">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="3"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+                </button>
                 <button class="icon-btn" id="symconfig-toggle-btn" onclick="toggleSymConfig()" title="Fill paytable fields with default values">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
@@ -2584,6 +2587,18 @@ function toggleLineDefs() {
     });
     updateLineDefsToggleBtn();
   }
+}
+
+function showSymConfigInfo() {
+  alert(
+    'Paytable multipliers\n\n' +
+    'Each value is a multiplier applied to the total stake per screen (bet size).\n\n' +
+    'Example: bet = 1.00, paytable = [1.0, 3.0, 10.0]\n' +
+    '  • 3 matching symbols → win 1.0 × 1.00 = 1.00\n' +
+    '  • 4 matching symbols → win 3.0 × 1.00 = 3.00\n' +
+    '  • 5 matching symbols → win 10.0 × 1.00 = 10.00\n\n' +
+    'The number of values must equal screenWidth − minMatch + 1.'
+  );
 }
 
 function updateSymConfigToggleBtn() {
