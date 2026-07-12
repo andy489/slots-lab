@@ -3046,7 +3046,7 @@ function renderRtpResult(container, r, payload) {
             <span class="rtp-stat-value">${fmt1(r.maxWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Std deviation</span>
+            <span class="rtp-stat-label">Std deviation<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">Measures how spread out payouts are around the average. A high value means wins vary widely in size; a low value means they cluster near the mean.<div class="tip-rule">√(E[win²] − E[win]²) × betSize</div></span></span></span>
             <span class="rtp-stat-value">${fmt4(r.stdDev)}</span>
           </div>
         </div>
