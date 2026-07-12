@@ -2548,10 +2548,12 @@ function toggleLineDefs() {
     const container = document.getElementById('rtp-lines-list');
     container.innerHTML = '';
     _lineCounter = 0;
-    DEFAULT_LINES.forEach(placeholder => {
+    DEFAULT_LINES.forEach(val => {
       addLineDef('');
       const inputs = container.querySelectorAll('.rtp-line-input');
-      inputs[inputs.length - 1].placeholder = placeholder;
+      const inp = inputs[inputs.length - 1];
+      inp.placeholder = val;
+      inp.value = val;
     });
     updateLineDefsToggleBtn();
   }
