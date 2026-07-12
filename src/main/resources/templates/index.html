@@ -2722,6 +2722,8 @@ function collectRtpRequest() {
       : [];
     if (paytable.some(isNaN))
       errors.push('Symbol ' + symId + ': paytable contains invalid numbers');
+    if (paytable.some(v => !isNaN(v) && Math.round(v * 10) !== v * 10))
+      errors.push('Symbol ' + symId + ': paytable values must be multiples of 0.1');
     if (paytable.length > 0 && (type === 'NORMAL' || type === 'WILD')) {
       const required = Math.max(1, screenWidth - minMatch + 1);
       if (!isNaN(screenWidth) && !isNaN(minMatch) && paytable.length !== required)

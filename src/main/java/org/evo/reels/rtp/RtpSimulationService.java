@@ -196,6 +196,8 @@ public class RtpSimulationService {
             if (sym.type() == SymbolType.NORMAL || sym.type() == SymbolType.WILD) {
                 if (sym.paytable() != null && sym.paytable().stream().anyMatch(v -> v == null || v < 0))
                     throw new IllegalArgumentException("Symbol " + sym.symbolId() + " paytable contains invalid values");
+                if (sym.paytable() != null && sym.paytable().stream().anyMatch(v -> v != null && Math.abs(Math.round(v * 10) - v * 10) > 0.0001))
+                    throw new IllegalArgumentException("Symbol " + sym.symbolId() + " paytable values must be multiples of 0.1 (min bet)");
                 if (sym.paytable() != null && !sym.paytable().isEmpty()) {
                     int required = sw - req.minMatch() + 1;
                     if (sym.paytable().size() != required)
