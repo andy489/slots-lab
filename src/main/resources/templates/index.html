@@ -330,12 +330,12 @@
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
       font-size: 0.8rem;
     }
-    .array-input::placeholder {
-      color: var(--accent);
-      opacity: 0.55;
-      font-style: italic;
-    }
-    .rtp-paytable-input::placeholder {
+    .array-input::placeholder,
+    .rtp-paytable-input::placeholder,
+    .rtp-line-input::placeholder,
+    #rtp-screen-width::placeholder,
+    #rtp-screen-height::placeholder,
+    #rtp-min-match::placeholder {
       color: var(--accent);
       opacity: 0.55;
       font-style: italic;
@@ -2924,7 +2924,23 @@ function applyImportCounts() {
   closeImportCounts();
 }
 
-toggleLineDefs();
+// Init: add default payline placeholder rows without filling screen inputs
+(function initDefaultPaylines() {
+  const DEFAULT_LINES = [
+    '0, 0, 0, 0, 0', '1, 1, 1, 1, 1', '2, 2, 2, 2, 2',
+    '0, 1, 0, 1, 0', '1, 0, 1, 0, 1', '2, 1, 2, 1, 2',
+    '1, 2, 1, 2, 1', '0, 1, 1, 1, 0', '2, 1, 1, 1, 2', '0, 2, 0, 2, 0',
+  ];
+  const container = document.getElementById('rtp-lines-list');
+  container.innerHTML = '';
+  _lineCounter = 0;
+  DEFAULT_LINES.forEach(ph => {
+    addLineDef('');
+    const rows = container.querySelectorAll('.rtp-line-input');
+    rows[rows.length - 1].placeholder = ph;
+  });
+  updateLineDefsToggleBtn();
+})();
 </script>
 
 <!-- ══ INFO MODAL ══ -->
