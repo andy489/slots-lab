@@ -2402,6 +2402,12 @@ function addSymbolRow(symbolId) {
     </div>
   `;
   container.appendChild(row);
+  // Auto-set type for well-known default symbol IDs
+  if (id === 1 || id === 2) {
+    const sel = row.querySelector('select');
+    sel.value = id === 2 ? 'WILD' : 'SCATTER';
+    onSymbolTypeChange(sel);
+  }
   // Sync paytable placeholder for the new row
   const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
   const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
