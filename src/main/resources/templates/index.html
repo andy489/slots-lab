@@ -673,7 +673,7 @@
     .history-item:hover { border-color: var(--accent); background: var(--accent-dim); }
     .history-item-del {
       position: absolute;
-      top: 0.3rem;
+      bottom: 0.3rem;
       right: 0.3rem;
       display: none;
       background: none;
@@ -2016,7 +2016,7 @@ function renderHistory(entries) {
     item.title = 'Click to restore';
     item.innerHTML = `
       <button class="history-item-del" title="Delete this entry">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
       </button>
       <span class="history-item-label">#${i + 1} &middot; ${entry.strategy}</span>
       <span class="history-item-meta">${entry.time}</span>
@@ -2086,7 +2086,7 @@ function renderRtpHistory(entries) {
     item.title = 'Click to restore';
     item.innerHTML = `
       <button class="history-item-del" title="Delete this entry">
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
       </button>
       <span class="history-item-label">#${i + 1} &middot; ${entry.strategy}</span>
       <span class="history-item-meta">${entry.time}</span>
