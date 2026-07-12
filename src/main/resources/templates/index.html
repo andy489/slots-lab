@@ -3042,7 +3042,7 @@ function renderRtpResult(container, r, payload) {
             <span class="rtp-stat-value">${fmt1(r.medianWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Max win<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">Highest single-spin payout observed across all simulated spins (max take).<div class="tip-rule">maxWin = maxMultiplier × betSize</div></span></span></span>
+            <span class="rtp-stat-label">Max win<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Highest stake multiplier observed in this simulation — the single biggest win relative to bet size.<div class="tip-rule">maxWin = maxMultiplier × betSize</div></span></span></span>
             <span class="rtp-stat-value">${fmt1(r.maxWin)}</span>
           </div>
           <div class="rtp-stat-card">
@@ -3056,7 +3056,7 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Volatility</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">stdDev ÷ avgWinPerSpin<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">avgWinPerSpin = totalWin ÷ allSpins × betSize</div><div class="tip-row"><span>Low</span><span>&lt; 2.0</span></div><div class="tip-row"><span>Medium</span><span>2.0 – 5.0</span></div><div class="tip-row"><span>High</span><span>5.0 – 10.0</span></div><div class="tip-row"><span>Extreme</span><span>≥ 10.0</span></div></div></span></span></span>
+            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">Risk level indicator — how wildly payouts swing relative to the average. Higher = rare but bigger wins, longer dry spells.<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.25rem;font-size:0.67rem">stdDev ÷ avgWinPerSpin</div><div class="tip-row"><span>Low</span><span>&lt; 2.0</span></div><div class="tip-row"><span>Medium</span><span>2.0 – 5.0</span></div><div class="tip-row"><span>High</span><span>5.0 – 10.0</span></div><div class="tip-row"><span>Extreme</span><span>≥ 10.0</span></div></div></span></span></span>
             <span class="rtp-stat-value">${fmt2(r.volatilityIndex)}</span>
           </div>
           <div class="rtp-stat-card">
