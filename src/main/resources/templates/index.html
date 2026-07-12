@@ -1483,6 +1483,9 @@ function addReelSet(data, scroll) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           Use Defaults
         </button>
+        <button class="icon-btn danger" onclick="clearCardInputs('${id}')" title="Clear all values">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <button class="icon-btn add" onclick="addReelRow('${id}-reels', null, true)" title="Add reel">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
@@ -1710,6 +1713,14 @@ function fillDefaults(cardId) {
   if (!card) return;
   card.querySelectorAll('input[placeholder]').forEach(inp => {
     inp.value = inp.placeholder;
+  });
+}
+
+function clearCardInputs(cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  card.querySelectorAll('input[placeholder]').forEach(inp => {
+    inp.value = '';
   });
 }
 
