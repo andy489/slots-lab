@@ -27,7 +27,7 @@ hs_err_pid*
 
 # runtime output
 result.txt
-history/
+/history/
 
 # hidden directories and local config files
 .*

@@ -52,6 +52,10 @@ public class HistoryService {
         }
     }
 
+    public void deleteOne(String kind, String id) throws IOException {
+        Files.deleteIfExists(dir(kind).resolve(id + ".json"));
+    }
+
     public void clearAll(String kind) throws IOException {
         Path dir = dir(kind);
         if (!Files.exists(dir)) return;

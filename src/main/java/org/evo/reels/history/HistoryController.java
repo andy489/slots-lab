@@ -43,6 +43,16 @@ public class HistoryController {
         }
     }
 
+    @DeleteMapping("/{kind}/{id}")
+    public ResponseEntity<List<HistoryEntry>> deleteOne(@PathVariable String kind, @PathVariable String id) {
+        try {
+            service.deleteOne(kind, id);
+            return ResponseEntity.ok(service.list(kind));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @DeleteMapping("/{kind}")
     public ResponseEntity<Void> clearAll(@PathVariable String kind) {
         try {
