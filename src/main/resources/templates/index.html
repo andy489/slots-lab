@@ -2429,10 +2429,7 @@ function onSymbolTypeChange(sel) {
   } else {
     const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
     const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
-    const count = Math.max(1, w - m + 1);
-    const example = Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
-    ptInput.placeholder = example;
-    ptInput.title = count + ' value(s) required (screenWidth − minMatch + 1)';
+    updatePaytablePlaceholders(w, m);
   }
 
   wildFields.classList.toggle('visible', isWild);
@@ -2598,9 +2595,31 @@ function onScreenSizeChange() {
 
 function updatePaytablePlaceholders(w, m) {
   const count = Math.max(1, w - m + 1);
-  const example = Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
+  const NORMAL_TABLE = {
+    1: '1.0',
+    2: '1.0, 2.0',
+    3: '1.0, 2.0, 4.0',
+    4: '0.5, 1.0, 2.0, 4.0',
+    5: '0.2, 0.5, 1.0, 2.0, 4.0',
+    6: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0',
+    7: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0',
+  };
+  const WILD_TABLE = {
+    1: '10.0',
+    2: '4.0, 10.0',
+    3: '2.0, 4.0, 10.0',
+    4: '1.0, 2.0, 4.0, 10.0',
+    5: '0.5, 1.0, 2.0, 4.0, 10.0',
+    6: '0.2, 0.5, 1.0, 2.0, 4.0, 10.0',
+    7: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 10.0',
+  };
+  const normalPh = NORMAL_TABLE[count] || Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
+  const wildPh   = WILD_TABLE[count]   || Array.from({length: count}, (_, i) => ((i + 1) * 2).toFixed(1)).join(', ');
   document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
-    inp.placeholder = example;
+    if (inp.disabled) return; // scatter — keep n/a
+    const row = inp.closest('.rtp-sym-row');
+    const isWild = row && row.querySelector('select') && row.querySelector('select').value === 'WILD';
+    inp.placeholder = isWild ? wildPh : normalPh;
     inp.title = count + ' value(s) required (screenWidth − minMatch + 1)';
   });
 }
