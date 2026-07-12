@@ -50,6 +50,12 @@
       --cm-caret:     hsl(45, 100%, 72%);
       --cm-sel:       hsla(45, 100%, 72%, .15);
       --cm-gutnum:    hsl(0, 0%, 30%);
+      --tip-bg:       hsl(220, 13%, 10%);
+      --tip-border:   hsl(220, 13%, 22%);
+      --tip-tip:      hsl(220, 13%, 22%);
+      --tip-text:     hsl(0, 0%, 80%);
+      --tip-icon-b:   hsl(0, 0%, 28%);
+      --tip-icon-c:   hsl(0, 0%, 42%);
     }
 
     [data-theme="light"] {
@@ -81,6 +87,13 @@
       --cm-bg:        hsl(0, 0%, 100%);
       --cm-gut:       hsl(0, 0%, 95%);
       --cm-line:      hsl(0, 0%, 15%);
+      --tip-bg:       hsl(0, 0%, 100%);
+      --tip-border:   hsl(0, 0%, 82%);
+      --tip-tip:      hsl(0, 0%, 82%);
+      --tip-text:     hsl(0, 0%, 25%);
+      --tip-icon-b:   hsl(0, 0%, 72%);
+      --tip-icon-c:   hsl(0, 0%, 52%);
+    }
       --cm-caret:     hsl(38, 90%, 42%);
       --cm-sel:       hsla(38, 90%, 42%, .15);
       --cm-gutnum:    hsl(0, 0%, 65%);
@@ -887,6 +900,61 @@
       flex-direction: column;
       gap: 0.4rem;
     }
+    /* Tooltip pattern */
+    .stat-tip-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .stat-info {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      border: 1px solid var(--tip-icon-b);
+      background: transparent;
+      color: var(--tip-icon-c);
+      font-size: 0.55rem;
+      font-weight: 700;
+      font-style: normal;
+      cursor: default;
+      flex-shrink: 0;
+      line-height: 1;
+      transition: border-color 0.15s, color 0.15s;
+      vertical-align: middle;
+      margin-left: 0.25rem;
+    }
+    .stat-tip-wrap:hover .stat-info,
+    .stat-tip-wrap:focus-within .stat-info { border-color: var(--accent); color: var(--accent); }
+    .stat-tip-box {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 7px);
+      right: 0;
+      width: 210px;
+      background: var(--tip-bg);
+      border: 1px solid var(--tip-border);
+      border-radius: 8px;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.72rem;
+      color: var(--tip-text);
+      line-height: 1.55;
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.28);
+      white-space: pre-line;
+    }
+    .stat-tip-box::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      right: 8px;
+      border: 5px solid transparent;
+      border-top-color: var(--tip-tip);
+    }
+    .stat-tip-wrap:hover .stat-tip-box,
+    .stat-tip-wrap:focus-within .stat-tip-box { display: block; }
     .rtp-stat-group-title {
       font-size: 0.62rem;
       text-transform: uppercase;
@@ -1319,12 +1387,15 @@
           <!-- Symbol Configuration -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Symbol Configuration</span>
+              <span class="section-label">Symbol Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box">Paytable multipliers apply to the total stake per screen (bet size).
+
+Example: bet = 1.00, paytable = [1.0, 3.0, 10.0]
+  x3 → 1.0 × 1.00 = 1.00
+  x4 → 3.0 × 1.00 = 3.00
+  x5 → 10.0 × 1.00 = 10.00
+
+Values count = screenWidth − minMatch + 1</span></span></span>
               <div style="display:flex;gap:0.35rem">
-                <button class="icon-btn" onclick="showSymConfigInfo()" title="About paytable multipliers">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="3"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
-                </button>
-                <button class="icon-btn" id="symconfig-toggle-btn" onclick="toggleSymConfig()" title="Fill paytable fields with default values">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
                 <button class="icon-btn add" onclick="addSymbolRow()" title="Add symbol">
@@ -2589,17 +2660,6 @@ function toggleLineDefs() {
   }
 }
 
-function showSymConfigInfo() {
-  alert(
-    'Paytable multipliers\n\n' +
-    'Each value is a multiplier applied to the total stake per screen (bet size).\n\n' +
-    'Example: bet = 1.00, paytable = [1.0, 3.0, 10.0]\n' +
-    '  • 3 matching symbols → win 1.0 × 1.00 = 1.00\n' +
-    '  • 4 matching symbols → win 3.0 × 1.00 = 3.00\n' +
-    '  • 5 matching symbols → win 10.0 × 1.00 = 10.00\n\n' +
-    'The number of values must equal screenWidth − minMatch + 1.'
-  );
-}
 
 function updateSymConfigToggleBtn() {
   const btn = document.getElementById('symconfig-toggle-btn');
@@ -2930,11 +2990,12 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Volatility</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility index
-              <button class="icon-btn" style="vertical-align:middle;margin-left:0.2rem" onclick="alert('Volatility Index = stdDev / avgWin (coefficient of variation)\n\nLow      < 2.0\nMedium   2.0 – 5.0\nHigh     5.0 – 10.0\nExtreme  ≥ 10.0')" title="Volatility index intervals">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="3"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
-              </button>
-            </span>
+            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box">stdDev ÷ avgWin (coefficient of variation)
+
+Low      &lt; 2.0
+Medium   2.0 – 5.0
+High     5.0 – 10.0
+Extreme  ≥ 10.0</span></span></span>
             <span class="rtp-stat-value">${fmt2(r.volatilityIndex)}</span>
           </div>
           <div class="rtp-stat-card">
