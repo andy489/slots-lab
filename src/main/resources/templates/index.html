@@ -2039,6 +2039,7 @@ function renderHistory(entries) {
     `;
     item.querySelector('.history-item-del').onclick = async (e) => {
       e.stopPropagation();
+      if (!await confirmDelete(`Delete entry #${i + 1}?`)) return;
       const res = await fetch(`/api/history/generate/${encodeURIComponent(entry.id)}`, { method: 'DELETE' });
       renderHistory(await res.json());
     };
@@ -2064,7 +2065,27 @@ async function onHistorySizeChange() {
   renderRtpHistory(await simRes.json());
 }
 
+/* ── Confirm modal helper ── */
+let _confirmResolve = null;
+function _confirmReject() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+}
+function confirmDelete(msg) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('confirm-modal-msg').textContent = msg;
+    document.getElementById('confirm-modal-ok').onclick = () => {
+      document.getElementById('confirm-modal').classList.remove('open');
+      _confirmResolve = null;
+      resolve(true);
+    };
+    document.getElementById('confirm-modal').classList.add('open');
+  });
+}
+
 async function clearHistory() {
+  if (!await confirmDelete('Delete all generation history?')) return;
   await fetch('/api/history/generate', { method: 'DELETE' });
   renderHistory([]);
 }
@@ -2109,6 +2130,7 @@ function renderRtpHistory(entries) {
     `;
     item.querySelector('.history-item-del').onclick = async (e) => {
       e.stopPropagation();
+      if (!await confirmDelete(`Delete entry #${i + 1}?`)) return;
       const res = await fetch(`/api/history/simulate/${encodeURIComponent(entry.id)}`, { method: 'DELETE' });
       renderRtpHistory(await res.json());
     };
@@ -2131,6 +2153,7 @@ async function onRtpHistorySizeChange() {
 }
 
 async function clearRtpHistory() {
+  if (!await confirmDelete('Delete all simulation history?')) return;
   await fetch('/api/history/simulate', { method: 'DELETE' });
   renderRtpHistory([]);
 }
@@ -3294,6 +3317,22 @@ function applyImportCounts() {
       <div style="display:flex;justify-content:flex-end;gap:0.5rem">
         <button class="theme-btn" onclick="closeImportCounts()" style="padding:0.4rem 0;width:90px">Cancel</button>
         <button class="theme-btn" onclick="applyImportCounts()" style="font-weight:600;padding:0.4rem 0;width:90px">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-modal" onclick="if(event.target===this)_confirmReject()">
+  <div class="modal" style="max-width:380px;width:90%">
+    <div class="modal-header">
+      <span class="modal-title" id="confirm-modal-title">Confirm</span>
+      <button class="modal-close" onclick="_confirmReject()" title="Cancel">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="padding:1rem 1.25rem">
+      <p id="confirm-modal-msg" style="margin:0 0 1.1rem;font-size:0.88rem;color:var(--text2)"></p>
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem">
+        <button class="theme-btn" onclick="_confirmReject()" style="padding:0.4rem 0;width:90px">Cancel</button>
+        <button class="theme-btn" id="confirm-modal-ok" style="padding:0.4rem 0;width:90px;font-weight:600;background:var(--danger);color:#fff;border-color:var(--danger)">Delete</button>
       </div>
     </div>
   </div>
