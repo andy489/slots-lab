@@ -887,26 +887,6 @@
       flex-direction: column;
       gap: 0.4rem;
     }
-    .rtp-vol-legend {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-      margin-top: 0.15rem;
-    }
-    .rtp-vol-legend span {
-      font-size: 0.62rem;
-      padding: 0.2rem 0.55rem;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      color: var(--text3);
-      background: var(--surface);
-      white-space: nowrap;
-    }
-    .rtp-vol-legend span.vol-active {
-      color: var(--accent);
-      border-color: var(--accent);
-      font-weight: 700;
-    }
     .rtp-stat-group-title {
       font-size: 0.62rem;
       text-transform: uppercase;
@@ -2950,19 +2930,17 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Volatility</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility index</span>
+            <span class="rtp-stat-label">Volatility index
+              <button class="icon-btn" style="vertical-align:middle;margin-left:0.2rem" onclick="alert('Volatility Index = stdDev / avgWin (coefficient of variation)\n\nLow      < 2.0\nMedium   2.0 – 5.0\nHigh     5.0 – 10.0\nExtreme  ≥ 10.0')" title="Volatility index intervals">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="8" stroke-width="3"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+              </button>
+            </span>
             <span class="rtp-stat-value">${fmt2(r.volatilityIndex)}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Volatility</span>
             <span class="rtp-stat-value">${r.volatilityLabel}</span>
           </div>
-        </div>
-        <div class="rtp-vol-legend">
-          <span class="${r.volatilityLabel === 'Low'     ? 'vol-active' : ''}">Low &lt; 2.0</span>
-          <span class="${r.volatilityLabel === 'Medium'  ? 'vol-active' : ''}">Medium 2.0 – 5.0</span>
-          <span class="${r.volatilityLabel === 'High'    ? 'vol-active' : ''}">High 5.0 – 10.0</span>
-          <span class="${r.volatilityLabel === 'Extreme' ? 'vol-active' : ''}">Extreme ≥ 10.0</span>
         </div>
       </div>
 
