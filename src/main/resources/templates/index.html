@@ -3070,8 +3070,12 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Configuration</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Payout strategy</span>
-            <span class="rtp-stat-value">${payload.strategy}</span>
+            <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">${{
+              LTR: 'Left to Right — wins are counted only from reel 1 outward. A symbol must start a consecutive run from the leftmost reel.',
+              RTL: 'Right to Left — wins are counted only from the last reel inward. A symbol must start a consecutive run from the rightmost reel.',
+              BW:  'Both Ways — wins are evaluated left-to-right AND right-to-left simultaneously. The higher payout of the two directions is awarded.'
+            }[payload.strategy] || payload.strategy}</span></span></span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size</span>
