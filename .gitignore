@@ -25,6 +25,10 @@ hs_err_pid*
 .DS_Store
 *.pages
 
+# runtime output
+result.txt
+history/
+
 # hidden directories and local config files
 .*
 !.gitignore
