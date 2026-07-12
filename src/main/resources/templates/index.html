@@ -936,7 +936,12 @@
       gap: 0.5rem;
       padding: 0.3rem 0;
     }
-    .rtp-chance-row + .rtp-chance-row { border-top: 1px solid var(--border); }
+    #rtp-chances-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 0.75rem;
+    }
+    .rtp-chance-row + .rtp-chance-row { border-top: none; }
     .rtp-chance-label {
       font-size: 0.72rem;
       color: var(--text2);
