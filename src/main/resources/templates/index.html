@@ -2350,12 +2350,9 @@ function syncRtpSymbolsFromReels() {
   }
   refreshSymbolRowNumbers();
 
-  // Set default screen width from first reel set
+  // Populate default lines if empty
   const firstRs = _latestReelSets[0];
   const w = firstRs.reelSet.length;
-  document.getElementById('rtp-screen-width').value = w;
-
-  // Populate default lines if empty
   if (document.querySelectorAll('.rtp-line-row').length === 0) {
     const h = parseInt(document.getElementById('rtp-screen-height').value) || 3;
     for (const line of generateDefaultLines(w, h)) {
