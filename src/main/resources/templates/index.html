@@ -2615,11 +2615,22 @@ function updatePaytablePlaceholders(w, m) {
   };
   const normalPh = NORMAL_TABLE[count] || Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
   const wildPh   = WILD_TABLE[count]   || Array.from({length: count}, (_, i) => ((i + 1) * 2).toFixed(1)).join(', ');
+  const LOW_TABLE = {
+    1: '2.0',
+    2: '1.0, 2.0',
+    3: '0.5, 1.0, 2.0',
+    4: '0.2, 0.5, 1.0, 2.0',
+    5: '0.1, 0.2, 0.5, 1.0, 2.0',
+    6: '0.1, 0.1, 0.2, 0.5, 1.0, 2.0',
+    7: '0.1, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0',
+  };
+  const lowPh = LOW_TABLE[count] || Array.from({length: count}, (_, i) => ((i + 1) * 0.5).toFixed(1)).join(', ');
   document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
     if (inp.disabled) return; // scatter — keep n/a
     const row = inp.closest('.rtp-sym-row');
+    const symId = row ? parseInt(row.dataset.symId) : 0;
     const isWild = row && row.querySelector('select') && row.querySelector('select').value === 'WILD';
-    inp.placeholder = isWild ? wildPh : normalPh;
+    inp.placeholder = isWild ? wildPh : (symId >= 6 ? lowPh : normalPh);
     inp.title = count + ' value(s) required (screenWidth − minMatch + 1)';
   });
 }
