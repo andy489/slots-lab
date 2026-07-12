@@ -1,5 +1,7 @@
 package org.evo.reels.rtp;
 
+import java.util.List;
+
 public record RtpResult(
         double rtpPercent,
         long totalSpins,
@@ -11,5 +13,6 @@ public record RtpResult(
         double stdDev,
         double volatilityIndex,
         String volatilityLabel,
-        double hitRatePct
+        double hitRatePct,
+        List<ComboStats> comboBreakdown
 ) {}

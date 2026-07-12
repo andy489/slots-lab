@@ -5,7 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -69,6 +72,8 @@ public class RtpSimulationService {
             double grandSumSquared = 0.0;
             long grandHits = 0;
             MedianTracker globalMedian = new MedianTracker();
+            Map<ComboKey, Long>   globalHits = new HashMap<>();
+            Map<ComboKey, Double> globalPays = new HashMap<>();
 
             for (int i = 0; i < N; i++) {
                 SpinStats s = futures.get(i).get();
@@ -78,6 +83,8 @@ public class RtpSimulationService {
                 grandHits      += s.hitCount();
                 if (s.maxWin() > grandMaxWin) grandMaxWin = s.maxWin();
                 globalMedian.merge(s.medianTracker());
+                s.hitCounts().forEach((k, v) -> globalHits.merge(k, v[0], Long::sum));
+                s.payouts().forEach((k, v)    -> globalPays.merge(k, v[0], Double::sum));
             }
 
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;
@@ -104,8 +111,17 @@ public class RtpSimulationService {
                     String.format("%.4f", avgWin), String.format("%.4f", stdDev),
                     volatilityLabel, String.format("%.2f", hitRatePct), elapsedMs);
 
+            // Build combo breakdown sorted by total payout descending
+            List<ComboStats> comboBreakdown = new ArrayList<>(globalHits.size());
+            globalHits.forEach((k, hits) -> {
+                double pay = globalPays.getOrDefault(k, 0.0);
+                comboBreakdown.add(new ComboStats(k.symbolId(), k.matchCount(), hits, pay));
+            });
+            comboBreakdown.sort(Comparator.comparingDouble(ComboStats::totalPayout).reversed());
+
             return new RtpResult(rtp, totalSpins, elapsedMs, betSize,
-                    avgWin, medianWin, maxWin, stdDev, volatilityIndex, volatilityLabel, hitRatePct);
+                    avgWin, medianWin, maxWin, stdDev, volatilityIndex, volatilityLabel, hitRatePct,
+                    comboBreakdown);
 
         } catch (Exception e) {
             throw new RuntimeException("RTP simulation failed: " + e.getMessage(), e);

@@ -1083,6 +1083,87 @@
       flex-shrink: 0;
     }
 
+    /* Combo breakdown */
+    .combo-section {
+      margin-top: 0.5rem;
+    }
+    .combo-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.4rem 0;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-weight: 700;
+      color: var(--text3);
+      border-top: 1px solid var(--border);
+      background: none;
+      border-bottom: none;
+      border-left: none;
+      border-right: none;
+      width: 100%;
+      text-align: left;
+    }
+    .combo-toggle:hover { color: var(--text2); }
+    .combo-chevron { transition: transform 0.2s; font-size: 0.7rem; }
+    .combo-chevron.open { transform: rotate(90deg); }
+    .combo-table-wrap { display: none; overflow-x: auto; margin-top: 0.4rem; }
+    .combo-table-wrap.open { display: block; }
+    .combo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+    .combo-table th {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text3);
+      font-weight: 700;
+      text-align: right;
+      padding: 0.3rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .combo-table th:first-child { text-align: left; }
+    .combo-table td {
+      padding: 0.3rem 0.6rem;
+      text-align: right;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .combo-table td:first-child { text-align: left; }
+    .combo-table tbody tr:hover td { background: var(--surface2); }
+    .combo-sym-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-family: 'JetBrains Mono','Fira Code',monospace;
+    }
+    .combo-bar-cell { min-width: 90px; }
+    .combo-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
+    .combo-bar {
+      flex: 1;
+      height: 5px;
+      border-radius: 3px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .combo-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      min-width: 1px;
+    }
+    .combo-bar-pct { font-size: 0.7rem; color: var(--text2); min-width: 38px; text-align: right; }
+
     /* Symbol table */
     .rtp-sym-header {
       display: grid;
@@ -3093,11 +3174,11 @@ function renderRtpResult(container, r, payload) {
         <span class="rtp-stat-group-title">Configuration</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">${{
+            <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${{
               LTR: 'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
               RTL: 'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
               BW:  'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.'
-            }[payload.strategy] || payload.strategy}</span></span></span>
+            }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
             <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
@@ -3110,6 +3191,46 @@ function renderRtpResult(container, r, payload) {
           </div>
         </div>
       </div>
+
+      ${(() => {
+        const combos = r.comboBreakdown;
+        if (!combos || combos.length === 0) return '';
+        const maxPay = combos[0].totalPayout;
+        const rows = combos.map(c => {
+          const hitRate = (c.hitCount / r.totalSpins * 100).toFixed(3);
+          const rtpContrib = (c.totalPayout / r.totalSpins * 100).toFixed(4);
+          const avgPayout = (c.totalPayout * payload.betSize / c.hitCount).toFixed(4);
+          const pct = maxPay > 0 ? Math.round(c.totalPayout / maxPay * 100) : 0;
+          return `<tr>
+            <td><span class="combo-sym-badge">S${c.symbolId}</span></td>
+            <td>${c.matchCount}</td>
+            <td>${c.hitCount.toLocaleString()}</td>
+            <td>${hitRate}%</td>
+            <td>${avgPayout}</td>
+            <td class="combo-bar-cell"><div class="combo-bar-wrap"><div class="combo-bar"><div class="combo-bar-fill" style="width:${pct}%"></div></div><span class="combo-bar-pct">${rtpContrib}%</span></div></td>
+          </tr>`;
+        }).join('');
+        const uid = 'cb' + Date.now();
+        return `<div class="combo-section">
+          <button class="combo-toggle" onclick="(function(btn){
+            const wrap=document.getElementById('${uid}');
+            const chev=btn.querySelector('.combo-chevron');
+            const open=wrap.classList.toggle('open');
+            chev.classList.toggle('open',open);
+          })(this)">
+            <span class="combo-chevron">&#9658;</span>
+            Combination Breakdown <span style="opacity:0.5;font-weight:400;text-transform:none;letter-spacing:0">(${combos.length} combinations)</span>
+          </button>
+          <div class="combo-table-wrap" id="${uid}">
+            <table class="combo-table">
+              <thead><tr>
+                <th>Symbol</th><th>Length</th><th>Hits</th><th>Hit Rate</th><th>Avg Payout</th><th>RTP Contrib</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+      })()}
 
     </div>
   `;

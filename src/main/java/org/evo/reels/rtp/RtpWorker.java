@@ -1,5 +1,7 @@
 package org.evo.reels.rtp;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
@@ -46,6 +48,12 @@ public class RtpWorker implements Callable<SpinStats> {
         double sumSquared = 0.0;
         long hitCount = 0;
         MedianTracker medianTracker = new MedianTracker();
+        Map<ComboKey, long[]>   hitMap = new HashMap<>();
+        Map<ComboKey, double[]> payMap = new HashMap<>();
+
+        boolean isLtr = strategy instanceof LtrPayoutStrategy;
+        boolean isRtl = strategy instanceof RtlPayoutStrategy;
+        boolean isBw  = strategy instanceof BwPayoutStrategy;
 
         int[][] screen = new int[screenWidth][screenHeight];
 
@@ -61,7 +69,20 @@ public class RtpWorker implements Callable<SpinStats> {
                 }
             }
 
-            double win = strategy.evaluate(screen, screenWidth, symbols, lines, minMatch);
+            double win;
+            if (isLtr) {
+                win = LineEvaluator.evalLtrTracked(screen, screenWidth, symbols, lines, minMatch, hitMap, payMap);
+            } else if (isRtl) {
+                win = LineEvaluator.evalRtlTracked(screen, screenWidth, symbols, lines, minMatch, hitMap, payMap);
+            } else if (isBw) {
+                double ltr = LineEvaluator.evalLtrTracked(screen, screenWidth, symbols, lines, minMatch, hitMap, payMap);
+                double rtl = LineEvaluator.evalRtlTracked(screen, screenWidth, symbols, lines, minMatch, hitMap, payMap);
+                win = ltr + rtl;
+            } else {
+                // fallback for any custom strategy — no tracking
+                win = strategy.evaluate(screen, screenWidth, symbols, lines, minMatch);
+            }
+
             totalWin += win;
             sumSquared += win * win;
             if (win > 0) {
@@ -71,7 +92,7 @@ public class RtpWorker implements Callable<SpinStats> {
             if (win > maxWin) maxWin = win;
         }
 
-        return new SpinStats(totalWin, maxWin, sumSquared, hitCount, medianTracker);
+        return new SpinStats(totalWin, maxWin, sumSquared, hitCount, medianTracker, hitMap, payMap);
     }
 
     private int pickSet(double u) {

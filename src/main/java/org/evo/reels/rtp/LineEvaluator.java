@@ -1,6 +1,7 @@
 package org.evo.reels.rtp;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Core line-based win evaluator.
@@ -12,20 +13,61 @@ final class LineEvaluator {
 
     private LineEvaluator() {}
 
+    private record LineResult(double win, int paySymbol, int streak) {}
+
+    // ── untracked (fast path) ────────────────────────────────────────────────
+
     static double evalLtr(int[][] screen, int reelCount, SymbolTable symbols, int[][] lines, int minMatch) {
         double total = 0.0;
-        for (int[] line : lines) total += evalLine(screen, reelCount, symbols, line, false, minMatch);
+        for (int[] line : lines) total += evalLineResult(screen, reelCount, symbols, line, false, minMatch).win();
         return total;
     }
 
     static double evalRtl(int[][] screen, int reelCount, SymbolTable symbols, int[][] lines, int minMatch) {
         double total = 0.0;
-        for (int[] line : lines) total += evalLine(screen, reelCount, symbols, line, true, minMatch);
+        for (int[] line : lines) total += evalLineResult(screen, reelCount, symbols, line, true, minMatch).win();
         return total;
     }
 
+    // ── tracked variants ─────────────────────────────────────────────────────
+
+    static double evalLtrTracked(int[][] screen, int reelCount, SymbolTable symbols,
+                                 int[][] lines, int minMatch,
+                                 Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
+        double total = 0.0;
+        for (int[] line : lines) {
+            LineResult r = evalLineResult(screen, reelCount, symbols, line, false, minMatch);
+            total += r.win();
+            if (r.win() > 0 && r.paySymbol() >= 0)
+                record(r.paySymbol(), r.streak(), r.win(), hitMap, payMap);
+        }
+        return total;
+    }
+
+    static double evalRtlTracked(int[][] screen, int reelCount, SymbolTable symbols,
+                                 int[][] lines, int minMatch,
+                                 Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
+        double total = 0.0;
+        for (int[] line : lines) {
+            LineResult r = evalLineResult(screen, reelCount, symbols, line, true, minMatch);
+            total += r.win();
+            if (r.win() > 0 && r.paySymbol() >= 0)
+                record(r.paySymbol(), r.streak(), r.win(), hitMap, payMap);
+        }
+        return total;
+    }
+
+    private static void record(int sym, int streak, double win,
+                               Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
+        ComboKey key = new ComboKey(sym, streak);
+        hitMap.computeIfAbsent(key, k -> new long[1])[0]++;
+        payMap.computeIfAbsent(key, k -> new double[1])[0] += win;
+    }
+
+    // ── core evaluator ───────────────────────────────────────────────────────
+
     /**
-     * Evaluates a single payline in one direction. Returns win multiplier (0 if no win).
+     * Evaluates a single payline in one direction.
      *
      * Wild multiplier aggregation rules:
      *   ADD      — sum all wild multipliers on the matching streak; apply sum as multiplier to base win.
@@ -34,14 +76,14 @@ final class LineEvaluator {
      *
      * If no wilds appear in the streak, lineMultiplier = 1.0 (no change to base win).
      */
-    private static double evalLine(int[][] screen, int reelCount,
-                                   SymbolTable symbols, int[] line, boolean reversed, int minMatch) {
+    private static LineResult evalLineResult(int[][] screen, int reelCount,
+                                             SymbolTable symbols, int[] line,
+                                             boolean reversed, int minMatch) {
         int streak = 0, wildStreak = 0, totalWilds = 0;
         int paySymbol = -1;
         boolean allWild = true;
 
-        // Accumulator for ADD / MULTIPLY; resolved for SEQUENCE after streak ends.
-        double wildAcc = 0.0;          // sum (ADD) or product (MULTIPLY) of wilds seen
+        double wildAcc = 0.0;
         boolean hasWild = false;
         WildMultiplierAggregation aggregationType = null;
         SymbolConfig firstWildCfg = null;
@@ -52,7 +94,7 @@ final class LineEvaluator {
             int sym  = screen[reel][row];
 
             if (symbols.isScatter(sym)) {
-                if (ri == 0) return 0.0;
+                if (ri == 0) return new LineResult(0.0, -1, 0);
                 break;
             }
 
@@ -70,13 +112,11 @@ final class LineEvaluator {
                             aggregationType = wCfg.wildAggregation();
                             firstWildCfg = wCfg;
                             hasWild = true;
-                            // Initialise accumulator for the chosen mode
                             if (aggregationType == WildMultiplierAggregation.ADD) {
                                 wildAcc = wCfg.wildMultiplier();
                             } else if (aggregationType == WildMultiplierAggregation.MULTIPLY) {
                                 wildAcc = wCfg.wildMultiplier();
                             }
-                            // SEQUENCE: resolved after streak; wildAcc unused
                         } else {
                             if (aggregationType == WildMultiplierAggregation.ADD) {
                                 wildAcc += wCfg.wildMultiplier();
@@ -93,36 +133,30 @@ final class LineEvaluator {
             }
         }
 
-        if (streak < minMatch) return 0.0;
+        if (streak < minMatch) return new LineResult(0.0, -1, 0);
 
-        // Resolve line multiplier
         double lineMultiplier;
         if (!hasWild) {
             lineMultiplier = 1.0;
         } else if (aggregationType == WildMultiplierAggregation.NONE) {
             lineMultiplier = 1.0;
         } else if (aggregationType == WildMultiplierAggregation.SEQUENCE) {
-            // Index by total wilds in the matching streak (not just leading wilds).
             List<Double> seq = firstWildCfg.wildSequence();
             int idx = totalWilds - 1;
             lineMultiplier = (seq != null && idx >= 0 && idx < seq.size()) ? seq.get(idx) : 1.0;
         } else {
-            // ADD or MULTIPLY — wildAcc is already the final value
             lineMultiplier = wildAcc > 0 ? wildAcc : 1.0;
         }
 
-        // Normal symbol payout
         double normalWin = 0.0;
         if (paySymbol >= 0) {
             SymbolConfig cfg = symbols.get(paySymbol);
             if (cfg != null) normalWin = payoutAt(cfg, streak, minMatch) * lineMultiplier;
         }
 
-        // Wild-only payout (all matched positions were wilds)
         double wildWin = 0.0;
         if (wildStreak >= minMatch && firstWildCfg != null) {
             wildWin = payoutAt(firstWildCfg, wildStreak, minMatch);
-            // If wild has no paytable, fall back to the best normal symbol payout for that streak length
             if (wildWin == 0.0) {
                 for (SymbolConfig sc : symbols.all()) {
                     if (sc.type() == SymbolType.NORMAL) {
@@ -133,13 +167,14 @@ final class LineEvaluator {
             }
         }
 
-        return Math.max(normalWin, wildWin);
+        double win = Math.max(normalWin, wildWin);
+        // effective symbol for tracking: if wild-only win, use wild symbol id
+        int trackSym = (win == wildWin && wildWin > 0 && normalWin <= wildWin && firstWildCfg != null)
+                ? firstWildCfg.symbolId() : paySymbol;
+        int trackStreak = (win == wildWin && wildWin > 0 && wildStreak >= minMatch) ? wildStreak : streak;
+        return new LineResult(win, win > 0 ? trackSym : -1, trackStreak);
     }
 
-    /**
-     * Looks up payout for a given streak length.
-     * Paytable index 0 = minMatch hits, index 1 = minMatch+1, etc.
-     */
     private static double payoutAt(SymbolConfig cfg, int streak, int minMatch) {
         List<Double> pt = cfg.paytable();
         if (pt == null || pt.isEmpty()) return 0.0;
