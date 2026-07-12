@@ -887,6 +887,26 @@
       flex-direction: column;
       gap: 0.4rem;
     }
+    .rtp-vol-legend {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.15rem;
+    }
+    .rtp-vol-legend span {
+      font-size: 0.62rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text3);
+      background: var(--surface);
+      white-space: nowrap;
+    }
+    .rtp-vol-legend span.vol-active {
+      color: var(--accent);
+      border-color: var(--accent);
+      font-weight: 700;
+    }
     .rtp-stat-group-title {
       font-size: 0.62rem;
       text-transform: uppercase;
@@ -2437,7 +2457,7 @@ function addSymbolRow(symbolId) {
     updatePaytablePlaceholders(w, m);
     if (def.paytable) {
       const ptInput = row.querySelector('.rtp-paytable-input');
-      if (ptInput) ptInput.placeholder = def.paytable;
+      if (ptInput) { ptInput.placeholder = def.paytable; ptInput.dataset.fixedPlaceholder = '1'; }
     }
   } else {
     updatePaytablePlaceholders(w, m);
@@ -2647,13 +2667,13 @@ function updatePaytablePlaceholders(w, m) {
     7: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0',
   };
   const WILD_TABLE = {
-    1: '10.0',
-    2: '4.0, 10.0',
-    3: '2.0, 4.0, 10.0',
-    4: '1.0, 2.0, 4.0, 10.0',
-    5: '0.5, 1.0, 2.0, 4.0, 10.0',
-    6: '0.2, 0.5, 1.0, 2.0, 4.0, 10.0',
-    7: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 10.0',
+    1: '50.0',
+    2: '10.0, 50.0',
+    3: '5.0, 10.0, 50.0',
+    4: '2.0, 5.0, 10.0, 50.0',
+    5: '1.0, 2.0, 5.0, 10.0, 50.0',
+    6: '0.5, 1.0, 2.0, 5.0, 10.0, 50.0',
+    7: '0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0',
   };
   const normalPh = NORMAL_TABLE[count] || Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
   const wildPh   = WILD_TABLE[count]   || Array.from({length: count}, (_, i) => ((i + 1) * 2).toFixed(1)).join(', ');
@@ -2669,6 +2689,7 @@ function updatePaytablePlaceholders(w, m) {
   const lowPh = LOW_TABLE[count] || Array.from({length: count}, (_, i) => ((i + 1) * 0.5).toFixed(1)).join(', ');
   document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
     if (inp.disabled) return; // scatter — keep n/a
+    if (inp.dataset.fixedPlaceholder) return; // SYM_DEFAULTS placeholder — don't overwrite
     const row = inp.closest('.rtp-sym-row');
     const symId = row ? parseInt(row.dataset.symId) : 0;
     const isWild = row && row.querySelector('select') && row.querySelector('select').value === 'WILD';
@@ -2752,7 +2773,9 @@ function collectRtpRequest() {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const symId = parseInt(row.dataset.symId);
     const type = row.querySelector('select').value;
-    const ptRaw = row.querySelector('input[type=text]').value.trim();
+    const ptRaw = (row.querySelector('input[type=text]').value.trim()
+                || row.querySelector('input[type=text]').placeholder.trim())
+                .replace(/^n\/a$/i, '');
     const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
     const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
@@ -2934,6 +2957,12 @@ function renderRtpResult(container, r, payload) {
             <span class="rtp-stat-label">Volatility</span>
             <span class="rtp-stat-value">${r.volatilityLabel}</span>
           </div>
+        </div>
+        <div class="rtp-vol-legend">
+          <span class="${r.volatilityLabel === 'Low'     ? 'vol-active' : ''}">Low &lt; 2.0</span>
+          <span class="${r.volatilityLabel === 'Medium'  ? 'vol-active' : ''}">Medium 2.0 – 5.0</span>
+          <span class="${r.volatilityLabel === 'High'    ? 'vol-active' : ''}">High 5.0 – 10.0</span>
+          <span class="${r.volatilityLabel === 'Extreme' ? 'vol-active' : ''}">Extreme ≥ 10.0</span>
         </div>
       </div>
 
