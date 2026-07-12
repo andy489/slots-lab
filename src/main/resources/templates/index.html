@@ -1268,7 +1268,6 @@
             <div class="section-card-header">
               <span class="section-label">Screen &amp; Line Configuration</span>
               <div style="display:flex;align-items:center;gap:0.5rem">
-                <span class="rtp-line-count" id="rtp-line-count">0</span>
                 <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
@@ -1294,7 +1293,7 @@
               </div>
               <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem">
                 <div class="rtp-lines-grid" id="rtp-lines-list"></div>
-                <button class="add-btn" onclick="addLineDef()">+ Add payline</button>
+                <button class="add-btn" id="add-payline-btn" onclick="addLineDef()">+ Add payline (0)</button>
               </div>
             </div>
           </div>
@@ -2502,8 +2501,8 @@ function renumberLines() {
 }
 function updateLineCount() {
   const n = document.querySelectorAll('.rtp-line-row').length;
-  const el = document.getElementById('rtp-line-count');
-  if (el) el.textContent = n;
+  const btn = document.getElementById('add-payline-btn');
+  if (btn) btn.textContent = `+ Add payline (${n})`;
   updateLineDefsToggleBtn();
 }
 
