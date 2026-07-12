@@ -1908,6 +1908,7 @@ function renderHistory(entries) {
     `;
     item.onclick = () => {
       genOutput.setValue(entry.result);
+      storeGeneratedReels(entry.result);
       if (entry.config) {
         try { restoreGenerateForm(JSON.parse(entry.config)); } catch(e) {}
       }
