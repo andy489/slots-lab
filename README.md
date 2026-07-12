@@ -1,1 +1,1 @@
-# Slot Lab
+# Slots Lab
