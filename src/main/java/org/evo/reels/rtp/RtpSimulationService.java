@@ -77,10 +77,7 @@ public class RtpSimulationService {
                 grandSumSquared += s.sumSquaredWin();
                 grandHits      += s.hitCount();
                 if (s.maxWin() > grandMaxWin) grandMaxWin = s.maxWin();
-                // Merge median trackers by re-adding sampled values (approximate but correct for large N)
-                MedianTracker mt = s.medianTracker();
-                double med = mt.median();
-                if (med > 0) globalMedian.add(med);
+                globalMedian.merge(s.medianTracker());
             }
 
             long elapsedMs = (System.nanoTime() - start) / 1_000_000;

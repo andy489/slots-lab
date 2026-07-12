@@ -64,8 +64,10 @@ public class RtpWorker implements Callable<SpinStats> {
             double win = strategy.evaluate(screen, screenWidth, symbols, lines, minMatch);
             totalWin += win;
             sumSquared += win * win;
-            medianTracker.add(win);
-            if (win > 0) hitCount++;
+            if (win > 0) {
+                hitCount++;
+                medianTracker.add(win);
+            }
             if (win > maxWin) maxWin = win;
         }
 

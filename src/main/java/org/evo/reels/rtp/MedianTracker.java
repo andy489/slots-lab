@@ -24,6 +24,14 @@ public class MedianTracker {
         }
     }
 
+    /** Merge another tracker's samples into this one via reservoir sampling. */
+    public void merge(MedianTracker other) {
+        int otherSize = (int) Math.min(other.count, CAPACITY);
+        for (int i = 0; i < otherSize; i++) {
+            add(other.reservoir[i]);
+        }
+    }
+
     public double median() { return percentile(0.5); }
 
     public double percentile(double p) {
