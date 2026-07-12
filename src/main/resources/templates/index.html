@@ -9,10 +9,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/javascript/javascript.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -348,10 +352,12 @@
     .rtp-line-input::placeholder,
     #rtp-screen-width::placeholder,
     #rtp-screen-height::placeholder,
-    #rtp-min-match::placeholder {
+    #rtp-min-match::placeholder,
+    #spin-test-reel-idx::placeholder,
+    #spin-test-screen::placeholder {
       color: var(--accent);
       opacity: 0.55;
-      font-style: italic;
+      font-style: normal;
     }
 
     /* ── Reel set cards (nested) ── */
@@ -557,6 +563,8 @@
     .CodeMirror-scroll { height: 100%; }
     .CodeMirror-gutters { background: var(--cm-gut) !important; border-right: 1px solid var(--border) !important; }
     .CodeMirror-linenumber { color: var(--cm-gutnum) !important; padding: 0 10px 0 8px !important; }
+    .CodeMirror-foldgutter { width: 22px !important; }
+    .CodeMirror-foldgutter-open, .CodeMirror-foldgutter-folded { font-size: 22px !important; line-height: 1 !important; cursor: pointer !important; display: inline-block !important; transform: scaleX(1.2) !important; }
     .CodeMirror-cursor { border-left-color: var(--cm-caret) !important; }
     .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--cm-sel) !important; }
     .CodeMirror .cm-property  { color: var(--js-key)   !important; font-weight: 600; }
@@ -625,6 +633,221 @@
     #conv-format { width: 140px; }
     input.sm  { width: 110px; }
     input.sm-s { width: 70px; }
+
+    /* ── Spin Test tab ── */
+    .spin-test-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      overflow: hidden;
+    }
+    .spin-test-nav {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface2);
+    }
+    .spin-test-output-col {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .spin-dto-highlight { background: var(--accent-dim) !important; }
+    .spin-test-json-pane {
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      margin-top: 0.5rem;
+    }
+    .spin-test-json-pane .pane-body { display: flex; flex-direction: column; }
+    .spin-test-json-pane .pane-body .CodeMirror {
+      height: 260px;
+      font-size: 12px; line-height: 1.55;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      border: none; border-radius: 0;
+      background: var(--cm-bg) !important;
+      color: var(--cm-line) !important;
+    }
+    .spin-test-results-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .spin-test-results-body::-webkit-scrollbar { width: 6px; }
+    .spin-test-results-body::-webkit-scrollbar-track { background: transparent; }
+    .spin-test-results-body::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+    .spin-count-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .spin-count-opt {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .spin-count-opt input { display: none; }
+    .spin-count-opt span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 36px;
+      border-radius: 6px;
+      border: 1px solid var(--border-hi);
+      background: var(--surface2);
+      color: var(--text2);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .spin-count-opt input:checked + span {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .spin-count-opt span:hover { background: var(--surface3); }
+    .spin-result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+    .spin-result-card-header {
+      padding: 0.5rem 1rem;
+      background: var(--surface4);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .spin-result-card-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--accent);
+    }
+    .spin-result-card-meta {
+      font-size: 0.68rem;
+      color: var(--text3);
+    }
+    .spin-result-card-body {
+      padding: 0.9rem 1rem;
+    }
+    .spin-screen-grid {
+      display: flex;
+      gap: 0.3rem;
+      margin-bottom: 0.75rem;
+    }
+    .spin-screen-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 36px;
+      align-items: center;
+    }
+    .spin-screen-cell {
+      width: 36px;
+      height: 30px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text2);
+      font-family: monospace;
+    }
+    .spin-screen-cell.wild { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .spin-screen-cell.scatter { border-color: hsl(270, 70%, 65%); color: hsl(270, 70%, 65%); background: hsla(270, 70%, 65%, .12); }
+    .spin-payout-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+    }
+    .spin-payout-table th {
+      text-align: left;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text3);
+      padding: 0.3rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .spin-payout-table td {
+      padding: 0.3rem 0.5rem;
+      color: var(--text2);
+      border-bottom: 1px solid var(--border);
+    }
+    .spin-payout-table tr:last-child td { border-bottom: none; }
+    .spin-no-win {
+      font-size: 0.78rem;
+      color: var(--text3);
+      font-style: italic;
+    }
+    /* ── Spin carousel ── */
+    .spin-carousel {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .spin-carousel-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.45rem 0.75rem;
+      background: var(--surface4);
+      border: 1px solid var(--border);
+      border-radius: 10px 10px 0 0;
+      border-bottom: none;
+    }
+    .spin-carousel-counter {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text2);
+      letter-spacing: .06em;
+    }
+    .spin-carousel-btns { display: flex; gap: 0.4rem; }
+    .spin-carousel-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border-hi);
+      background: var(--surface2);
+      color: var(--text2);
+      cursor: pointer;
+      transition: background .12s, color .12s;
+      flex-shrink: 0;
+    }
+    .spin-carousel-btn:hover:not(:disabled) { background: var(--surface3); color: var(--text1); }
+    .spin-carousel-btn:disabled { opacity: .35; cursor: default; }
+    .spin-carousel-slide {
+      border: 1px solid var(--border);
+      border-radius: 0 0 10px 10px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--card-shadow);
+    }
+
     /* ── History panel ── */
     .history-panel {
       flex-shrink: 0;
@@ -1403,7 +1626,7 @@
   </button>
   <div class="tabbar-sep"></div>
   <button class="tab-btn active" onclick="switchTab('generate', this)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h0"/><path d="M17.8 6.2L19 5"/><path d="M3 21l9-9"/><path d="M12.2 6.2L11 5"/></svg>
     Generate
   </button>
   <button class="tab-btn" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
@@ -1416,6 +1639,10 @@
       <rect x="0"  y="23" width="24" height="1" fill="currentColor" opacity=".4"/>
     </svg>
     SIMULATION
+  </button>
+  <button class="tab-btn" onclick="switchTab('spin-test', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+    Spin Test
   </button>
   <button class="tab-btn" onclick="switchTab('convert', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
@@ -1685,6 +1912,85 @@
     </div>
   </div>
 
+  <!-- ══ SPIN TEST TAB ══ -->
+  <div id="tab-spin-test" class="tab-panel">
+    <div class="spin-test-layout">
+
+      <!-- Left: controls -->
+      <div class="spin-test-nav">
+        <div class="form-col-header">
+          <span class="form-col-title">Options</span>
+          <button class="run-btn" id="spin-test-run-btn" onclick="runSpinTest()">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run
+          </button>
+        </div>
+        <div class="form-scroll">
+
+          <!-- Spin Count -->
+          <div class="section-card">
+            <div class="section-card-header"><span class="section-label">Spin Count</span></div>
+            <div class="section-card-body">
+              <div class="spin-count-group">
+                <label class="spin-count-opt"><input type="radio" name="spin-count" value="1" checked/><span>1</span></label>
+                <label class="spin-count-opt"><input type="radio" name="spin-count" value="3"/><span>3</span></label>
+                <label class="spin-count-opt"><input type="radio" name="spin-count" value="10"/><span>10</span></label>
+                <label class="spin-count-opt"><input type="radio" name="spin-count" value="20"/><span>20</span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option 2: Fixed reel set + stops -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <span class="section-label">Fixed Reel Set &amp; Stops</span>
+              <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional</span>
+            </div>
+            <div class="section-card-body">
+              <div class="field-full">
+                <label for="spin-test-reel-idx">Reel Set Index</label>
+                <input type="number" id="spin-test-reel-idx" placeholder="leave blank for random" min="0"/>
+              </div>
+              <div class="field-full">
+                <label for="spin-test-stops">Stop Positions (comma-separated)</label>
+                <input type="text" id="spin-test-stops" class="array-input" placeholder="e.g. 0,5,12,3,7"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option 3: Fixed screen -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <span class="section-label">Fixed Screen Override</span>
+              <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional — overrides above</span>
+            </div>
+            <div class="section-card-body">
+              <div class="field-full">
+                <label for="spin-test-screen">Screen [[col],[col],…]</label>
+                <textarea id="spin-test-screen" rows="4" style="height:80px;resize:vertical;font-family:monospace;font-size:0.8rem" placeholder="e.g. [[1,2,3],[4,5,6],[7,8,9],[1,2,3],[4,5,6]]"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <span class="status" id="spin-test-status"></span>
+        </div>
+      </div>
+
+      <!-- Right: output -->
+      <div class="spin-test-output-col">
+        <div class="output-col-header">
+          <span class="output-col-title">Spin Results</span>
+        </div>
+        <div class="spin-test-results-body" id="spin-test-results-body">
+          <div class="rtp-placeholder">
+            <span>Configure options and click Run</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ══ CONVERT TAB ══ -->
   <div id="tab-convert" class="tab-panel">
     <div class="conv-layout">
@@ -1756,9 +2062,9 @@ const cmOpts = {
   indentUnit: 2,
   tabSize: 2,
 };
-const genOutput  = CodeMirror.fromTextArea(document.getElementById('gen-output'),  { ...cmOpts, readOnly: true });
-const convInput  = CodeMirror.fromTextArea(document.getElementById('conv-input'),  { ...cmOpts });
-const convOutput = CodeMirror.fromTextArea(document.getElementById('conv-output'), { ...cmOpts, readOnly: true });
+const genOutput      = CodeMirror.fromTextArea(document.getElementById('gen-output'),        { ...cmOpts, readOnly: true });
+const convInput      = CodeMirror.fromTextArea(document.getElementById('conv-input'),        { ...cmOpts });
+const convOutput     = CodeMirror.fromTextArea(document.getElementById('conv-output'),       { ...cmOpts, readOnly: true });
 
 /* ── Reel Set Form Builder ── */
 let reelSetCounter = 0;
@@ -2072,6 +2378,7 @@ function switchTab(name, btn) {
     if (name === 'generate') genOutput.refresh();
     else if (name === 'convert') { convInput.refresh(); convOutput.refresh(); }
     else if (name === 'rtp') tryLoadReelsFromEditor();
+    else if (name === 'spin-test') { tryLoadReelsFromEditor(); }
   }, 0);
 }
 
@@ -3555,6 +3862,333 @@ function applyImportCounts() {
   });
   updateLineDefsToggleBtn();
 })();
+
+/* ── Spin Test Tab ── */
+
+function buildSpinTestPayload() {
+  const errors = [];
+
+  if (!_latestReelSets || _latestReelSets.length === 0) {
+    tryLoadReelsFromEditor();
+  }
+  if (!_latestReelSets || _latestReelSets.length === 0)
+    return { errors: ['No generated reels found. Run Generate first.'] };
+
+  // Reuse rtp form fields for the shared configuration
+  const chances = [];
+  let chanceSum = 0;
+  _latestReelSets.forEach((_, i) => {
+    const el = document.getElementById('rtp-chance-' + i);
+    const v  = parseFloat(el?.value);
+    if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': chance must be >= 0'); return; }
+    chances.push({ setIndex: i, chance: v });
+    chanceSum += v;
+  });
+  if (Math.abs(chanceSum - 100) > 0.05)
+    errors.push('Reel set chances must sum to 100.0% (current: ' + chanceSum.toFixed(1) + '%). Configure in the Simulation tab.');
+
+  const screenWidth  = parseInt(document.getElementById('rtp-screen-width')?.value);
+  const screenHeight = parseInt(document.getElementById('rtp-screen-height')?.value);
+  const minMatch     = parseInt(document.getElementById('rtp-min-match')?.value);
+  if (isNaN(screenWidth)  || screenWidth  < 1) errors.push('Screen width not set — configure in Simulation tab');
+  if (isNaN(screenHeight) || screenHeight < 1) errors.push('Screen height not set — configure in Simulation tab');
+  if (isNaN(minMatch) || minMatch < 1)         errors.push('Min Match not set — configure in Simulation tab');
+
+  const lineDefinitions = [];
+  document.querySelectorAll('.rtp-line-row').forEach((row) => {
+    const nums = row.querySelector('.rtp-line-input').value.trim().split(',').map(s => parseInt(s.trim(), 10));
+    if (!nums.some(isNaN)) lineDefinitions.push(nums);
+  });
+  if (lineDefinitions.length === 0) errors.push('No line definitions — configure in Simulation tab');
+
+  const symbols = [];
+  document.querySelectorAll('.rtp-sym-row').forEach(row => {
+    const symId  = parseInt(row.dataset.symId);
+    const type   = row.querySelector('select').value;
+    const ptRaw  = (row.querySelector('input[type=text]').value.trim() || row.querySelector('input[type=text]').placeholder.trim()).replace(/^n\/a$/i, '');
+    const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
+    const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
+    const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
+    const seqRaw   = row.querySelector('.rtp-wild-seq')?.value.trim() || '';
+    const wildSequence = (wildAgg === 'SEQUENCE' && seqRaw) ? seqRaw.split(',').map(s => parseFloat(s.trim())) : [];
+    symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence });
+  });
+  if (symbols.length === 0) errors.push('No symbols configured — configure in Simulation tab');
+
+  if (errors.length > 0) return { errors };
+
+  const strategy = document.getElementById('rtp-strategy')?.value || 'LTR';
+  const count    = parseInt(document.querySelector('input[name="spin-count"]:checked')?.value) || 1;
+
+  const reelIdxRaw = document.getElementById('spin-test-reel-idx').value.trim();
+  const reelSetIndex = reelIdxRaw !== '' ? parseInt(reelIdxRaw) : null;
+
+  const stopsRaw = document.getElementById('spin-test-stops').value.trim();
+  const stops = stopsRaw ? stopsRaw.split(',').map(s => parseInt(s.trim(), 10)) : null;
+
+  let screen = null;
+  const screenRaw = document.getElementById('spin-test-screen').value.trim();
+  if (screenRaw) {
+    try {
+      screen = JSON.parse(screenRaw);
+    } catch(e) {
+      return { errors: ['Fixed screen: invalid JSON — ' + e.message] };
+    }
+  }
+
+  return {
+    errors: [],
+    payload: {
+      reelSets: _latestReelSets,
+      reelSetChances: chances,
+      symbols,
+      strategy,
+      screenWidth,
+      screenHeight,
+      minMatch,
+      lineDefinitions,
+      count,
+      reelSetIndex,
+      stops,
+      screen
+    }
+  };
+}
+
+async function runSpinTest() {
+  const btn = document.getElementById('spin-test-run-btn');
+  const { errors, payload } = buildSpinTestPayload();
+  if (errors.length > 0) {
+    showToast(errors[0], true);
+    setStatus('spin-test', false, errors[0]);
+    return;
+  }
+
+  btn.disabled = true;
+  setStatus('spin-test', null, 'Running…');
+
+  const body = document.getElementById('spin-test-results-body');
+  body.innerHTML = `<div class="rtp-placeholder"><span>Generating spins…</span></div>`;
+
+  try {
+    const res = await fetch('/api/spin-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (d.error) {
+      setStatus('spin-test', false, d.error);
+      body.innerHTML = `<div class="rtp-placeholder"><span style="color:var(--error)">${escapeHtml(d.error)}</span></div>`;
+    } else {
+      const spins = JSON.parse(d.result);
+      renderSpinTestResults(body, spins, payload);
+      setStatus('spin-test', true, 'Done');
+    }
+  } catch(e) {
+    setStatus('spin-test', false, 'Network error');
+    body.innerHTML = `<div class="rtp-placeholder"><span style="color:var(--error)">Network error</span></div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderSpinTestResults(container, spins, payload) {
+  if (!spins || spins.length === 0) {
+    container.innerHTML = `<div class="rtp-placeholder"><span>No results</span></div>`;
+    return;
+  }
+
+  const wildIds = new Set(
+    (payload.symbols || []).filter(s => s.type === 'WILD').map(s => s.symbolId)
+  );
+  const scatterIds = new Set(
+    (payload.symbols || []).filter(s => s.type === 'SCATTER').map(s => s.symbolId)
+  );
+
+  function buildCardHtml(spin, idx) {
+    const setLabel = spin.reelSetIndex >= 0 ? `ReelSet #${spin.reelSetIndex}` : 'Fixed Screen';
+    const stopsStr = spin.reelsStopPositions && spin.reelsStopPositions.length > 0 ? `[${spin.reelsStopPositions.join(', ')}]` : '—';
+    const totalWin = (spin.payoutData || []).reduce((s, e) => s + e.winAmount, 0);
+    const screenHtml = (spin.screen || []).map(col => {
+      const cells = col.map(sym => {
+        const isWild    = wildIds.has(sym);
+        const isScatter = scatterIds.has(sym);
+        const cls = isWild ? ' wild' : isScatter ? ' scatter' : '';
+        return `<div class="spin-screen-cell${cls}">${sym}</div>`;
+      }).join('');
+      return `<div class="spin-screen-col">${cells}</div>`;
+    }).join('');
+    let payoutHtml;
+    if (!spin.payoutData || spin.payoutData.length === 0) {
+      payoutHtml = `<span class="spin-no-win">No winning combinations</span>`;
+    } else {
+      const rows = spin.payoutData.flatMap(wrapper => {
+        return (wrapper.lines || []).map(e => {
+          const lineDef = e.lineDefinition ? `[${e.lineDefinition.join(', ')}]` : '—';
+          const lineSymbols = e.lineSymbols ? `[${e.lineSymbols.join(', ')}]` : '—';
+          return `<tr>
+            <td>${e.lineId}</td>
+            <td>${e.matchType}</td>
+            <td>${e.lineSize}</td>
+            <td>${e.lineStart}</td>
+            <td>${e.payoutSymbolId}</td>
+            <td>${lineDef}</td>
+            <td>${lineSymbols}</td>
+            <td>${e.lineMultiplier}</td>
+            <td style="color:var(--success);font-weight:700">${e.winAmount.toFixed(2)}</td>
+          </tr>`;
+        });
+      }).join('');
+      payoutHtml = `
+        <table class="spin-payout-table">
+          <thead><tr><th>Line ID</th><th>Match</th><th>Line Size</th><th>Start Reel</th><th>Tile ID</th><th>Line Definition</th><th>Line Symbols</th><th>Multiplier</th><th>Win</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+    return `
+      <div class="spin-result-card-header">
+        <span class="spin-result-card-title">Spin ${idx + 1}</span>
+        <span class="spin-result-card-meta">${setLabel} &nbsp;·&nbsp; stops: ${stopsStr} &nbsp;·&nbsp; total win: <strong style="color:var(--accent)">${totalWin.toFixed(2)}</strong></span>
+      </div>
+      <div class="spin-result-card-body">
+        <div class="spin-screen-grid">${screenHtml}</div>
+        ${payoutHtml}
+      </div>`;
+  }
+
+  container.innerHTML = '';
+
+  // ── Carousel ──
+  const n = spins.length;
+  let current = 0;
+  let highlightSpin = null; // assigned after cm is created
+
+  const carousel = document.createElement('div');
+  carousel.className = 'spin-carousel';
+
+  const navBar = document.createElement('div');
+  navBar.className = 'spin-carousel-nav';
+
+  const counter = document.createElement('span');
+  counter.className = 'spin-carousel-counter';
+
+  const btnPrev = document.createElement('button');
+  btnPrev.className = 'spin-carousel-btn';
+  btnPrev.title = 'Previous spin';
+  btnPrev.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+
+  const btnNext = document.createElement('button');
+  btnNext.className = 'spin-carousel-btn';
+  btnNext.title = 'Next spin';
+  btnNext.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+  const btns = document.createElement('div');
+  btns.className = 'spin-carousel-btns';
+  btns.appendChild(btnPrev);
+  btns.appendChild(btnNext);
+
+  navBar.appendChild(counter);
+  navBar.appendChild(btns);
+
+  const slide = document.createElement('div');
+  slide.className = 'spin-carousel-slide';
+
+  carousel.appendChild(navBar);
+  carousel.appendChild(slide);
+
+  function showSlide(idx) {
+    current = Math.max(0, Math.min(n - 1, idx));
+    counter.textContent = `Spin ${current + 1} / ${n}`;
+    slide.innerHTML = buildCardHtml(spins[current], current);
+    btnPrev.disabled = current === 0;
+    btnNext.disabled = current === n - 1;
+    if (highlightSpin) highlightSpin(current);
+  }
+
+  btnPrev.addEventListener('click', () => showSlide(current - 1));
+  btnNext.addEventListener('click', () => showSlide(current + 1));
+  showSlide(0);
+
+  container.appendChild(carousel);
+
+  // ── JSON DTO pane ──
+  const copyBtnHtml = `<button class="copy-btn" title="Copy JSON">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  </button>`;
+  const pane = document.createElement('div');
+  pane.className = 'spin-test-json-pane';
+  pane.innerHTML = `
+    <div class="pane-header">
+      <span class="pane-title">JSON DTO</span>
+      ${copyBtnHtml}
+    </div>
+    <div class="pane-body"></div>`;
+  container.appendChild(pane);
+
+  const dtos = spins;
+
+  // Compute per-spin line ranges by serialising each DTO individually first
+  const spinJsons = dtos.map(d => compactJson(d));
+  const lineRanges = [];
+  let lineOffset = 1; // line 0 = "["
+  for (let i = 0; i < spinJsons.length; i++) {
+    const indented = spinJsons[i].split('\n').map(l => '  ' + l);
+    const from = lineOffset;
+    const to   = lineOffset + indented.length - 1;
+    lineRanges.push({ from, to });
+    lineOffset = to + 1; // next spin starts on the very next line (comma is on the last line of current)
+  }
+
+  // Build full JSON: "[" + indented items joined by "," + "]"
+  const json = '[\n' + spinJsons.map(j => j.split('\n').map(l => '  ' + l).join('\n')).join(',\n') + '\n]';
+
+  const cmContainer = pane.querySelector('.pane-body');
+  const cm = CodeMirror(cmContainer, {
+    ...cmOpts,
+    readOnly: true,
+    value: json,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+    extraKeys: { 'Ctrl-Q': cm => cm.foldCode(cm.getCursor()) }
+  });
+  setTimeout(() => {
+    cm.refresh();
+  }, 0);
+
+  // Wire carousel ↔ JSON highlight
+  let prevHighlightRange = null;
+  highlightSpin = function(idx) {
+    if (prevHighlightRange) {
+      for (let l = prevHighlightRange.from; l <= prevHighlightRange.to; l++)
+        cm.removeLineClass(l, 'background', 'spin-dto-highlight');
+    }
+    const r = lineRanges[idx];
+    if (r) {
+      for (let l = r.from; l <= r.to; l++)
+        cm.addLineClass(l, 'background', 'spin-dto-highlight');
+      cm.scrollIntoView({ line: r.from, ch: 0 }, 40);
+      prevHighlightRange = r;
+    }
+  };
+  highlightSpin(0);
+
+  pane.querySelector('.copy-btn').addEventListener('click', function() {
+    navigator.clipboard.writeText(cm.getValue()).then(() => {
+      const btn = this;
+      btn.classList.add('copied');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1800);
+    });
+  });
+}
+
+function compactJson(obj) {
+  // Serialize with 2-space indent, then collapse arrays of primitives onto one line
+  const raw = JSON.stringify(obj, null, 2);
+  return raw.replace(/\[\s*([\d,\s-]+?)\s*\]/g, m => '[' + m.replace(/\s+/g, '').slice(1,-1).split(',').join(', ') + ']');
+}
 </script>
 
 <!-- ══ INFO MODAL ══ -->
