@@ -1,0 +1,13 @@
+package com.slotslab.simulation.strategy;
+
+import com.slotslab.simulation.config.SymbolTable;
+import com.slotslab.simulation.eval.LineEvaluator;
+
+public class BwPayoutStrategy implements PayoutStrategy {
+    @Override
+    public double evaluate(int[][] screen, int screenWidth, SymbolTable symbols, int[][] lines, int minMatch) {
+        double ltr = LineEvaluator.evalLtr(screen, screenWidth, symbols, lines, minMatch);
+        double rtl = LineEvaluator.evalRtl(screen, screenWidth, symbols, lines, minMatch);
+        return ltr + rtl;
+    }
+}

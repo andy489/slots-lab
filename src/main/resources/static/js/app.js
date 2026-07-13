@@ -310,6 +310,7 @@ loadRtpHistory();
 
 document.getElementById('rtp-symbol-rows').addEventListener('input', updateSymConfigToggleBtn);
 document.getElementById('rtp-lines-list').addEventListener('input', updateLineDefsToggleBtn);
+onStrategyChange();
 onConvFormatChange();
 
 /* ── Convert tab defaults ── */
@@ -871,6 +872,7 @@ function restoreRtpForm(payload) {
     }
   });
   onScreenSizeChange();
+  onStrategyChange();
 }
 
 function clearGenerateResult() {
@@ -1067,6 +1069,11 @@ function onSymbolTypeChange(sel) {
   const aggSel = row.querySelector('.rtp-wild-agg');
   if (isWild) {
     if (aggSel) onWildAggChange(aggSel);
+    const isWays = document.getElementById('rtp-strategy').value === 'WAYS';
+    if (isWays) {
+      wildFields.style.display = 'none';
+      if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
+    }
   } else {
     // Reset to NONE and hide sequence/mult when switching away from Wild
     if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
@@ -1212,13 +1219,26 @@ function toggleSymConfig() {
   }
   updateSymConfigToggleBtn();
 }
+function onStrategyChange() {
+  const isWays = document.getElementById('rtp-strategy').value === 'WAYS';
+  const section = document.getElementById('line-defs-section');
+  const addBtn = document.getElementById('linedef-add-btn');
+  if (section) section.style.display = isWays ? 'none' : '';
+  if (addBtn) addBtn.style.display = isWays ? 'none' : '';
+  document.querySelectorAll('.rtp-sym-row').forEach(row => {
+    const typeSel = row.querySelector('select');
+    if (!typeSel || typeSel.value !== 'WILD') return;
+    const wildFields = row.querySelector('.rtp-wild-fields');
+    if (wildFields) wildFields.style.display = isWays ? 'none' : '';
+    if (isWays) {
+      const aggSel = row.querySelector('.rtp-wild-agg');
+      if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
+    }
+  });
+}
 function onScreenSizeChange() {
   const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
   const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
-  const lineplaceholder = Array.from({length: w}, (_, i) => i < 3 ? 1 : 0).join(', ');
-  document.querySelectorAll('.rtp-line-input').forEach(inp => {
-    inp.placeholder = lineplaceholder;
-  });
   updatePaytablePlaceholders(w, m);
   // Refresh sequence placeholders for any SEQUENCE wilds
   const seqPh = Array.from({length: w}, (_, i) => (i + 1).toFixed(1)).join(', ');
@@ -1319,22 +1339,56 @@ function collectRtpRequest() {
   if (!isNaN(minMatch) && !isNaN(screenWidth) && minMatch > screenWidth)
     errors.push('Min Match (' + minMatch + ') cannot exceed screen width (' + screenWidth + ')');
 
-  // Line definitions
+  // Line definitions — three-pass validation: format → positions → duplicates
+  // WAYS strategy does not use paylines — skip line validation entirely
   const lineRows = document.querySelectorAll('.rtp-line-row');
-  if (lineRows.length === 0) errors.push('At least one line definition is required');
+  const _strategyForLineCheck = document.getElementById('rtp-strategy').value;
+  const isWays = _strategyForLineCheck === 'WAYS';
+  if (!isWays && lineRows.length === 0) errors.push('At least one line definition is required');
   const lineDefinitions = [];
-  const seenLines = new Set();
+  const parsedLines = [];   // store per-row parse results for later passes
+
+  // Pass 1: format (only digits, commas, spaces) — placeholder-only lines are skipped (treated as not entered)
   lineRows.forEach((row, li) => {
-    const raw = row.querySelector('.rtp-line-input').value.trim();
+    const inp = row.querySelector('.rtp-line-input');
+    const raw = inp.value.trim();
+    if (raw === '') {
+      parsedLines.push(null);
+      return;
+    }
+    if (!/^[\d ,]+$/.test(raw)) {
+      errors.push('Line ' + (li+1) + ': must contain only numbers separated by commas');
+      parsedLines.push(null);
+      return;
+    }
     const nums = raw.split(',').map(s => parseInt(s.trim(), 10));
-    if (nums.some(isNaN)) { errors.push('Line ' + (li+1) + ': invalid position'); return; }
+    if (nums.some(isNaN)) {
+      errors.push('Line ' + (li+1) + ': must contain only numbers separated by commas');
+      parsedLines.push(null);
+      return;
+    }
+    parsedLines.push(nums);
+  });
+
+  if (!isWays && parsedLines.every(n => n === null) && lineRows.length > 0)
+    errors.push('At least one line definition must be filled in');
+
+  // Pass 2: length and position range
+  parsedLines.forEach((nums, li) => {
+    if (nums === null) return;
     if (!isNaN(screenWidth) && nums.length !== screenWidth)
       errors.push('Line ' + (li+1) + ': must have exactly ' + screenWidth + ' positions');
     if (!isNaN(screenHeight) && nums.some(n => n < 0 || n >= screenHeight))
       errors.push('Line ' + (li+1) + ': positions must be 0–' + (screenHeight-1));
+  });
+
+  // Pass 3: duplicates (only among valid lines)
+  const seenLines = new Set();
+  parsedLines.forEach((nums, li) => {
+    if (nums === null) return;
     const key = JSON.stringify(nums);
     if (seenLines.has(key)) errors.push('Line ' + (li+1) + ': duplicate payline');
-    seenLines.add(key);
+    else seenLines.add(key);
     lineDefinitions.push(nums);
   });
 
@@ -1343,9 +1397,7 @@ function collectRtpRequest() {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const symId = parseInt(row.dataset.symId);
     const type = row.querySelector('select').value;
-    const ptRaw = (row.querySelector('input[type=text]').value.trim()
-                || row.querySelector('input[type=text]').placeholder.trim())
-                .replace(/^n\/a$/i, '');
+    const ptRaw = row.querySelector('input[type=text]').value.trim().replace(/^n\/a$/i, '');
     const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
     const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
@@ -1353,6 +1405,8 @@ function collectRtpRequest() {
     const wildSequence = (wildAgg === 'SEQUENCE' && seqRaw)
       ? seqRaw.split(',').map(s => Math.round(parseFloat(s.trim()) * 10) / 10)
       : [];
+    if (type === 'NORMAL' && paytable.length === 0)
+      errors.push('Symbol ' + symId + ': paytable is required for NORMAL symbols');
     if (paytable.some(isNaN))
       errors.push('Symbol ' + symId + ': paytable contains invalid numbers');
     if (paytable.some(v => !isNaN(v) && Math.round(v * 10) !== v * 10))
@@ -1374,6 +1428,10 @@ function collectRtpRequest() {
   });
 
   if (symbols.length === 0) errors.push('At least one symbol must be configured');
+
+  if (!symbols.some(s => s.type === 'NORMAL' && s.paytable.length > 0))
+    errors.push('At least one NORMAL symbol with a paytable is required');
+
 
   // Settings
   const strategy    = document.getElementById('rtp-strategy').value;
@@ -1538,9 +1596,10 @@ function renderRtpResult(container, r, payload) {
             <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${{
               LTR: 'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
               RTL: 'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
-              BW:  'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.'
+              BW:  'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
+              ADJ: 'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.'
             }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>
@@ -1979,7 +2038,25 @@ function renderSpinTestResults(container, spins, payload) {
     if (!spin.payoutData || spin.payoutData.length === 0) {
       payoutHtml = `<span class="spin-no-win">No winning combinations</span>`;
     } else {
+      const isWaysWrapper = w => w._className && w._className.includes('WayLinesDto');
       const rows = spin.payoutData.flatMap(wrapper => {
+        if (isWaysWrapper(wrapper)) {
+          return (wrapper.wayLines || []).map(e => {
+            const ways        = e.ways        ? `[${e.ways.join(', ')}]`                 : '—';
+            const waysWithMul = e.waysWithWaysMultipliers ? `[${e.waysWithWaysMultipliers.join(', ')}]` : '—';
+            return `<tr>
+              <td>${e.floatId}</td>
+              <td>WAYS</td>
+              <td>${e.lineSize}</td>
+              <td>0</td>
+              <td>${e.payoutSymbolId}</td>
+              <td>${ways}</td>
+              <td>${waysWithMul}</td>
+              <td>${e.totalSimpleLines}</td>
+              <td style="color:var(--success);font-weight:700">${e.winAmount.toFixed(2)}</td>
+            </tr>`;
+          });
+        }
         return (wrapper.lines || []).map(e => {
           const lineDef = e.lineDefinition ? `[${e.lineDefinition.join(', ')}]` : '—';
           const lineSymbols = e.lineSymbols ? `[${e.lineSymbols.join(', ')}]` : '—';
@@ -1996,9 +2073,13 @@ function renderSpinTestResults(container, spins, payload) {
           </tr>`;
         });
       }).join('');
+      const hasWays = spin.payoutData.some(isWaysWrapper);
+      const headers = hasWays
+        ? `<tr><th>Line ID</th><th>Match</th><th>Line Size</th><th>Start Reel</th><th>Tile ID</th><th>Ways</th><th>Ways×Mult</th><th>Simple Lines</th><th>Win</th></tr>`
+        : `<tr><th>Line ID</th><th>Match</th><th>Line Size</th><th>Start Reel</th><th>Tile ID</th><th>Line Definition</th><th>Line Symbols</th><th>Multiplier</th><th>Win</th></tr>`;
       payoutHtml = `
         <table class="spin-payout-table">
-          <thead><tr><th>Line ID</th><th>Match</th><th>Line Size</th><th>Start Reel</th><th>Tile ID</th><th>Line Definition</th><th>Line Symbols</th><th>Multiplier</th><th>Win</th></tr></thead>
+          <thead>${headers}</thead>
           <tbody>${rows}</tbody>
         </table>`;
     }
@@ -2145,3 +2226,68 @@ function compactJson(obj) {
   const raw = JSON.stringify(obj, null, 2);
   return raw.replace(/\[\s*([\d,\s-]+?)\s*\]/g, m => '[' + m.replace(/\s+/g, '').slice(1,-1).split(',').join(', ') + ']');
 }
+
+/* ── Tooltip fixed-position positioning ── */
+(function () {
+  const GAP = 8;
+
+  function applyPosition(tip, badge) {
+    const br = badge.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const tipW = tip.offsetWidth || parseInt(tip.style.width) || 260;
+    const tipH = tip.offsetHeight || 100;
+
+    const rightEdge = br.right + GAP + tipW;
+    if (rightEdge <= vw) {
+      tip.style.left = (br.right + GAP) + 'px';
+      const centeredTop = br.top + br.height / 2 - tipH / 2;
+      tip.style.top = Math.max(8, Math.min(vh - tipH - 8, centeredTop)) + 'px';
+    } else {
+      tip.style.left = Math.max(8, Math.min(vw - tipW - 8, br.left + br.width / 2 - tipW / 2)) + 'px';
+      tip.style.top = Math.max(8, br.top - tipH - GAP) + 'px';
+    }
+  }
+
+  function positionTip(wrap) {
+    const tip = wrap.querySelector('.stat-tip-box');
+    if (!tip) return;
+    const badge = wrap.querySelector('.stat-info') || wrap;
+
+    // Apply fixed positioning immediately so overflow clipping can't hide it
+    tip.style.position = 'fixed';
+    tip.style.zIndex = '9999';
+    tip.style.left = '-9999px'; // park off-screen until measured
+    tip.style.top = '0';
+    tip.style.bottom = '';
+    tip.style.transform = '';
+
+    // Defer measurement until after :hover CSS has rendered and element is visible
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => applyPosition(tip, badge));
+    });
+  }
+
+  function resetTip(wrap) {
+    const tip = wrap.querySelector('.stat-tip-box');
+    if (!tip) return;
+    tip.style.position = '';
+    tip.style.zIndex = '';
+    tip.style.left = '';
+    tip.style.top = '';
+    tip.style.bottom = '';
+    tip.style.transform = '';
+  }
+
+  document.addEventListener('mouseover', function (e) {
+    const wrap = e.target.closest('.stat-tip-wrap');
+    if (!wrap) return;
+    positionTip(wrap);
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    const wrap = e.target.closest('.stat-tip-wrap');
+    if (!wrap) return;
+    if (!wrap.contains(e.relatedTarget)) resetTip(wrap);
+  });
+})();
