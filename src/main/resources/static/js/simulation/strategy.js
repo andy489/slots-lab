@@ -21,7 +21,7 @@ function onStrategyChange() {
   if (addBtn) addBtn.style.display = noLines ? 'none' : '';
   if (lineToggleBtn) lineToggleBtn.style.display = noLines ? 'none' : '';
   if (scatterToggleBtn) scatterToggleBtn.style.display = isContacts ? '' : 'none';
-  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = noLines ? '' : 'none';
+  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = (isWays || isClusters) ? '' : 'none';
 
   const scattersSection = document.getElementById('scatters-paytable-section');
   if (scattersSection) {

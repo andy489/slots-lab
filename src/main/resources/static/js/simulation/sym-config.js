@@ -64,22 +64,22 @@ function addSymbolRow(symbolId) {
       const aggSel = row.querySelector('.rtp-wild-agg');
       if (aggSel) {
         const strat = document.getElementById('rtp-strategy')?.value;
-        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS' && strat !== 'SCATTERS') ? 'ADD' : def.agg;
+        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS') ? 'ADD' : def.agg;
         aggSel.value = resolvedAgg;
         onWildAggChange(aggSel);
       }
     }
     updatePaytablePlaceholders(w, m);
     const strat2 = document.getElementById('rtp-strategy')?.value;
-    if (def.paytable && strat2 !== 'SCATTERS') {
+    if (def.paytable && strat2 !== 'SCATTERS' && strat2 !== 'CLUSTERS') {
       const ptInput = row.querySelector('.rtp-paytable-input');
       if (ptInput) { ptInput.placeholder = def.paytable; ptInput.dataset.fixedPlaceholder = '1'; }
     }
   } else {
     updatePaytablePlaceholders(w, m);
   }
-  const isContacts = document.getElementById('rtp-strategy')?.value === 'SCATTERS';
-  if (isContacts) {
+  const isContactsLike = ['SCATTERS', 'CLUSTERS'].includes(document.getElementById('rtp-strategy')?.value);
+  if (isContactsLike) {
     const setSel = row.querySelector('.rtp-interval-set-sel');
     const typeSel = row.querySelector('select');
     const typeVal = typeSel ? typeSel.value : 'NORMAL';
@@ -100,7 +100,7 @@ function onSymbolTypeChange(sel) {
   const setSel = row.querySelector('.rtp-interval-set-sel');
   const isWild = sel.value === 'WILD';
   const isScatter = sel.value === 'SCATTER';
-  const isContacts = document.getElementById('rtp-strategy')?.value === 'SCATTERS';
+  const isContacts = ['SCATTERS', 'CLUSTERS'].includes(document.getElementById('rtp-strategy')?.value);
 
   if (isScatter || (isWild && isContacts)) {
     ptInput.disabled = true;
