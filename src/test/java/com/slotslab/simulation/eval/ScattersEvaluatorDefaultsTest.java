@@ -1,7 +1,7 @@
 package com.slotslab.simulation.eval;
 
 import com.slotslab.dto.scatters.ContactDto;
-import com.slotslab.dto.scatters.ScattersDto;
+import com.slotslab.dto.scatters.ContactsDto;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.SymbolConfig;
@@ -70,7 +70,7 @@ class ScattersEvaluatorDefaultsTest {
                 {3, 3, 4, 4, 4},
                 {3, 3, 4, 4, 4}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -98,7 +98,7 @@ class ScattersEvaluatorDefaultsTest {
                 {3, 3, 4, 4, 4},
                 {3, 3, 4, 4, 4}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -128,7 +128,7 @@ class ScattersEvaluatorDefaultsTest {
                 {1, 1, 2, 2, 2},
                 {1, 1, 2, 2, 2}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 allNormals, MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -161,7 +161,7 @@ class ScattersEvaluatorDefaultsTest {
                 {1, 1, 2, 2, 2},
                 {1, 1, 2, 2, 2}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -191,7 +191,7 @@ class ScattersEvaluatorDefaultsTest {
                 {3, 3, 4, 4, 4},
                 {4, 4, 4, 4, 4}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 sym3only, MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -216,7 +216,7 @@ class ScattersEvaluatorDefaultsTest {
                 {3, 3, 3, 3, 3}
         };
         // total = 25, interval 20-25 (idx 3)
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 sym3only, MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -241,7 +241,7 @@ class ScattersEvaluatorDefaultsTest {
                 {99, 99, 99, 99, 99},
                 {99, 99, 99, 99, 99}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 sym3only, MIN_MATCH, INTERVALS);
         assertNull(result);
     }
@@ -261,7 +261,7 @@ class ScattersEvaluatorDefaultsTest {
                 {4, 4, 4, 4, 4},   // 5 sym4 (separate win)
                 {4, 4, 4, 4, 4}    // 5 sym4
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -291,7 +291,7 @@ class ScattersEvaluatorDefaultsTest {
                 {3, 3, 3, 3, 3},
                 {3, 3, 3, 3, 3}
         };
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);

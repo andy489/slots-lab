@@ -1,6 +1,6 @@
 package com.slotslab.simulation.web;
 
-import com.slotslab.dto.scatters.ScattersDto;
+import com.slotslab.dto.scatters.ContactsDto;
 import com.slotslab.dto.lines.SimpleLineDto;
 import com.slotslab.dto.lines.SimpleLinesDto;
 import com.slotslab.dto.spin.PayoutEntry;
@@ -189,12 +189,12 @@ public class SpinTestService {
         }
         if (isScatters) {
             int screenHeight = screen[0].length;
-            ScattersDto contacts = ScattersEvaluator.evalScatters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets);
+            ContactsDto contacts = ScattersEvaluator.evalScatters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets);
             if (contacts != null) result.add(contacts);
         }
         if (isClusters) {
             int screenHeight = screen[0].length;
-            ScattersDto clusters = ClustersEvaluator.evalClusters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, adjacencyOffsets);
+            ContactsDto clusters = ClustersEvaluator.evalClusters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, adjacencyOffsets);
             if (clusters != null) result.add(clusters);
         }
         return result;

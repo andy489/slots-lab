@@ -1,7 +1,7 @@
 package com.slotslab.simulation.eval;
 
 import com.slotslab.dto.scatters.ContactDto;
-import com.slotslab.dto.scatters.ScattersDto;
+import com.slotslab.dto.scatters.ContactsDto;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.SymbolConfig;
@@ -55,7 +55,7 @@ class ScattersEvaluatorTest {
     void allSym1_minMatch_wins() {
         // 3×3 full of sym1 → contactSize=9, interval[1] (6–9), pay=10.0
         int[][] screen = {{1,1,1},{1,1,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -72,7 +72,7 @@ class ScattersEvaluatorTest {
         // screen: [[2,1,1],[1,1,1],[1,1,1]] → sym2 count=1 < 3 → no sym2 win
         // Actually need sym2 ≥ 3. Use: [[2,2,2],[1,1,1],[1,1,1]] sym2=3, sym1 count includes 6 tiles
         int[][] screen = {{2,2,2},{1,1,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -89,7 +89,7 @@ class ScattersEvaluatorTest {
     void noNormalMeetsMinMatch_returnsNull() {
         // only 2 of sym1 → no win
         int[][] screen = {{1,1,3},{3,3,3},{3,3,3}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
         assertNull(result);
     }
@@ -101,7 +101,7 @@ class ScattersEvaluatorTest {
         // sym1=5 tiles, but one is replaced by scatter → sym1 effective=4, still wins
         // [[1,1,1],[1,3,1],[1,1,1]] → sym1 count=8 (scatter at [1][1] skipped)
         int[][] screen = {{1,1,1},{1,3,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -112,7 +112,7 @@ class ScattersEvaluatorTest {
     @Test
     void allScatter_noWin() {
         int[][] screen = {{3,3,3},{3,3,3},{3,3,3}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
         assertNull(result);
     }
@@ -124,7 +124,7 @@ class ScattersEvaluatorTest {
         // sym4=WILD(NONE). [[4,4,4],[1,1,1],[3,3,3]] → sym1 contact = 3 wilds + 3 sym1 = 6
         // multiplier stays 1.0 (NONE), pay=interval[1]=10.0
         int[][] screen = {{4,4,4},{1,1,1},{3,3,3}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -143,7 +143,7 @@ class ScattersEvaluatorTest {
         ));
         // [[5,1,1],[1,1,1],[1,1,1]] → sym1 contact = 1 wild + 8 sym1 = 9, mult=2.0
         int[][] screen = {{5,1,1},{1,1,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols, MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -163,7 +163,7 @@ class ScattersEvaluatorTest {
         ));
         // [[6,6,1],[1,1,1],[1,1,1]] → sym1 contact = 2 wilds + 7 sym1 = 9, mult=seq[1]=3.0
         int[][] screen = {{6,6,1},{1,1,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols, MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -179,7 +179,7 @@ class ScattersEvaluatorTest {
         // All wilds, no normal → fallback to highest paying normal for count
         // [[4,4,4],[4,4,4],[4,4,4]] → wildOnlyCount=9, best normal=sym1, interval[1]=10.0
         int[][] screen = {{4,4,4},{4,4,4},{4,4,4}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -194,7 +194,7 @@ class ScattersEvaluatorTest {
         // sym1 wins → wild-only fallback must NOT fire (no duplicate entry)
         // [[4,1,1],[1,1,1],[1,1,1]] → sym1 wins; wilds connect
         int[][] screen = {{4,1,1},{1,1,1},{1,1,1}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
 
         assertNotNull(result);
@@ -212,7 +212,7 @@ class ScattersEvaluatorTest {
     void wildOnlyFallback_belowMinMatch_noWin() {
         // Only 2 wilds, rest scatter → count=2 < minMatch=3
         int[][] screen = {{4,4,3},{3,3,3},{3,3,3}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols(), MIN_MATCH, INTERVALS);
         assertNull(result);
     }
@@ -288,7 +288,7 @@ class ScattersEvaluatorTest {
         // [[1,1,1],[2,2,2],[3,3,3]] → sym1 count=3 → interval "high"[0] → pay=8.0
         //                           → sym2 count=3 → interval "low"[0]  → pay=1.0
         int[][] screen = {{1,1,1},{2,2,2},{3,3,3}};
-        ScattersDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
+        ContactsDto result = ScattersEvaluator.evalScatters(screen, REEL_COUNT, SCREEN_HEIGHT,
                 symbols, MIN_MATCH, sets);
 
         assertNotNull(result);

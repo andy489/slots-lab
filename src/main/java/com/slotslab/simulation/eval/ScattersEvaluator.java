@@ -1,7 +1,7 @@
 package com.slotslab.simulation.eval;
 
 import com.slotslab.dto.scatters.ContactDto;
-import com.slotslab.dto.scatters.ScattersDto;
+import com.slotslab.dto.scatters.ContactsDto;
 import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
@@ -26,7 +26,7 @@ public final class ScattersEvaluator {
 
     private ScattersEvaluator() {}
 
-    public static ScattersDto evalScatters(int[][] screen, int reelCount, int screenHeight,
+    public static ContactsDto evalScatters(int[][] screen, int reelCount, int screenHeight,
                                            SymbolTable symbols, int minMatch,
                                            List<ScattersIntervalSet> intervalSets) {
         List<ContactDto> contacts = new ArrayList<>();
@@ -142,7 +142,7 @@ public final class ScattersEvaluator {
         }
 
         if (contacts.isEmpty()) return null;
-        return ScattersDto.of(contacts, 1.0);
+        return ContactsDto.of(contacts, 1.0);
     }
 
     public static double evalScattersTracked(int[][] screen, int reelCount, int screenHeight,

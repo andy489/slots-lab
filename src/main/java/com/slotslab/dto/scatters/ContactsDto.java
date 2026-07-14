@@ -7,20 +7,20 @@ import com.slotslab.dto.spin.PayoutEntry;
 import java.util.List;
 
 @JsonPropertyOrder("_className")
-public record ScattersDto(
+public record ContactsDto(
         List<ContactDto> contacts,
         double globalMultiplier,
         double winAmount
 ) implements PayoutEntry {
 
-    public static ScattersDto of(List<ContactDto> contacts, double globalMultiplier) {
+    public static ContactsDto of(List<ContactDto> contacts, double globalMultiplier) {
         double total = contacts.stream().mapToDouble(ContactDto::winAmount).sum();
-        return new ScattersDto(contacts, globalMultiplier, total);
+        return new ContactsDto(contacts, globalMultiplier, total);
     }
 
     @Override
     @JsonProperty("_className")
     public String className() {
-        return ScattersDto.class.getName();
+        return ContactsDto.class.getName();
     }
 }

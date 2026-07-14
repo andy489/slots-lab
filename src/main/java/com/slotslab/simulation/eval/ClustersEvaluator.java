@@ -1,7 +1,7 @@
 package com.slotslab.simulation.eval;
 
 import com.slotslab.dto.scatters.ContactDto;
-import com.slotslab.dto.scatters.ScattersDto;
+import com.slotslab.dto.scatters.ContactsDto;
 import com.slotslab.simulation.config.AdjacencyOffset;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.ScattersPaytableEntry;
@@ -30,7 +30,7 @@ public final class ClustersEvaluator {
 
     // ── public API ────────────────────────────────────────────────────────────
 
-    public static ScattersDto evalClusters(int[][] screen, int reelCount, int screenHeight,
+    public static ContactsDto evalClusters(int[][] screen, int reelCount, int screenHeight,
                                            SymbolTable symbols, int minMatch,
                                            List<ScattersIntervalSet> intervalSets,
                                            List<AdjacencyOffset> adjacency) {
@@ -99,7 +99,7 @@ public final class ClustersEvaluator {
         }
 
         if (contacts.isEmpty()) return null;
-        return ScattersDto.of(contacts, 1.0);
+        return ContactsDto.of(contacts, 1.0);
     }
 
     public static double evalClustersTracked(int[][] screen, int reelCount, int screenHeight,
