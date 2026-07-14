@@ -1,6 +1,7 @@
 package com.slotslab.simulation.web;
 
 import com.slotslab.simulation.config.ReelSetChance;
+import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.strategy.PayoutStrategyType;
 
@@ -17,7 +18,8 @@ public record RtpRequest(
         List<List<Integer>> lineDefinitions,
         long spins,
         int threadCount,
-        double betSize
+        double betSize,
+        List<ScattersIntervalSet> contactsIntervalSets
 ) {
     public record ReelSetEntry(String setName, List<List<Integer>> reelSet) {}
 }

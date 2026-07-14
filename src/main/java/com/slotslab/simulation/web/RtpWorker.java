@@ -1,6 +1,9 @@
 package com.slotslab.simulation.web;
 
+import com.slotslab.simulation.config.ScattersIntervalSet;
+import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.SymbolTable;
+import com.slotslab.simulation.eval.ScattersEvaluator;
 import com.slotslab.simulation.eval.LineEvaluator;
 import com.slotslab.simulation.eval.WaysEvaluator;
 import com.slotslab.simulation.stats.ComboKey;
@@ -8,12 +11,14 @@ import com.slotslab.simulation.stats.MedianTracker;
 import com.slotslab.simulation.stats.SpinStats;
 import com.slotslab.simulation.strategy.AdjPayoutStrategy;
 import com.slotslab.simulation.strategy.BwPayoutStrategy;
+import com.slotslab.simulation.strategy.ScattersPayoutStrategy;
 import com.slotslab.simulation.strategy.LtrPayoutStrategy;
 import com.slotslab.simulation.strategy.PayoutStrategy;
 import com.slotslab.simulation.strategy.RtlPayoutStrategy;
 import com.slotslab.simulation.strategy.WaysPayoutStrategy;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
@@ -30,6 +35,7 @@ public class RtpWorker implements Callable<SpinStats> {
     private final SymbolTable symbols;
     private final PayoutStrategy strategy;
     private final int[][] lines;
+    private final List<ScattersIntervalSet> contactsIntervalSets;
 
     public RtpWorker(long spins,
                      int[][][] reels,
@@ -40,7 +46,8 @@ public class RtpWorker implements Callable<SpinStats> {
                      int minMatch,
                      SymbolTable symbols,
                      PayoutStrategy strategy,
-                     int[][] lines) {
+                     int[][] lines,
+                     List<ScattersIntervalSet> contactsIntervalSets) {
         this.spins = spins;
         this.reels = reels;
         this.reelLengths = reelLengths;
@@ -51,6 +58,7 @@ public class RtpWorker implements Callable<SpinStats> {
         this.symbols = symbols;
         this.strategy = strategy;
         this.lines = lines;
+        this.contactsIntervalSets = contactsIntervalSets;
     }
 
     @Override
@@ -64,11 +72,12 @@ public class RtpWorker implements Callable<SpinStats> {
         Map<ComboKey, long[]>   hitMap = new HashMap<>();
         Map<ComboKey, double[]> payMap = new HashMap<>();
 
-        boolean isLtr  = strategy instanceof LtrPayoutStrategy;
-        boolean isRtl  = strategy instanceof RtlPayoutStrategy;
-        boolean isBw   = strategy instanceof BwPayoutStrategy;
-        boolean isAdj  = strategy instanceof AdjPayoutStrategy;
-        boolean isWays = strategy instanceof WaysPayoutStrategy;
+        boolean isLtr      = strategy instanceof LtrPayoutStrategy;
+        boolean isRtl      = strategy instanceof RtlPayoutStrategy;
+        boolean isBw       = strategy instanceof BwPayoutStrategy;
+        boolean isAdj      = strategy instanceof AdjPayoutStrategy;
+        boolean isWays     = strategy instanceof WaysPayoutStrategy;
+        boolean isScatters = strategy instanceof ScattersPayoutStrategy;
 
         int[][] screen = new int[screenWidth][screenHeight];
 
@@ -97,6 +106,8 @@ public class RtpWorker implements Callable<SpinStats> {
                 win = LineEvaluator.evalAdjTracked(screen, screenWidth, symbols, lines, minMatch, hitMap, payMap);
             } else if (isWays) {
                 win = WaysEvaluator.evalWaysTracked(screen, screenWidth, screenHeight, symbols, minMatch, hitMap, payMap);
+            } else if (isScatters) {
+                win = ScattersEvaluator.evalScattersTracked(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, hitMap, payMap);
             } else {
                 win = strategy.evaluate(screen, screenWidth, symbols, lines, minMatch);
             }

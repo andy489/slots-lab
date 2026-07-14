@@ -19,13 +19,13 @@ public final class LineEvaluator {
 
     public static double evalLtr(int[][] screen, int reelCount, SymbolTable symbols, int[][] lines, int minMatch) {
         double total = 0.0;
-        for (int[] line : lines) total += evalLineResult(screen, reelCount, symbols, line, false, minMatch).win();
+        for (int[] line : lines) total += evalLine(screen, reelCount, symbols, line, 0, false, minMatch).win();
         return total;
     }
 
     public static double evalRtl(int[][] screen, int reelCount, SymbolTable symbols, int[][] lines, int minMatch) {
         double total = 0.0;
-        for (int[] line : lines) total += evalLineResult(screen, reelCount, symbols, line, true, minMatch).win();
+        for (int[] line : lines) total += evalLine(screen, reelCount, symbols, line, 0, true, minMatch).win();
         return total;
     }
 
@@ -42,7 +42,7 @@ public final class LineEvaluator {
                                  Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
         double total = 0.0;
         for (int[] line : lines) {
-            LineResult r = evalLineResult(screen, reelCount, symbols, line, false, minMatch);
+            LineResult r = evalLine(screen, reelCount, symbols, line, 0, false, minMatch);
             total += r.win();
             if (r.win() > 0 && r.paySymbol() >= 0)
                 record(r.paySymbol(), r.streak(), r.win(), hitMap, payMap);
@@ -55,7 +55,7 @@ public final class LineEvaluator {
                                  Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
         double total = 0.0;
         for (int[] line : lines) {
-            LineResult r = evalLineResult(screen, reelCount, symbols, line, true, minMatch);
+            LineResult r = evalLine(screen, reelCount, symbols, line, 0, true, minMatch);
             total += r.win();
             if (r.win() > 0 && r.paySymbol() >= 0)
                 record(r.paySymbol(), r.streak(), r.win(), hitMap, payMap);
@@ -90,14 +90,19 @@ public final class LineEvaluator {
         LineResult best = new LineResult(0.0, -1, 0);
         int maxStart = reelCount - minMatch;
         for (int startReel = 0; startReel <= maxStart; startReel++) {
-            LineResult r = evalLineFromReel(screen, reelCount, symbols, line, minMatch, startReel);
+            LineResult r = evalLine(screen, reelCount, symbols, line, startReel, false, minMatch);
             if (r.win() > best.win()) best = r;
         }
         return best;
     }
 
-    private static LineResult evalLineFromReel(int[][] screen, int reelCount, SymbolTable symbols,
-                                               int[] line, int minMatch, int startReel) {
+    /**
+     * Evaluates a single pay-line starting from {@code startReel}.
+     * Pass {@code startReel=0} for LTR/RTL full-line evaluation.
+     * {@code reversed=true} traverses reels right-to-left (RTL).
+     */
+    static LineResult evalLine(int[][] screen, int reelCount, SymbolTable symbols,
+                               int[] line, int startReel, boolean reversed, int minMatch) {
         int streak = 0, wildStreak = 0, totalWilds = 0;
         int paySymbol = -1;
         boolean allWild = true;
@@ -107,110 +112,13 @@ public final class LineEvaluator {
         WildMultiplierAggregation aggregationType = null;
         SymbolConfig firstWildCfg = null;
 
-        for (int reel = startReel; reel < reelCount; reel++) {
-            int row = line[reel];
-            int sym = screen[reel][row];
-
-            if (symbols.isScatter(sym)) {
-                if (reel == startReel) return new LineResult(0.0, -1, 0);
-                break;
-            }
-
-            boolean isWild = symbols.isWild(sym);
-            if (!isWild && paySymbol < 0) paySymbol = sym;
-
-            if (allWild || isWild || sym == paySymbol) {
-                streak++;
-                if (isWild) {
-                    if (allWild) wildStreak++;
-                    totalWilds++;
-                    SymbolConfig wCfg = symbols.get(sym);
-                    if (wCfg != null) {
-                        if (!hasWild) {
-                            aggregationType = wCfg.wildAggregation();
-                            firstWildCfg = wCfg;
-                            hasWild = true;
-                            if (aggregationType == WildMultiplierAggregation.ADD) {
-                                wildAcc = wCfg.wildMultiplier();
-                            } else if (aggregationType == WildMultiplierAggregation.MULTIPLY) {
-                                wildAcc = wCfg.wildMultiplier();
-                            }
-                        } else {
-                            if (aggregationType == WildMultiplierAggregation.ADD) {
-                                wildAcc += wCfg.wildMultiplier();
-                            } else if (aggregationType == WildMultiplierAggregation.MULTIPLY) {
-                                wildAcc *= wCfg.wildMultiplier();
-                            }
-                        }
-                    }
-                } else {
-                    allWild = false;
-                }
-            } else {
-                break;
-            }
-        }
-
-        if (streak < minMatch) return new LineResult(0.0, -1, 0);
-
-        double lineMultiplier;
-        if (!hasWild) {
-            lineMultiplier = 1.0;
-        } else if (aggregationType == WildMultiplierAggregation.NONE) {
-            lineMultiplier = 1.0;
-        } else if (aggregationType == WildMultiplierAggregation.SEQUENCE) {
-            List<Double> seq = firstWildCfg.wildSequence();
-            int idx = totalWilds - 1;
-            lineMultiplier = (seq != null && idx >= 0 && idx < seq.size()) ? seq.get(idx) : 1.0;
-        } else {
-            lineMultiplier = wildAcc > 0 ? wildAcc : 1.0;
-        }
-
-        double normalWin = 0.0;
-        if (paySymbol >= 0) {
-            SymbolConfig cfg = symbols.get(paySymbol);
-            if (cfg != null) normalWin = payoutAt(cfg, streak, minMatch) * lineMultiplier;
-        }
-
-        double wildWin = 0.0;
-        if (wildStreak >= minMatch && firstWildCfg != null) {
-            wildWin = payoutAt(firstWildCfg, wildStreak, minMatch);
-            if (wildWin == 0.0 && paySymbol < 0) {
-                for (SymbolConfig sc : symbols.all()) {
-                    if (sc.type() == SymbolType.NORMAL) {
-                        double v = payoutAt(sc, wildStreak, minMatch);
-                        if (v > wildWin) wildWin = v;
-                    }
-                }
-            }
-        }
-
-        double win = Math.max(normalWin, wildWin);
-        int trackSym = (win == wildWin && wildWin > 0 && normalWin <= wildWin && firstWildCfg != null)
-                ? firstWildCfg.symbolId() : paySymbol;
-        int trackStreak = (win == wildWin && wildWin > 0 && wildStreak >= minMatch) ? wildStreak : streak;
-        return new LineResult(win, win > 0 ? trackSym : -1, trackStreak);
-    }
-
-    private static LineResult evalLineResult(int[][] screen, int reelCount,
-                                             SymbolTable symbols, int[] line,
-                                             boolean reversed, int minMatch) {
-        int streak = 0, wildStreak = 0, totalWilds = 0;
-        int paySymbol = -1;
-        boolean allWild = true;
-
-        double wildAcc = 0.0;
-        boolean hasWild = false;
-        WildMultiplierAggregation aggregationType = null;
-        SymbolConfig firstWildCfg = null;
-
-        for (int ri = 0; ri < reelCount; ri++) {
-            int reel = reversed ? (reelCount - 1 - ri) : ri;
+        for (int ri = startReel; ri < reelCount; ri++) {
+            int reel = reversed ? (reelCount - 1 - (ri - startReel)) : ri;
             int row  = line[reel];
             int sym  = screen[reel][row];
 
             if (symbols.isScatter(sym)) {
-                if (ri == 0) return new LineResult(0.0, -1, 0);
+                if (ri == startReel) return new LineResult(0.0, -1, 0);
                 break;
             }
 

@@ -1,0 +1,188 @@
+/* ── Section card ── */
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+}
+.section-card-header {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: 10px 10px 0 0;
+}
+.section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text3);
+}
+.section-card-body {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ── Field rows ── */
+.field-row { display: flex; align-items: center; gap: 0.6rem; }
+.field-row.stack { align-items: flex-start; }
+.field-label {
+  font-size: 0.72rem;
+  color: var(--text3);
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 92px;
+  flex-shrink: 0;
+}
+.field-label.wide { min-width: 110px; }
+
+/* ── Two-col grid ── */
+.field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.field-grid .field-item { display: flex; flex-direction: column; gap: 0.25rem; }
+.field-grid .field-item label,
+.field-full label {
+  font-size: 0.68rem;
+  color: var(--text3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.field-full { display: flex; flex-direction: column; gap: 0.25rem; }
+
+/* ── Inputs ── */
+input[type=text], input[type=number], select, textarea {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border-hi);
+  padding: 0 0.65rem;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: var(--font);
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+input[type=number] { -moz-appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+select { cursor: pointer; }
+
+/* ── Monospace array inputs ── */
+.array-input {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+}
+.array-input::placeholder,
+.rtp-paytable-input::placeholder,
+.rtp-line-input::placeholder,
+.scatter-from::placeholder,
+.scatter-to::placeholder,
+#rtp-screen-width::placeholder,
+#rtp-screen-height::placeholder,
+#rtp-min-match::placeholder,
+#spin-test-reel-idx::placeholder,
+#spin-test-screen::placeholder {
+  color: var(--accent-ph);
+  font-style: normal;
+}
+
+/* ── Run button ── */
+.run-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: var(--accent);
+  color: hsl(0, 0%, 8%);
+  border: none;
+  padding: 0 1.1rem;
+  height: 30px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-family: var(--font);
+  transition: opacity .15s, transform .1s;
+}
+.run-btn:hover { opacity: .88; }
+.run-btn:active { transform: scale(.97); }
+.run-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+/* ── Icon buttons ── */
+.icon-btn {
+  width: 26px; height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.icon-btn:hover                { background: var(--surface3);   color: var(--text);   border-color: var(--border-hi); }
+.icon-btn.danger:hover         { background: var(--danger-dim);  color: var(--danger); border-color: var(--danger); }
+.icon-btn.add:hover            { background: var(--accent-dim);  color: var(--accent); border-color: var(--accent); }
+
+/* ── Add / dashed button ── */
+.add-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+  border: 1px dashed var(--border-hi);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text3);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: color .12s, border-color .12s, background .12s;
+  width: 100%;
+}
+.add-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+
+/* ── Status badge ── */
+.status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.6rem;
+  border-radius: 5px;
+}
+.status:empty { display: none; }
+.status.ok      { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.status.err     { color: var(--error);   background: color-mix(in srgb, var(--error)   12%, transparent); }
+.status.pending { color: var(--text3); }
+
+/* ── Copy button ── */
+.copy-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.copy-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.copy-btn.copied { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); border-color: var(--success); }
+
+/* ── Field error highlight ── */
+.field-error { border-color: var(--error) !important; }
+
+/* ── Toolbar helpers (Convert tab reused) ── */
+.field-group { display: flex; align-items: center; gap: 0.35rem; }
+.toolbar-label { font-size: 0.72rem; color: var(--text3); white-space: nowrap; font-weight: 500; }
+.sep { width: 1px; height: 20px; background: var(--border-hi); }
+select.sm  { width: 100px; }
+input.sm   { width: 110px; }
+input.sm-s { width: 70px; }

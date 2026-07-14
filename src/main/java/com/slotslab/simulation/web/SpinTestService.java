@@ -1,18 +1,22 @@
 package com.slotslab.simulation.web;
 
+import com.slotslab.dto.scatters.ScattersDto;
 import com.slotslab.dto.lines.SimpleLineDto;
 import com.slotslab.dto.lines.SimpleLinesDto;
 import com.slotslab.dto.spin.PayoutEntry;
 import com.slotslab.dto.spin.SpinData;
 import com.slotslab.dto.ways.WayLinesDto;
 import com.slotslab.simulation.config.ReelSetChance;
+import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.config.SymbolTable;
 import com.slotslab.simulation.config.SymbolType;
 import com.slotslab.simulation.config.WildMultiplierAggregation;
+import com.slotslab.simulation.eval.ScattersEvaluator;
 import com.slotslab.simulation.eval.WaysEvaluator;
 import com.slotslab.simulation.strategy.AdjPayoutStrategy;
 import com.slotslab.simulation.strategy.BwPayoutStrategy;
+import com.slotslab.simulation.strategy.ScattersPayoutStrategy;
 import com.slotslab.simulation.strategy.LtrPayoutStrategy;
 import com.slotslab.simulation.strategy.PayoutStrategy;
 import com.slotslab.simulation.strategy.PayoutStrategyFactory;
@@ -31,26 +35,34 @@ public class SpinTestService {
     public List<SpinData> generate(SpinTestRequest req) {
         validate(req);
 
-        int setCount     = req.reelSets().size();
+        boolean hasFixedScreen = req.screen() != null && !req.screen().isEmpty();
         int screenWidth  = req.screenWidth();
         int screenHeight = req.screenHeight();
 
-        int[][][] reels = new int[setCount][screenWidth][];
-        for (int s = 0; s < setCount; s++) {
-            List<List<Integer>> rs = req.reelSets().get(s).reelSet();
-            for (int r = 0; r < screenWidth; r++) {
-                List<Integer> reel = rs.get(r);
-                int[] arr = new int[reel.size()];
-                for (int p = 0; p < reel.size(); p++) arr[p] = reel.get(p);
-                reels[s][r] = arr;
+        int[][][] reels;
+        double[] cumulative;
+        if (hasFixedScreen) {
+            reels      = new int[0][][];
+            cumulative = new double[]{1.0};
+        } else {
+            int setCount = req.reelSets().size();
+            reels = new int[setCount][screenWidth][];
+            for (int s = 0; s < setCount; s++) {
+                List<List<Integer>> rs = req.reelSets().get(s).reelSet();
+                for (int r = 0; r < screenWidth; r++) {
+                    List<Integer> reel = rs.get(r);
+                    int[] arr = new int[reel.size()];
+                    for (int p = 0; p < reel.size(); p++) arr[p] = reel.get(p);
+                    reels[s][r] = arr;
+                }
             }
+            cumulative = buildCumulative(req.reelSetChances());
         }
 
-        int[][] lines = req.lineDefinitions().stream()
-                .map(l -> l.stream().mapToInt(Integer::intValue).toArray())
-                .toArray(int[][]::new);
+        int[][] lines = req.lineDefinitions() != null
+                ? req.lineDefinitions().stream().map(l -> l.stream().mapToInt(Integer::intValue).toArray()).toArray(int[][]::new)
+                : new int[0][];
 
-        double[] cumulative = buildCumulative(req.reelSetChances());
         SymbolTable symbols  = new SymbolTable(req.symbols());
         PayoutStrategy strategy = PayoutStrategyFactory.create(req.strategy());
 
@@ -115,7 +127,7 @@ public class SpinTestService {
             }
         }
 
-        List<PayoutEntry> payoutData = evalPerLine(screen, screenWidth, symbols, lines, req.minMatch(), strategy);
+        List<PayoutEntry> payoutData = evalPerLine(screen, screenWidth, symbols, lines, req.minMatch(), strategy, req.contactsIntervalSets());
 
         List<List<Integer>> screenList = new ArrayList<>(screenWidth);
         for (int r = 0; r < screenWidth; r++) {
@@ -129,20 +141,22 @@ public class SpinTestService {
 
     private List<PayoutEntry> evalPerLine(
             int[][] screen, int screenWidth, SymbolTable symbols,
-            int[][] lines, int minMatch, PayoutStrategy strategy) {
+            int[][] lines, int minMatch, PayoutStrategy strategy,
+            List<ScattersIntervalSet> contactsIntervalSets) {
 
-        boolean isLtr  = strategy instanceof LtrPayoutStrategy;
-        boolean isRtl  = strategy instanceof RtlPayoutStrategy;
-        boolean isBw   = strategy instanceof BwPayoutStrategy;
-        boolean isAdj  = strategy instanceof AdjPayoutStrategy;
-        boolean isWays = strategy instanceof WaysPayoutStrategy;
+        boolean isLtr      = strategy instanceof LtrPayoutStrategy;
+        boolean isRtl      = strategy instanceof RtlPayoutStrategy;
+        boolean isBw       = strategy instanceof BwPayoutStrategy;
+        boolean isAdj      = strategy instanceof AdjPayoutStrategy;
+        boolean isWays     = strategy instanceof WaysPayoutStrategy;
+        boolean isScatters = strategy instanceof ScattersPayoutStrategy;
 
         List<PayoutEntry> result = new ArrayList<>();
 
         if (isLtr || isBw) {
             List<SimpleLineDto> ltrLines = new ArrayList<>();
             for (int li = 0; li < lines.length; li++) {
-                SimpleLineDto e = evalSingleLine(screen, screenWidth, symbols, lines[li], minMatch, false, li);
+                SimpleLineDto e = evalSingleLine(screen, screenWidth, symbols, lines[li], minMatch, false, 0, li);
                 if (e != null) ltrLines.add(e);
             }
             if (!ltrLines.isEmpty()) result.add(SimpleLinesDto.of("LTR", ltrLines));
@@ -150,7 +164,7 @@ public class SpinTestService {
         if (isRtl || isBw) {
             List<SimpleLineDto> rtlLines = new ArrayList<>();
             for (int li = 0; li < lines.length; li++) {
-                SimpleLineDto e = evalSingleLine(screen, screenWidth, symbols, lines[li], minMatch, true, li);
+                SimpleLineDto e = evalSingleLine(screen, screenWidth, symbols, lines[li], minMatch, true, 0, li);
                 if (e != null) rtlLines.add(e);
             }
             if (!rtlLines.isEmpty()) result.add(SimpleLinesDto.of("RTL", rtlLines));
@@ -168,12 +182,32 @@ public class SpinTestService {
             WayLinesDto wayLines = WaysEvaluator.evalWays(screen, screenWidth, screenHeight, symbols, minMatch);
             if (wayLines != null) result.add(wayLines);
         }
+        if (isScatters) {
+            int screenHeight = screen[0].length;
+            ScattersDto contacts = ScattersEvaluator.evalScatters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets);
+            if (contacts != null) result.add(contacts);
+        }
         return result;
+    }
+
+    private SimpleLineDto evalAdjSingleLine(
+            int[][] screen, int reelCount, SymbolTable symbols,
+            int[] line, int minMatch, int lineIdx) {
+
+        SimpleLineDto best = null;
+        int maxStart = reelCount - minMatch;
+        for (int startReel = 0; startReel <= maxStart; startReel++) {
+            SimpleLineDto candidate = evalSingleLine(screen, reelCount, symbols, line, minMatch, false, startReel, lineIdx);
+            if (candidate != null && (best == null || candidate.winAmount() > best.winAmount())) {
+                best = candidate;
+            }
+        }
+        return best;
     }
 
     private SimpleLineDto evalSingleLine(
             int[][] screen, int reelCount, SymbolTable symbols,
-            int[] line, int minMatch, boolean reversed, int lineIdx) {
+            int[] line, int minMatch, boolean reversed, int startReel, int lineIdx) {
 
         int streak = 0, wildStreak = 0;
         Integer prevSym = null, currSym;
@@ -181,12 +215,12 @@ public class SpinTestService {
         Integer payoutSymbolId = null, wildItem = null;
         double lineMultiplier = 0.0;
 
-        for (int reel = 0; reel < reelCount; reel++) {
-            int r = reversed ? (reelCount - 1 - reel) : reel;
+        for (int ri = startReel; ri < reelCount; ri++) {
+            int r = reversed ? (reelCount - 1 - (ri - startReel)) : ri;
             currSym = screen[r][line[r]];
 
             if (symbols.isScatter(currSym)) {
-                if (reel == 0) return null;
+                if (ri == startReel) return null;
                 break;
             }
 
@@ -261,8 +295,18 @@ public class SpinTestService {
         double win = Math.round(singularPay * lineMultiplier * 100.0) / 100.0;
         if (win == 0.0) return null;
 
-        String matchType  = reversed ? "RTL" : "LTR";
-        int lineStart     = reversed ? (reelCount - streak) : 0;
+        String matchType;
+        int lineStart;
+        if (startReel > 0) {
+            matchType = "ADJ";
+            lineStart = startReel;
+        } else if (reversed) {
+            matchType = "RTL";
+            lineStart = reelCount - streak;
+        } else {
+            matchType = "LTR";
+            lineStart = 0;
+        }
 
         List<Integer> lineDefinition = new ArrayList<>(line.length);
         for (int v : line) lineDefinition.add(v);
@@ -270,7 +314,7 @@ public class SpinTestService {
         List<Integer> linePos     = new ArrayList<>(streak);
         List<Integer> lineSymbols = new ArrayList<>(streak);
         for (int i = 0; i < streak; i++) {
-            int r = reversed ? (reelCount - 1 - i) : i;
+            int r = reversed ? (reelCount - 1 - i) : (startReel + i);
             linePos.add(line[r]);
             lineSymbols.add(screen[r][line[r]]);
         }
@@ -282,128 +326,6 @@ public class SpinTestService {
         double sp = Math.round(singularPay * 100.0) / 100.0;
         return new SimpleLineDto(
                 lineIdx, matchType, streak, lineStart,
-                linePos, lineDefinition, lineSymbols,
-                payoutSymbolId, sp, lineMultiplier, win);
-    }
-
-    private SimpleLineDto evalAdjSingleLine(
-            int[][] screen, int reelCount, SymbolTable symbols,
-            int[] line, int minMatch, int lineIdx) {
-
-        SimpleLineDto best = null;
-        int maxStart = reelCount - minMatch;
-        for (int startReel = 0; startReel <= maxStart; startReel++) {
-            SimpleLineDto candidate = evalSingleLineFromReel(screen, reelCount, symbols, line, minMatch, startReel, lineIdx);
-            if (candidate != null && (best == null || candidate.winAmount() > best.winAmount())) {
-                best = candidate;
-            }
-        }
-        return best;
-    }
-
-    private SimpleLineDto evalSingleLineFromReel(
-            int[][] screen, int reelCount, SymbolTable symbols,
-            int[] line, int minMatch, int startReel, int lineIdx) {
-
-        int streak = 0, wildStreak = 0;
-        Integer prevSym = null, currSym;
-        boolean allWild = true;
-        Integer payoutSymbolId = null, wildItem = null;
-        double lineMultiplier = 0.0;
-
-        for (int reel = startReel; reel < reelCount; reel++) {
-            currSym = screen[reel][line[reel]];
-
-            if (symbols.isScatter(currSym)) {
-                if (reel == startReel) return null;
-                break;
-            }
-
-            boolean isWild = symbols.isWild(currSym);
-            if (prevSym == null && !isWild) prevSym = currSym;
-
-            if (allWild || isWild || currSym.equals(prevSym)) {
-                streak++;
-
-                if (allWild && isWild) {
-                    wildStreak++;
-                    wildItem = currSym;
-                }
-
-                if (!isWild) {
-                    allWild = false;
-                } else {
-                    SymbolConfig wc = symbols.get(currSym);
-                    if (wc != null && wc.wildAggregation() != WildMultiplierAggregation.NONE) {
-                        double wm = wc.wildMultiplier();
-                        switch (wc.wildAggregation()) {
-                            case ADD      -> lineMultiplier += wm;
-                            case MULTIPLY -> lineMultiplier = (lineMultiplier == 0.0) ? wm : lineMultiplier * wm;
-                            default       -> {}
-                        }
-                    }
-                }
-            } else {
-                payoutSymbolId = prevSym;
-                break;
-            }
-        }
-
-        if (payoutSymbolId == null && prevSym != null) payoutSymbolId = prevSym;
-        if (lineMultiplier <= 0.0) lineMultiplier = 1.0;
-
-        double weight = 0.0;
-        if (payoutSymbolId != null && streak >= minMatch) {
-            List<Double> pt = symbols.get(payoutSymbolId) != null ? symbols.get(payoutSymbolId).paytable() : null;
-            if (pt != null && (streak - minMatch) < pt.size()) weight = Math.max(0, pt.get(streak - minMatch));
-        }
-
-        double wildWeight = 0.0;
-        if (wildItem != null && wildStreak >= minMatch) {
-            List<Double> pt = symbols.get(wildItem) != null ? symbols.get(wildItem).paytable() : null;
-            if (pt != null && (wildStreak - minMatch) < pt.size()) wildWeight = Math.max(0, pt.get(wildStreak - minMatch));
-            if (wildWeight == 0.0 && prevSym == null) {
-                for (SymbolConfig sc : symbols.all()) {
-                    if (sc.type() == SymbolType.NORMAL) {
-                        List<Double> spt = sc.paytable();
-                        if (spt != null && (wildStreak - minMatch) < spt.size()) {
-                            double v = Math.max(0, spt.get(wildStreak - minMatch));
-                            if (v > wildWeight) wildWeight = v;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (weight == 0.0 && wildWeight == 0.0) return null;
-        if (streak < minMatch && wildStreak < minMatch) return null;
-
-        if (wildWeight > weight) {
-            payoutSymbolId = wildItem;
-            streak         = wildStreak;
-            weight         = wildWeight;
-        }
-
-        if (streak < minMatch) return null;
-
-        double singularPay = weight;
-        double win = Math.round(singularPay * lineMultiplier * 100.0) / 100.0;
-        if (win == 0.0) return null;
-
-        List<Integer> lineDefinition = new ArrayList<>(line.length);
-        for (int v : line) lineDefinition.add(v);
-
-        List<Integer> linePos     = new ArrayList<>(streak);
-        List<Integer> lineSymbols = new ArrayList<>(streak);
-        for (int i = 0; i < streak; i++) {
-            int r = startReel + i;
-            linePos.add(line[r]);
-            lineSymbols.add(screen[r][line[r]]);
-        }
-
-        double sp = Math.round(singularPay * 100.0) / 100.0;
-        return new SimpleLineDto(
-                lineIdx, "ADJ", streak, startReel,
                 linePos, lineDefinition, lineSymbols,
                 payoutSymbolId, sp, lineMultiplier, win);
     }
@@ -428,20 +350,25 @@ public class SpinTestService {
     }
 
     private void validate(SpinTestRequest req) {
-        if (req.reelSets() == null || req.reelSets().isEmpty())
-            throw new IllegalArgumentException("No reel sets provided");
+        boolean hasFixedScreen = req.screen() != null && !req.screen().isEmpty();
+
+        if (!hasFixedScreen) {
+            if (req.reelSets() == null || req.reelSets().isEmpty())
+                throw new IllegalArgumentException("No reel sets provided");
+            if (req.reelSetChances() == null || req.reelSetChances().size() != req.reelSets().size())
+                throw new IllegalArgumentException("reelSetChances must have one entry per reel set");
+        }
         if (req.symbols() == null || req.symbols().isEmpty())
             throw new IllegalArgumentException("No symbol configuration provided");
-        if (req.reelSetChances() == null || req.reelSetChances().size() != req.reelSets().size())
-            throw new IllegalArgumentException("reelSetChances must have one entry per reel set");
         if (req.screenWidth() < 1)
             throw new IllegalArgumentException("screenWidth must be >= 1");
         if (req.screenHeight() < 1)
             throw new IllegalArgumentException("screenHeight must be >= 1");
         if (req.strategy() != PayoutStrategyType.WAYS &&
+                req.strategy() != PayoutStrategyType.SCATTERS &&
                 (req.lineDefinitions() == null || req.lineDefinitions().isEmpty()))
             throw new IllegalArgumentException("At least one line definition is required");
-        if (req.reelSetIndex() != null) {
+        if (!hasFixedScreen && req.reelSetIndex() != null) {
             int idx = req.reelSetIndex();
             if (idx < 0 || idx >= req.reelSets().size())
                 throw new IllegalArgumentException("reelSetIndex " + idx + " out of range");
@@ -456,6 +383,10 @@ public class SpinTestService {
                     throw new IllegalArgumentException(
                             "WAYS strategy does not support wild multipliers — symbol " + sym.symbolId() + " must use wildAggregation=NONE");
             }
+        }
+        if (req.strategy() == PayoutStrategyType.SCATTERS) {
+            RtpSimulationService.validateContactsIntervalSets(
+                    req.contactsIntervalSets(), req.minMatch(), req.screenWidth() * req.screenHeight());
         }
         if (req.symbols() != null) {
             for (SymbolConfig sym : req.symbols()) {

@@ -8,7 +8,8 @@ public record SymbolConfig(
         List<Double> paytable,
         double wildMultiplier,
         WildMultiplierAggregation wildAggregation,
-        List<Double> wildSequence
+        List<Double> wildSequence,
+        String contactsIntervalSetName
 ) {
     public SymbolConfig {
         if (type == SymbolType.WILD && wildAggregation == null)
@@ -17,10 +18,10 @@ public record SymbolConfig(
     }
 
     public static SymbolConfig normal(int id, List<Double> paytable) {
-        return new SymbolConfig(id, SymbolType.NORMAL, paytable, 1.0, WildMultiplierAggregation.ADD, List.of());
+        return new SymbolConfig(id, SymbolType.NORMAL, paytable, 1.0, WildMultiplierAggregation.ADD, List.of(), null);
     }
 
     public static SymbolConfig scatter(int id) {
-        return new SymbolConfig(id, SymbolType.SCATTER, List.of(), 1.0, WildMultiplierAggregation.ADD, List.of());
+        return new SymbolConfig(id, SymbolType.SCATTER, List.of(), 1.0, WildMultiplierAggregation.ADD, List.of(), null);
     }
 }

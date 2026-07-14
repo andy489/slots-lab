@@ -18,7 +18,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
 
-  <link rel="stylesheet" href="/css/app.css"/>
+  <link rel="stylesheet" href="/css/base.css"/>
+  <link rel="stylesheet" href="/css/header.css"/>
+  <link rel="stylesheet" href="/css/tabbar.css"/>
+  <link rel="stylesheet" href="/css/layout.css"/>
+  <link rel="stylesheet" href="/css/forms.css"/>
+  <link rel="stylesheet" href="/css/generate.css"/>
+  <link rel="stylesheet" href="/css/history.css"/>
+  <link rel="stylesheet" href="/css/codemirror.css"/>
+  <link rel="stylesheet" href="/css/simulation.css"/>
+  <link rel="stylesheet" href="/css/rtp-results.css"/>
+  <link rel="stylesheet" href="/css/spin-test.css"/>
+  <link rel="stylesheet" href="/css/convert.css"/>
+  <link rel="stylesheet" href="/css/modal.css"/>
+  <link rel="stylesheet" href="/css/toast.css"/>
 </head>
 <body>
 
@@ -135,6 +148,8 @@
         </div><!-- end form-scroll -->
       </div><!-- end form-col -->
 
+      <div class="rtp-resize-handle" id="gen-resize-handle"></div>
+
       <!-- Right: result -->
       <div class="output-col">
         <div class="output-col-header">
@@ -183,7 +198,7 @@
 
           <!-- Simulation Settings -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box" style="width:260px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win direction (LTR / RTL / BW / ADJ / WAYS)</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
+            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:260px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win direction (LTR / RTL / BW / ADJ / WAYS / SCATTERS)</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
@@ -194,6 +209,7 @@
                     <option value="BW">BW (Both Ways)</option>
                     <option value="ADJ">ADJ (Adjacent)</option>
                     <option value="WAYS">WAYS (All Ways)</option>
+                    <option value="SCATTERS">SCATTERS (Scatter Pays)</option>
                   </select>
                 </div>
                 <div class="field-item">
@@ -231,12 +247,18 @@
             </div>
           </div>
 
-          <!-- Screen & Line Configuration -->
+          <!-- Screen and Paytable Configuration -->
           <div class="section-card" id="line-defs-card">
             <div class="section-card-header" style="flex-wrap:nowrap">
-              <span class="section-label" style="min-width:0;flex-shrink:1">Screen &amp; Line Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:540px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
+              <span class="section-label" style="min-width:0;flex-shrink:1">Screen and Paytable Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="screen-paytable-tip" class="stat-tip-box tip-right" style="width:540px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
               <div id="line-defs-header-btns" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                 <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </button>
+                <button class="icon-btn" id="scatterdefs-toggle-btn" onclick="toggleScatterDefs()" title="Fill interval fields with default values" style="display:none">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </button>
+                <button class="icon-btn" id="screendims-toggle-btn" onclick="toggleScreenDims()" title="Fill screen dimension fields with default values" style="display:none">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
                 <button class="icon-btn add" id="linedef-add-btn" onclick="addLineDef()" title="Add line">
@@ -248,20 +270,25 @@
               <div class="field-grid">
                 <div class="field-item">
                   <label for="rtp-screen-width">Width (reels)</label>
-                  <input type="number" id="rtp-screen-width" placeholder="5" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
+                  <input type="number" id="rtp-screen-width" placeholder="5" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
                 <div class="field-item">
                   <label for="rtp-screen-height">Height (rows)</label>
-                  <input type="number" id="rtp-screen-height" placeholder="3" min="1" max="10" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
+                  <input type="number" id="rtp-screen-height" placeholder="3" min="1" max="10" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
                 <div class="field-item">
                   <label for="rtp-min-match" title="Minimum consecutive matching symbols on a line to count as a win">Min Match</label>
-                  <input type="number" id="rtp-min-match" placeholder="3" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn()"/>
+                  <input type="number" id="rtp-min-match" placeholder="3" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
               </div>
               <div id="line-defs-section" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem">
                 <div class="rtp-lines-grid" id="rtp-lines-list"></div>
-                <button class="add-btn" id="add-payline-btn" onclick="addLineDef()">+ Add payline (0)</button>
+                <button class="add-btn" id="add-payline-btn" onclick="addLineDef()" style="margin-top:0.4rem">+ Add payline (0)</button>
+              </div>
+              <div id="scatters-paytable-section" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
+                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem">Contacts Paytable — interval sets</div>
+                <div id="interval-sets-container" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+                <button class="add-btn" id="add-interval-set-btn" onclick="addIntervalSet()">+ Add interval set</button>
               </div>
             </div>
           </div>
@@ -269,7 +296,7 @@
           <!-- Symbol Configuration -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Symbol Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:540px">Paytable multipliers apply to the total stake per screen (bet size).<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">e.g. bet = 1.00, paytable = [1.0, 3.0, 10.0]</div><div class="tip-row"><span>x3 match</span><span>1.0 × 1.00 = 1.00</span></div><div class="tip-row"><span>x4 match</span><span>3.0 × 1.00 = 3.00</span></div><div class="tip-row"><span>x5 match</span><span>10.0 × 1.00 = 10.00</span></div></div><div class="tip-rule">values count = screenWidth − minMatch + 1</div><div class="tip-rule">At least one <strong>NORMAL</strong> symbol with a paytable is required. A <strong>WILD</strong> without a paytable automatically pays the highest NORMAL symbol's payout for a wild-only streak.</div><div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — they would double-count the wild's contribution, which is already reflected in the ways count. <em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div></span></span></span>
+              <span class="section-label">Symbol Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="symconfig-tip" class="stat-tip-box tip-right" style="width:540px">Paytable multipliers apply to the total stake per screen (bet size).<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">e.g. bet = 1.00, paytable = [1.0, 3.0, 10.0]</div><div class="tip-row"><span>x3 match</span><span>1.0 × 1.00 = 1.00</span></div><div class="tip-row"><span>x4 match</span><span>3.0 × 1.00 = 3.00</span></div><div class="tip-row"><span>x5 match</span><span>10.0 × 1.00 = 10.00</span></div></div><div class="tip-rule">values count = screenWidth − minMatch + 1</div><div class="tip-rule">At least one <strong>NORMAL</strong> symbol with a paytable is required. A <strong>WILD</strong> without a paytable automatically pays the highest NORMAL symbol's payout for a wild-only streak.</div><div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — they would double-count the wild's contribution, which is already reflected in the ways count. <em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div></span></span></span>
               <div style="display:flex;gap:0.35rem">
                 <button class="icon-btn" id="symconfig-toggle-btn" onclick="toggleSymConfig()" title="Fill paytable fields with default values">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -297,6 +324,9 @@
 
         </div>
       </div>
+
+      <!-- Resize handle -->
+      <div class="rtp-resize-handle" id="rtp-resize-handle"></div>
 
       <!-- Right: result -->
       <div class="rtp-result-col">
@@ -385,12 +415,17 @@
           <div class="section-card">
             <div class="section-card-header">
               <span class="section-label">Fixed Screen Override</span>
-              <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional — overrides above</span>
+              <div style="display:flex;align-items:center;gap:0.5rem">
+                <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional — overrides above</span>
+                <button class="icon-btn" id="spin-screen-fill-btn" onclick="fillSpinTestDefaults()" title="Use placeholders as defaults">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </button>
+              </div>
             </div>
             <div class="section-card-body">
               <div class="field-full">
                 <label for="spin-test-screen">Screen [[col],[col],…]</label>
-                <textarea id="spin-test-screen" rows="4" style="height:80px;resize:vertical;font-family:monospace;font-size:0.8rem" placeholder="e.g. [[1,2,3],[4,5,6],[7,8,9],[1,2,3],[4,5,6]]"></textarea>
+                <textarea id="spin-test-screen" rows="4" style="height:80px;resize:vertical;font-family:monospace;font-size:0.8rem" placeholder="e.g. [[1,2,3],[4,5,6],[7,8,9],[1,2,3],[4,5,6]]" oninput="updateSpinScreenFillBtn()"></textarea>
               </div>
             </div>
           </div>
@@ -398,6 +433,8 @@
           <span class="status" id="spin-test-status"></span>
         </div>
       </div>
+
+      <div class="rtp-resize-handle" id="spin-resize-handle"></div>
 
       <!-- Right: output -->
       <div class="spin-test-output-col">
@@ -464,7 +501,18 @@
 
 <div id="toast"></div>
 
-<script src="/js/app.js"></script>
+<script src="/js/core/theme.js"></script>
+<script src="/js/core/ui-utils.js"></script>
+<script src="/js/generate/generate.js"></script>
+<script src="/js/convert/convert.js"></script>
+<script src="/js/simulation/rtp-reels.js"></script>
+<script src="/js/simulation/sym-config.js"></script>
+<script src="/js/simulation/line-defs.js"></script>
+<script src="/js/simulation/strategy.js"></script>
+<script src="/js/simulation/rtp-sim.js"></script>
+<script src="/js/simulation/spin-test.js"></script>
+<script src="/js/core/tooltips.js"></script>
+<script src="/js/core/app-init.js"></script>
 
 <!-- ══ INFO MODAL ══ -->
 <div class="modal-overlay" id="info-modal" onclick="if(event.target===this)closeInfo()">

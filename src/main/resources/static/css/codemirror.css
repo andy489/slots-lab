@@ -1,0 +1,44 @@
+/* ── CodeMirror overrides ── */
+.output-body .CodeMirror,
+.pane-body .CodeMirror {
+  flex: 1;
+  height: 100%;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  border: none;
+  border-radius: 0;
+  background: var(--cm-bg) !important;
+  color: var(--cm-line) !important;
+}
+.CodeMirror-scroll { height: 100%; }
+.CodeMirror-gutters { background: var(--cm-gut) !important; border-right: 1px solid var(--border) !important; }
+.CodeMirror-linenumber { color: var(--cm-gutnum) !important; padding: 0 10px 0 8px !important; }
+.CodeMirror-foldgutter { width: 22px !important; }
+.CodeMirror-foldgutter-open,
+.CodeMirror-foldgutter-folded {
+  font-size: 22px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: inline-block !important;
+  transform: scaleX(1.2) !important;
+}
+.CodeMirror-cursor { border-left-color: var(--cm-caret) !important; }
+.CodeMirror-selected,
+.CodeMirror-focused .CodeMirror-selected { background: var(--cm-sel) !important; }
+
+.CodeMirror .cm-property  { color: var(--js-key)   !important; font-weight: 600; }
+.CodeMirror .cm-string    { color: var(--js-str)   !important; }
+.CodeMirror .cm-number    { color: var(--js-num)   !important; }
+.CodeMirror .cm-atom      { color: var(--js-bool)  !important; }
+.CodeMirror .cm-null      { color: var(--js-null)  !important; }
+.CodeMirror .cm-punctuation,
+.CodeMirror .cm-bracket,
+.CodeMirror .cm-operator  { color: var(--js-punct) !important; }
+
+/* ── Spin test JSON pane (fixed height variant) ── */
+.spin-test-json-pane .pane-body .CodeMirror {
+  height: 260px;
+  font-size: 12px;
+  line-height: 1.55;
+}

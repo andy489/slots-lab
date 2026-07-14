@@ -151,9 +151,15 @@ public final class WaysEvaluator {
 
     // ── wild-only ways ────────────────────────────────────────────────────────
 
-    private static WayLineDto evalWildOnlyWays(int[][] screen, int reelCount, int screenHeight,
-                                               SymbolTable symbols, int minMatch, int floatId,
-                                               TreeMap<Integer, SymbolConfig> normals) {
+    private record WildOnlyResult(
+            List<List<Integer>> wildPos, List<List<Integer>> line2DimSym,
+            List<Integer> ways, List<Integer> waysWithMult,
+            int lineSize, int totalSimpleLines,
+            double singularPay, double winAmount) {}
+
+    private static WildOnlyResult computeWildOnly(int[][] screen, int reelCount, int screenHeight,
+                                                   SymbolTable symbols, int minMatch,
+                                                   TreeMap<Integer, SymbolConfig> normals) {
         int wildId = symbols.wildId();
         if (wildId < 0) return null;
 
@@ -164,10 +170,9 @@ public final class WaysEvaluator {
             if (pos.isEmpty()) { broke = true; break; }
             wildPos.add(pos);
         }
-        if (broke && wildPos.size() < minMatch) return null;
+        if ((broke || wildPos.size() < reelCount) && wildPos.size() < minMatch) return null;
         if (wildPos.size() < minMatch) return null;
 
-        // must be all-wild: no normal symbol may appear in any matching position
         for (int r = 0; r < wildPos.size(); r++) {
             for (int row : wildPos.get(r)) {
                 if (!symbols.isWild(screen[r][row])) return null;
@@ -175,7 +180,7 @@ public final class WaysEvaluator {
         }
 
         int lineSize = wildPos.size();
-        double singularPay = bestPay(wildId, lineSize, minMatch, symbols, normals);
+        double singularPay = bestPay(lineSize, minMatch, normals);
         if (singularPay <= 0) return null;
 
         List<List<Integer>> line2DimSym = extract2DimSym(wildPos, screen);
@@ -188,17 +193,28 @@ public final class WaysEvaluator {
         double winAmount = Math.round(singularPay * totalWaysMult * 100.0) / 100.0;
         if (winAmount <= 0) return null;
 
-        List<Integer> line1DimPos = extract1DimPos(wildPos, reelCount);
-        List<Integer> line1DimSym = extract1DimSym(line1DimPos, screen, reelCount);
         int totalSimpleLines = waysWithMult.stream().reduce(1, (a, b) -> a * b);
+        return new WildOnlyResult(wildPos, line2DimSym, ways, waysWithMult,
+                lineSize, totalSimpleLines, singularPay, winAmount);
+    }
+
+    private static WayLineDto evalWildOnlyWays(int[][] screen, int reelCount, int screenHeight,
+                                               SymbolTable symbols, int minMatch, int floatId,
+                                               TreeMap<Integer, SymbolConfig> normals) {
+        WildOnlyResult r = computeWildOnly(screen, reelCount, screenHeight, symbols, minMatch, normals);
+        if (r == null) return null;
+
+        int wildId = symbols.wildId();
+        List<Integer> line1DimPos = extract1DimPos(r.wildPos(), reelCount);
+        List<Integer> line1DimSym = extract1DimSym(line1DimPos, screen, reelCount);
 
         return new WayLineDto(
-                floatId, lineSize, 0, wildId,
-                Math.round(singularPay * 100.0) / 100.0,
-                winAmount,
+                floatId, r.lineSize(), 0, wildId,
+                Math.round(r.singularPay() * 100.0) / 100.0,
+                r.winAmount(),
                 line1DimPos, line1DimSym,
-                wildPos, line2DimSym,
-                ways, waysWithMult, totalSimpleLines
+                r.wildPos(), r.line2DimSym(),
+                r.ways(), r.waysWithMult(), r.totalSimpleLines()
         );
     }
 
@@ -207,48 +223,18 @@ public final class WaysEvaluator {
                                                   TreeMap<Integer, SymbolConfig> normals,
                                                   Map<ComboKey, long[]> hitMap,
                                                   Map<ComboKey, double[]> payMap) {
+        WildOnlyResult r = computeWildOnly(screen, reelCount, screenHeight, symbols, minMatch, normals);
+        if (r == null) return 0.0;
+
         int wildId = symbols.wildId();
-        if (wildId < 0) return 0.0;
-
-        List<List<Integer>> wildPos = new ArrayList<>();
-        boolean broke = false;
-        for (int r = 0; r < reelCount; r++) {
-            List<Integer> pos = getWildOnlyPositions(screen, r, screenHeight, wildId, symbols);
-            if (pos.isEmpty()) { broke = true; break; }
-            wildPos.add(pos);
-        }
-        if (broke && wildPos.size() < minMatch) return 0.0;
-        if (wildPos.size() < minMatch) return 0.0;
-
-        for (int r = 0; r < wildPos.size(); r++) {
-            for (int row : wildPos.get(r)) {
-                if (!symbols.isWild(screen[r][row])) return 0.0;
-            }
-        }
-
-        int lineSize = wildPos.size();
-        double singularPay = bestPay(wildId, lineSize, minMatch, symbols, normals);
-        if (singularPay <= 0) return 0.0;
-
-        List<List<Integer>> line2DimSym = extract2DimSym(wildPos, screen);
-        List<Integer> ways = extractWays(wildPos);
-        List<Integer> waysWithMult = extractWaysWithMultipliers(ways, line2DimSym, symbols);
-
-        double totalWaysMult = 1.0;
-        for (int w : waysWithMult) totalWaysMult *= w;
-
-        double win = Math.round(singularPay * totalWaysMult * 100.0) / 100.0;
-        if (win <= 0) return 0.0;
-
-        int totalSimpleLines = waysWithMult.stream().reduce(1, (a, b) -> a * b);
-        ComboKey key = new ComboKey(wildId, lineSize);
-        hitMap.computeIfAbsent(key, k -> new long[1])[0] += totalSimpleLines;
-        payMap.computeIfAbsent(key, k -> new double[1])[0] += win;
-        return win;
+        ComboKey key = new ComboKey(wildId, r.lineSize());
+        hitMap.computeIfAbsent(key, k -> new long[1])[0] += r.totalSimpleLines();
+        payMap.computeIfAbsent(key, k -> new double[1])[0] += r.winAmount();
+        return r.winAmount();
     }
 
-    private static double bestPay(int wildId, int lineSize, int minMatch,
-                                  SymbolTable symbols, TreeMap<Integer, SymbolConfig> normals) {
+    private static double bestPay(int lineSize, int minMatch,
+                                   TreeMap<Integer, SymbolConfig> normals) {
         int ptIdx = lineSize - minMatch;
         double best = 0.0;
         for (SymbolConfig sc : normals.values()) {
@@ -257,20 +243,6 @@ public final class WaysEvaluator {
             if (v > best) best = v;
         }
         return best;
-    }
-
-    private static int leadingWildStreakSize(List<List<Integer>> line2DimPos,
-                                             int[][] screen, SymbolTable symbols) {
-        int count = 0;
-        for (int r = 0; r < line2DimPos.size(); r++) {
-            boolean reelAllWild = true;
-            for (int row : line2DimPos.get(r)) {
-                if (!symbols.isWild(screen[r][row])) { reelAllWild = false; break; }
-            }
-            if (!reelAllWild) break;
-            count++;
-        }
-        return count;
     }
 
     private static List<Integer> getWildOnlyPositions(int[][] screen, int reel, int screenHeight,

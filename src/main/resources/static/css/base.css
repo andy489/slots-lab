@@ -1,0 +1,103 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens ── */
+:root, [data-theme="dark"] {
+  --bg:           hsl(0, 0%, 7%);
+  --surface:      hsl(240, 2%, 13%);
+  --surface2:     hsl(240, 2%, 12%);
+  --surface3:     hsl(0, 0%, 19%);
+  --surface4:     hsl(240, 2%, 16%);
+  --border:       hsl(0, 0%, 18%);
+  --border-hi:    hsl(0, 0%, 26%);
+  --accent:       hsl(45, 100%, 72%);
+  --accent-dim:   hsla(45, 100%, 72%, .12);
+  --accent-ph:    hsla(45, 100%, 72%, 0.55);
+  --text:         hsl(0, 0%, 98%);
+  --text2:        hsl(0, 0%, 80%);
+  --text3:        hsl(0, 0%, 50%);
+  --success:      hsl(120, 50%, 55%);
+  --error:        hsl(0, 43%, 60%);
+  --danger:       hsl(0, 70%, 60%);
+  --danger-dim:   hsla(0, 70%, 60%, .12);
+  --shadow:       0 8px 32px hsla(0, 0%, 0%, .5);
+  --card-shadow:  0 2px 8px hsla(0,0%,0%,.35);
+  --font:         'Poppins', sans-serif;
+
+  /* CodeMirror colours */
+  --js-key:       hsl(45, 100%, 72%);
+  --js-str:       hsl(120, 40%, 65%);
+  --js-num:       hsl(200, 80%, 70%);
+  --js-bool:      hsl(120, 40%, 65%);
+  --js-null:      hsl(0, 0%, 40%);
+  --js-punct:     hsl(0, 0%, 35%);
+  --cm-bg:        hsl(240, 2%, 12%);
+  --cm-gut:       hsl(240, 2%, 13%);
+  --cm-line:      hsl(0, 0%, 84%);
+  --cm-caret:     hsl(45, 100%, 72%);
+  --cm-sel:       hsla(45, 100%, 72%, .15);
+  --cm-gutnum:    hsl(0, 0%, 30%);
+
+  /* Tooltip colours */
+  --tip-bg:       hsl(220, 13%, 10%);
+  --tip-border:   hsl(220, 13%, 22%);
+  --tip-tip:      hsl(220, 13%, 22%);
+  --tip-text:     hsl(0, 0%, 80%);
+  --tip-icon-b:   hsl(0, 0%, 28%);
+  --tip-icon-c:   hsl(0, 0%, 42%);
+}
+
+[data-theme="light"] {
+  --bg:           hsl(210, 20%, 94%);
+  --surface:      hsl(0, 0%, 100%);
+  --surface2:     hsl(210, 15%, 96%);
+  --surface3:     hsl(0, 0%, 91%);
+  --surface4:     hsl(0, 0%, 97%);
+  --border:       hsl(0, 0%, 83%);
+  --border-hi:    hsl(0, 0%, 72%);
+  --accent:       hsl(38, 90%, 42%);
+  --accent-dim:   hsla(38, 90%, 42%, .12);
+  --accent-ph:    hsla(38, 90%, 42%, 0.55);
+  --text:         hsl(0, 0%, 10%);
+  --text2:        hsl(0, 0%, 30%);
+  --text3:        hsl(0, 0%, 55%);
+  --success:      hsl(130, 50%, 35%);
+  --error:        hsl(0, 60%, 45%);
+  --danger:       hsl(0, 70%, 48%);
+  --danger-dim:   hsla(0, 70%, 48%, .10);
+  --shadow:       0 4px 20px hsla(0, 0%, 0%, .10);
+  --card-shadow:  0 1px 4px hsla(0,0%,0%,.10);
+
+  --js-key:       hsl(38, 90%, 35%);
+  --js-str:       hsl(130, 45%, 35%);
+  --js-num:       hsl(210, 70%, 40%);
+  --js-bool:      hsl(130, 45%, 35%);
+  --js-null:      hsl(0, 0%, 55%);
+  --js-punct:     hsl(0, 0%, 60%);
+  --cm-bg:        hsl(0, 0%, 100%);
+  --cm-gut:       hsl(0, 0%, 95%);
+  --cm-line:      hsl(0, 0%, 15%);
+  --cm-caret:     hsl(38, 90%, 42%);
+  --cm-sel:       hsla(38, 90%, 42%, .15);
+  --cm-gutnum:    hsl(0, 0%, 65%);
+
+  --tip-bg:       hsl(0, 0%, 100%);
+  --tip-border:   hsl(0, 0%, 82%);
+  --tip-tip:      hsl(0, 0%, 82%);
+  --tip-text:     hsl(0, 0%, 25%);
+  --tip-icon-b:   hsl(0, 0%, 72%);
+  --tip-icon-c:   hsl(0, 0%, 52%);
+}
+
+/* ── Base layout ── */
+html { height: 100vh; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  transition: background .2s, color .2s;
+}

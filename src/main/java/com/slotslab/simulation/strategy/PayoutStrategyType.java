@@ -5,5 +5,6 @@ public enum PayoutStrategyType {
     RTL,
     BW,
     ADJ,
-    WAYS
+    WAYS,
+    SCATTERS
 }

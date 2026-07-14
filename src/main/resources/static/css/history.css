@@ -1,0 +1,82 @@
+/* ── History panel ── */
+.history-panel {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.history-header {
+  height: 36px;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.history-title {
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text3);
+  flex: 1;
+}
+.history-list {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  overflow-x: auto;
+}
+.history-list::-webkit-scrollbar { height: 4px; }
+.history-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+
+.history-item {
+  flex-shrink: 0;
+  width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  position: relative;
+}
+.history-item:hover { border-color: var(--accent); background: var(--accent-dim); }
+
+.history-item-del {
+  position: absolute;
+  bottom: 0.3rem; right: 0.3rem;
+  display: none;
+  background: none; border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--text3);
+  line-height: 1;
+  border-radius: 3px;
+}
+.history-item-del:hover { color: var(--danger); }
+.history-item:hover .history-item-del { display: flex; }
+
+.history-item-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.history-item-meta {
+  font-size: 0.65rem;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-empty {
+  font-size: 0.7rem;
+  color: var(--text3);
+  padding: 0.4rem 0;
+  font-style: italic;
+}

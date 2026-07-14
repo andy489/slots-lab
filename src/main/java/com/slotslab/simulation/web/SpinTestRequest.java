@@ -1,6 +1,7 @@
 package com.slotslab.simulation.web;
 
 import com.slotslab.simulation.config.ReelSetChance;
+import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.strategy.PayoutStrategyType;
 
@@ -18,5 +19,6 @@ public record SpinTestRequest(
         int count,
         Integer reelSetIndex,
         List<Integer> stops,
-        List<List<Integer>> screen
+        List<List<Integer>> screen,
+        List<ScattersIntervalSet> contactsIntervalSets
 ) {}

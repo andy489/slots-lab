@@ -36,7 +36,7 @@ class WaysEvaluatorTest {
     private static SymbolTable symbols() {
         return new SymbolTable(List.of(
             SymbolConfig.normal(1, List.of(1.0, 3.0, 10.0)),
-            new SymbolConfig(2, SymbolType.WILD, List.of(), 1.0, WildMultiplierAggregation.NONE, List.of()),
+            new SymbolConfig(2, SymbolType.WILD, List.of(), 1.0, WildMultiplierAggregation.NONE, List.of(), null),
             SymbolConfig.normal(3, List.of(0.2, 0.6,  2.0)),
             SymbolConfig.normal(4, List.of(2.0, 6.0, 20.0)),
             SymbolConfig.normal(5, List.of(3.0, 9.0, 30.0)),

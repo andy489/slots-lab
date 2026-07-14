@@ -309,9 +309,17 @@ loadHistory();
 loadRtpHistory();
 
 document.getElementById('rtp-symbol-rows').addEventListener('input', updateSymConfigToggleBtn);
+document.getElementById('interval-sets-container').addEventListener('input', updateScatterDefsToggleBtn);
 document.getElementById('rtp-lines-list').addEventListener('input', updateLineDefsToggleBtn);
+['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    updateLineDefsToggleBtn();
+    updateScatterDefsToggleBtn();
+    updateSpinTestPlaceholders();
+  });
+});
 onStrategyChange();
-onConvFormatChange();
+updateSpinTestPlaceholders();
 
 /* ── Convert tab defaults ── */
 const r1 = [1,2,3,1,2,2,2,4], r2 = [2,3,1,2,3], r3 = [3,1,2,3,1];
@@ -335,7 +343,7 @@ function switchTab(name, btn) {
     if (name === 'generate') genOutput.refresh();
     else if (name === 'convert') { convInput.refresh(); convOutput.refresh(); }
     else if (name === 'rtp') tryLoadReelsFromEditor();
-    else if (name === 'spin-test') { tryLoadReelsFromEditor(); }
+    else if (name === 'spin-test') { tryLoadReelsFromEditor(); updateSpinTestPlaceholders(); }
   }, 0);
 }
 
@@ -850,6 +858,12 @@ function restoreRtpForm(payload) {
   _lineCounter = 0;
   (payload.lineDefinitions || []).forEach(line => addLineDef(line.join(', ')));
   updateLineCount();
+  // Contacts interval sets
+  document.getElementById('interval-sets-container').innerHTML = '';
+  const setsToRestore = payload.contactsIntervalSets || payload.scattersPaytable
+    ? (payload.contactsIntervalSets || [{ name: 'default', intervals: payload.scattersPaytable || [] }])
+    : [];
+  setsToRestore.forEach(s => addIntervalSet(s.name, s.intervals || []));
   // Symbols
   document.getElementById('rtp-symbol-rows').innerHTML = '';
   _symRowCounter = 0;
@@ -860,6 +874,10 @@ function restoreRtpForm(payload) {
     onSymbolTypeChange(typeSel);
     if (sym.type !== 'SCATTER') {
       row.querySelector('.rtp-paytable-input').value = (sym.paytable || []).join(', ');
+    }
+    if (sym.contactsIntervalSetName) {
+      const setSel = row.querySelector('.rtp-interval-set-sel');
+      if (setSel) setSel.value = sym.contactsIntervalSetName;
     }
     if (sym.type === 'WILD') {
       const aggSel = row.querySelector('.rtp-wild-agg');
@@ -989,7 +1007,10 @@ function addSymbolRow(symbolId) {
       <option value="WILD">Wild</option>
       <option value="SCATTER">Scatter</option>
     </select>
-    <input type="text" class="array-input rtp-paytable-input" placeholder="0, 0, 1.5, 3.0, 10.0" value=""/>
+    <div class="rtp-paytable-cell">
+      <select class="rtp-interval-set-sel" style="display:none;font-size:0.78rem" title="Interval set for this symbol" onchange="const ww=parseInt(document.getElementById('rtp-screen-width').value)||5,mm=parseInt(document.getElementById('rtp-min-match').value)||3;updatePaytablePlaceholders(ww,mm)"></select>
+      <input type="text" class="array-input rtp-paytable-input" placeholder="0.5, 2.0, 5.0" value=""/>
+    </div>
     <button class="icon-btn danger" onclick="removeSymbolRow('rtp-sym-${rid}')">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
     </button>
@@ -1034,17 +1055,39 @@ function addSymbolRow(symbolId) {
     onSymbolTypeChange(sel);
     if (def.agg) {
       const aggSel = row.querySelector('.rtp-wild-agg');
-      if (aggSel) { aggSel.value = def.agg; onWildAggChange(aggSel); }
+      if (aggSel) {
+        const strat = document.getElementById('rtp-strategy')?.value;
+        // NONE is only mandatory for WAYS; for other strategies default to ADD so multiplier is visible
+        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS') ? 'ADD' : def.agg;
+        aggSel.value = resolvedAgg;
+        onWildAggChange(aggSel);
+      }
     }
-    // Apply specific placeholder after generic update so it wins
+    // Apply specific placeholder after generic update so it wins.
+    // In SCATTERS the placeholder count must match the interval count, so don't pin it.
     updatePaytablePlaceholders(w, m);
-    if (def.paytable) {
+    const strat2 = document.getElementById('rtp-strategy')?.value;
+    if (def.paytable && strat2 !== 'SCATTERS') {
       const ptInput = row.querySelector('.rtp-paytable-input');
       if (ptInput) { ptInput.placeholder = def.paytable; ptInput.dataset.fixedPlaceholder = '1'; }
     }
   } else {
     updatePaytablePlaceholders(w, m);
   }
+  // Populate interval set dropdown if SCATTERS is active
+  const isContacts = document.getElementById('rtp-strategy')?.value === 'SCATTERS';
+  if (isContacts) {
+    const setSel = row.querySelector('.rtp-interval-set-sel');
+    const typeSel = row.querySelector('select');
+    const typeVal = typeSel ? typeSel.value : 'NORMAL';
+    if (setSel) {
+      const names = getIntervalSetNames();
+      setSel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      // Only NORMAL symbols need the interval set selector; WILD and SCATTER do not
+      setSel.style.display = (typeVal === 'WILD' || typeVal === 'SCATTER') ? 'none' : '';
+    }
+  }
+  updateSpinTestPlaceholders();
   return row;
 }
 
@@ -1052,17 +1095,29 @@ function onSymbolTypeChange(sel) {
   const row = sel.closest('.rtp-sym-row');
   const ptInput = row.querySelector('input[type=text]');
   const wildFields = row.querySelector('.rtp-wild-fields');
+  const setSel = row.querySelector('.rtp-interval-set-sel');
   const isWild = sel.value === 'WILD';
   const isScatter = sel.value === 'SCATTER';
+  const isContacts = document.getElementById('rtp-strategy')?.value === 'SCATTERS';
 
-  ptInput.disabled = isScatter;
-  if (isScatter) {
+  if (isScatter || (isWild && isContacts)) {
+    // SCATTER = blocker (no payout); WILD in SCATTERS = inherits from highest normal (no own paytable)
+    ptInput.disabled = true;
     ptInput.placeholder = 'n/a';
     ptInput.value = '';
+    if (setSel) setSel.style.display = 'none';
+  } else if (isScatter) {
+    ptInput.disabled = true;
+    ptInput.placeholder = 'n/a';
+    ptInput.value = '';
+    if (setSel) setSel.style.display = 'none';
   } else {
+    ptInput.disabled = false;
     const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
     const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
     updatePaytablePlaceholders(w, m);
+    // Only NORMAL symbols need to select which interval set they use; WILD uses wildMultiplier instead
+    if (setSel) setSel.style.display = (isContacts && !isWild) ? '' : 'none';
   }
 
   wildFields.classList.toggle('visible', isWild);
@@ -1075,7 +1130,6 @@ function onSymbolTypeChange(sel) {
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
     }
   } else {
-    // Reset to NONE and hide sequence/mult when switching away from Wild
     if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
   }
 }
@@ -1098,6 +1152,7 @@ function removeSymbolRow(rowId) {
   const el = document.getElementById(rowId);
   if (el) el.remove();
   updateSymConfigToggleBtn();
+  updateSpinTestPlaceholders();
 }
 
 function refreshSymbolRowNumbers() {
@@ -1197,6 +1252,33 @@ function toggleLineDefs() {
   }
 }
 
+function updateScatterDefsToggleBtn() {
+  const btn = document.getElementById('scatterdefs-toggle-btn');
+  if (!btn) return;
+  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+    || Array.from(document.querySelectorAll('#interval-sets-container .scatter-from, #interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
+  btn.innerHTML = hasValues
+    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = hasValues ? 'Clear all values' : 'Fill interval fields with default values';
+  btn.classList.toggle('danger', hasValues);
+}
+
+function toggleScatterDefs() {
+  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  const intervalInputs = document.querySelectorAll('#interval-sets-container .scatter-from, #interval-sets-container .scatter-to');
+  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+    || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
+  if (hasValues) {
+    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
+    intervalInputs.forEach(inp => { inp.value = ''; inp.style.color = ''; inp.style.borderColor = ''; });
+  } else {
+    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
+    intervalInputs.forEach(inp => { if (inp.placeholder) inp.value = inp.placeholder; });
+  }
+  updateScatterDefsToggleBtn();
+}
 
 function updateSymConfigToggleBtn() {
   const btn = document.getElementById('symconfig-toggle-btn');
@@ -1219,42 +1301,490 @@ function toggleSymConfig() {
   }
   updateSymConfigToggleBtn();
 }
+function updateSpinTestPlaceholders() {
+  const wEl = document.getElementById('rtp-screen-width');
+  const hEl = document.getElementById('rtp-screen-height');
+  const w = parseInt((wEl && (wEl.value || wEl.placeholder)) || 5);
+  const h = parseInt((hEl && (hEl.value || hEl.placeholder)) || 3);
+  const screenEl = document.getElementById('spin-test-screen');
+  const stopsEl  = document.getElementById('spin-test-stops');
+  if (screenEl) {
+    const symRows = document.querySelectorAll('.rtp-sym-row');
+    const symIds = symRows.length > 0
+      ? Array.from(symRows).map(r => parseInt(r.dataset.symId))
+      : Array.from({ length: w * h }, (_, i) => i + 1);
+    let idx = 0;
+    const cols = [];
+    for (let c = 0; c < w; c++) {
+      const rows = [];
+      for (let r = 0; r < h; r++) rows.push(symIds[idx++ % symIds.length]);
+      cols.push('[' + rows.join(',') + ']');
+    }
+    screenEl.placeholder = '[' + cols.join(',') + ']';
+  }
+  if (stopsEl) {
+    const stops = [];
+    for (let c = 0; c < w; c++) stops.push(c * 3);
+    stopsEl.placeholder = stops.join(',');
+  }
+}
+function fillSpinTestDefaults() {
+  const strat = document.getElementById('rtp-strategy')?.value || 'LTR';
+  const isContacts = strat === 'SCATTERS';
+  const isWays = strat === 'WAYS';
+
+  // 1. Fill screen dims + lines/scatter defs (same as their toggle buttons in fill mode)
+  if (isContacts) {
+    const scatterHasValues = (() => {
+      const screenInputs = ['rtp-screen-width','rtp-screen-height','rtp-min-match'].map(id => document.getElementById(id));
+      const intervalInputs = document.querySelectorAll('#interval-sets-container .scatter-from, #interval-sets-container .scatter-to');
+      return screenInputs.some(inp => inp && inp.value.trim() !== '')
+        || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
+    })();
+    if (!scatterHasValues) toggleScatterDefs();
+  } else {
+    const lineHasValues = (() => {
+      const screenInputs = ['rtp-screen-width','rtp-screen-height','rtp-min-match'].map(id => document.getElementById(id));
+      const lineInputs = document.querySelectorAll('.rtp-line-input');
+      return screenInputs.some(inp => inp && inp.value.trim() !== '')
+        || Array.from(lineInputs).some(inp => inp.value.trim() !== '');
+    })();
+    if (!lineHasValues && !isWays) toggleLineDefs();
+    else if (isWays) {
+      // WAYS has no line defs; just fill screen dims if empty
+      ['rtp-screen-width','rtp-screen-height','rtp-min-match'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp && !inp.value.trim()) inp.value = inp.placeholder;
+      });
+    }
+  }
+
+  // 2. Fill sym config paytables if empty
+  const symHasValues = Array.from(document.querySelectorAll('#rtp-symbol-rows .rtp-paytable-input')).some(inp => inp.value.trim() !== '');
+  if (!symHasValues) toggleSymConfig();
+
+  // 3. Update placeholder with current sym IDs + screen dims, then fill the textarea
+  updateSpinTestPlaceholders();
+  const screenEl = document.getElementById('spin-test-screen');
+  if (screenEl && !screenEl.value.trim() && screenEl.placeholder) {
+    screenEl.value = screenEl.placeholder;
+  }
+}
 function onStrategyChange() {
-  const isWays = document.getElementById('rtp-strategy').value === 'WAYS';
+  const strat = document.getElementById('rtp-strategy').value;
+  const isWays = strat === 'WAYS';
+  const isContacts = strat === 'SCATTERS';
+  const noLines = isWays || isContacts;
+
+  // Snapshot BEFORE any DOM changes (addIntervalSet → updatePaytablePlaceholders fires below)
+  const _ptSnapshotInputs = document.querySelectorAll('.rtp-paytable-input:not([disabled])');
+  const _ptOldPlaceholders = new Map();
+  _ptSnapshotInputs.forEach(inp => _ptOldPlaceholders.set(inp, inp.placeholder));
+
   const section = document.getElementById('line-defs-section');
   const addBtn = document.getElementById('linedef-add-btn');
-  if (section) section.style.display = isWays ? 'none' : '';
-  if (addBtn) addBtn.style.display = isWays ? 'none' : '';
+  const lineToggleBtn = document.getElementById('linedefs-toggle-btn');
+  const scatterToggleBtn = document.getElementById('scatterdefs-toggle-btn');
+  if (section) section.style.display = noLines ? 'none' : '';
+  if (addBtn) addBtn.style.display = noLines ? 'none' : '';
+  if (lineToggleBtn) lineToggleBtn.style.display = noLines ? 'none' : '';
+  if (scatterToggleBtn) scatterToggleBtn.style.display = isContacts ? '' : 'none';
+
+  // Update screen dimension placeholders and values to match strategy defaults
+  const wEl = document.getElementById('rtp-screen-width');
+  const hEl = document.getElementById('rtp-screen-height');
+  const mEl = document.getElementById('rtp-min-match');
+  const newH = isContacts ? '5' : '3';
+  const newM = isContacts ? '5' : '3';
+  const oldH = isContacts ? '3' : '5';
+  const oldM = isContacts ? '3' : '5';
+  if (wEl) { wEl.placeholder = '5'; if (wEl.value === '5') wEl.value = ''; }
+  if (hEl) {
+    hEl.placeholder = newH;
+    if (!hEl.value || hEl.value === oldH || hEl.value === newH) hEl.value = '';
+  }
+  if (mEl) {
+    mEl.placeholder = newM;
+    if (!mEl.value || mEl.value === oldM || mEl.value === newM) mEl.value = '';
+  }
+
+  const scattersSection = document.getElementById('scatters-paytable-section');
+  if (scattersSection) {
+    scattersSection.style.display = isContacts ? 'flex' : 'none';
+    if (isContacts && document.getElementById('interval-sets-container').children.length === 0) {
+      addIntervalSet(null, [{ from: 5, to: 6 }, { from: 7, to: 8 }, { from: 9, to: 11 }, { from: 12, to: 14 }, { from: 15, to: 19 }, { from: 20, to: 25 }]);
+    }
+  }
+
+  // When switching to SCATTERS, unpin any fixed placeholders so interval count drives them
+  if (isContacts) {
+    document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
+      delete inp.dataset.fixedPlaceholder;
+    });
+  }
+
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const typeSel = row.querySelector('select');
-    if (!typeSel || typeSel.value !== 'WILD') return;
+    const setSel = row.querySelector('.rtp-interval-set-sel');
+    const isWild = typeSel && typeSel.value === 'WILD';
+    const isScatter = typeSel && typeSel.value === 'SCATTER';
+    const ptInput = row.querySelector('.rtp-paytable-input');
+
+    // SCATTER = blocker (no payout ever); WILD in SCATTERS = inherits from highest normal
+    if ((isScatter || (isWild && isContacts)) && ptInput) {
+      ptInput.disabled = true;
+      ptInput.placeholder = 'n/a';
+      ptInput.value = '';
+      if (setSel) setSel.style.display = 'none';
+    } else {
+      if (ptInput && !isScatter) ptInput.disabled = false;
+      if (setSel) setSel.style.display = (isContacts && !isScatter && !isWild) ? '' : 'none';
+    }
+
+    if (!typeSel || !isWild) return;
     const wildFields = row.querySelector('.rtp-wild-fields');
     if (wildFields) wildFields.style.display = isWays ? 'none' : '';
+    const aggSel = row.querySelector('.rtp-wild-agg');
     if (isWays) {
-      const aggSel = row.querySelector('.rtp-wild-agg');
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
+    } else {
+      // Switching away from WAYS: if agg was forced to NONE, restore to ADD so multiplier is visible
+      if (aggSel && aggSel.value === 'NONE') { aggSel.value = 'ADD'; }
+      if (aggSel) onWildAggChange(aggSel);
     }
   });
+  if (isContacts) refreshIntervalSetDropdowns();
+  else {
+    const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+    const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+    updatePaytablePlaceholders(w, m);
+  }
+
+  // Clear any paytable value that matched the pre-switch placeholder (was a default, not custom)
+  document.querySelectorAll('.rtp-paytable-input:not([disabled])').forEach(inp => {
+    const old = _ptOldPlaceholders.get(inp);
+    if (old && inp.value && inp.value === old) inp.value = '';
+  });
+
+  // Clear line def values that matched their placeholder (filled by "fill defaults", not custom)
+  document.querySelectorAll('.rtp-line-input').forEach(inp => {
+    if (inp.value && inp.placeholder && inp.value === inp.placeholder) inp.value = '';
+  });
+  updateLineDefsToggleBtn();
+
+  // Clear scatter interval values that matched their placeholder
+  document.querySelectorAll('.scatter-from, .scatter-to').forEach(inp => {
+    if (inp.value && inp.placeholder && inp.value === inp.placeholder) inp.value = '';
+  });
+  updateScatterDefsToggleBtn();
+
+  const tip = document.getElementById('screen-paytable-tip');
+  if (tip) {
+    const gridRows =
+      '<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div>' +
+      '<div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div>' +
+      '<div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div>';
+    if (isContacts) {
+      tip.innerHTML = 'Defines the grid and contacts paytable.' + gridRows +
+        '<div class="tip-rule">Contacts paytable — interval sets: each set maps a range of matching symbol counts to a payout multiplier. ' +
+        'A symbol wins when its total count on the screen falls within an interval; the interval boundaries are <strong>inclusive</strong> ' +
+        '(e.g. from 3 to 5 triggers for counts 3, 4, or 5). Each symbol row can be assigned to a specific interval set via the dropdown.</div>';
+    } else if (isWays) {
+      tip.innerHTML = 'Defines the grid.' + gridRows +
+        '<div class="tip-rule">WAYS pays for every combination of matching symbols across consecutive reels — no fixed paylines required.</div>';
+    } else {
+      tip.innerHTML = 'Defines the grid and winning lines.' + gridRows +
+        '<div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. ' +
+        'e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). ' +
+        'Only symbols landing on a defined payline can contribute to a win.</div>';
+    }
+  }
+  const symTip = document.getElementById('symconfig-tip');
+  if (symTip) {
+    const paytableExample =
+      'Paytable multipliers apply to the total stake per screen (bet size).' +
+      '<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">e.g. bet = 1.00, paytable = [1.0, 3.0, 10.0]</div>' +
+      '<div class="tip-row"><span>x3 match</span><span>1.0 × 1.00 = 1.00</span></div>' +
+      '<div class="tip-row"><span>x4 match</span><span>3.0 × 1.00 = 3.00</span></div>' +
+      '<div class="tip-row"><span>x5 match</span><span>10.0 × 1.00 = 10.00</span></div></div>' +
+      '<div class="tip-rule">values count = screenWidth − minMatch + 1</div>';
+    const wildBase = '<div class="tip-rule">At least one <strong>NORMAL</strong> symbol with a paytable is required. ' +
+      'A <strong>WILD</strong> without a paytable automatically pays the highest NORMAL symbol\'s payout for a wild-only streak.</div>';
+    if (isContacts) {
+      symTip.innerHTML = paytableExample + wildBase +
+        '<div class="tip-rule"><strong>SCATTERS strategy:</strong> Each NORMAL symbol\'s paytable entries correspond to the interval set assigned to it — ' +
+        'the first entry pays when the contact count falls in the first interval, the second entry for the second interval, and so on. ' +
+        'SCATTER symbols act as blockers (no payout). WILD symbols inherit the payout of the highest-paying NORMAL symbol for the same contact count.</div>';
+    } else if (isWays) {
+      symTip.innerHTML = paytableExample + wildBase +
+        '<div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — ' +
+        'they would double-count the wild\'s contribution, which is already reflected in the ways count. ' +
+        '<em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div>';
+    } else {
+      symTip.innerHTML = paytableExample + wildBase;
+    }
+  }
+  updateSymConfigToggleBtn();
+}
+let _setCardCounter = 0;
+function addIntervalSet(name, intervals) {
+  const cid = _setCardCounter++;
+  const container = document.getElementById('interval-sets-container');
+  const card = document.createElement('div');
+  card.className = 'interval-set-card';
+  card.dataset.setId = cid;
+  card.style.cssText = 'border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;display:flex;flex-direction:column;gap:0.3rem';
+  card.innerHTML =
+    '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem">' +
+      '<span class="interval-set-card-label" style="font-size:0.78rem;opacity:0.8;font-weight:500;flex:1"></span>' +
+      '<button class="icon-btn remove" onclick="removeIntervalSet(this)" title="Remove set" style="margin-left:auto">✕</button>' +
+    '</div>' +
+    '<div class="interval-rows" style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem"></div>' +
+    '<button class="add-btn" style="font-size:0.72rem;padding:0.15rem 0.5rem;margin-top:0.15rem" onclick="addScatterInterval(this.closest(\'.interval-set-card\'))">+ Add interval</button>';
+  container.appendChild(card);
+  refreshIntervalSetCardLabels();
+  (intervals || [{ from: undefined, to: undefined }]).forEach(e => addScatterInterval(card, e.from, e.to));
+  refreshIntervalSetDropdowns();
+}
+
+function refreshIntervalSetCardLabels() {
+  document.querySelectorAll('.interval-set-card').forEach((card, i) => {
+    const lbl = card.querySelector('.interval-set-card-label');
+    const name = 'int-set-' + (i + 1);
+    if (lbl) lbl.textContent = name;
+    card.dataset.setName = name;
+  });
+}
+
+function removeIntervalSet(btn) {
+  const card = btn.closest('.interval-set-card');
+  if (document.getElementById('interval-sets-container').children.length <= 1) {
+    showToast('At least one interval set is required', true); return;
+  }
+  card.remove();
+  refreshIntervalSetCardLabels();
+  refreshIntervalSetDropdowns();
+  const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+  const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+  updatePaytablePlaceholders(w, m);
+}
+
+function validateIntervalField(inp) {
+  const row = inp.closest('.scatter-interval-row');
+  const wEl = document.getElementById('rtp-screen-width');
+  const hEl = document.getElementById('rtp-screen-height');
+  const w = parseInt(wEl.value || wEl.placeholder) || 5;
+  const h = parseInt(hEl.value || hEl.placeholder) || 5;
+  const max = w * h;
+  const val = parseInt(inp.value);
+  let invalid = false;
+  if (inp.value === '') { invalid = false; }
+  else if (isNaN(val) || val < 1 || val > max) { invalid = true; }
+  else {
+    const fromInp = row.querySelector('.scatter-from');
+    const toInp   = row.querySelector('.scatter-to');
+    if (fromInp.value && toInp.value) {
+      const f = parseInt(fromInp.value), t = parseInt(toInp.value);
+      if (!isNaN(f) && !isNaN(t) && f > t) {
+        [fromInp, toInp].forEach(x => {
+          x.style.color = 'var(--error,#e55)';
+          x.style.borderColor = 'var(--error,#e55)';
+        });
+        return;
+      }
+    }
+  }
+  if (invalid) {
+    inp.style.color = 'var(--error,#e55)';
+    inp.style.borderColor = 'var(--error,#e55)';
+  } else {
+    inp.style.borderColor = '';
+    inp.style.color = '';
+  }
+  // clear partner's error styling if both are now valid
+  const fromInp = row.querySelector('.scatter-from');
+  const toInp   = row.querySelector('.scatter-to');
+  if (fromInp && toInp) {
+    const f = parseInt(fromInp.value), t = parseInt(toInp.value);
+    if (!isNaN(f) && !isNaN(t) && f <= t) {
+      [fromInp, toInp].forEach(x => {
+        if (parseInt(x.value) >= 1 && parseInt(x.value) <= max) {
+          x.style.borderColor = '';
+          x.style.color = '';
+        }
+      });
+    }
+  }
+}
+
+function addScatterInterval(card, from, to) {
+  if (!card) {
+    const cards = document.querySelectorAll('.interval-set-card');
+    card = cards[cards.length - 1];
+  }
+  const rowsDiv = card.querySelector('.interval-rows');
+  const wEl = document.getElementById('rtp-screen-width');
+  const hEl = document.getElementById('rtp-screen-height');
+  const w = parseInt(wEl.value || wEl.placeholder) || 5;
+  const h = parseInt(hEl.value || hEl.placeholder) || 5;
+  const maxContacts = w * h;
+
+  // When adding via button (no explicit from/to), check if last row's "to" is at the max
+  if (from === undefined && to === undefined) {
+    const existingRows = rowsDiv.querySelectorAll('.scatter-interval-row');
+    if (existingRows.length > 0) {
+      const lastTo = existingRows[existingRows.length - 1].querySelector('.scatter-to');
+      const lastToVal = parseInt(lastTo.value || lastTo.placeholder);
+      if (lastToVal === maxContacts) { from = maxContacts; to = maxContacts; }
+    }
+  }
+
+  const row = document.createElement('div');
+  row.className = 'scatter-interval-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:0.4rem';
+  row.innerHTML =
+    '<label style="font-size:0.72rem;opacity:0.7;min-width:2rem">from</label>' +
+    '<input type="number" class="scatter-from" min="1" placeholder="3" style="width:2.6rem;text-align:center" title="Min contacts (1 – reels × rows = ' + maxContacts + ')" oninput="validateIntervalField(this)" onblur="validateIntervalField(this)"/>' +
+    '<label style="font-size:0.72rem;opacity:0.7;min-width:1rem">to</label>' +
+    '<input type="number" class="scatter-to" min="1" placeholder="5" style="width:2.6rem;text-align:center" title="Max contacts (1 – reels × rows = ' + maxContacts + ')" oninput="validateIntervalField(this)" onblur="validateIntervalField(this)"/>' +
+    '<button class="icon-btn remove" title="Remove interval" style="margin-left:0.2rem" onclick="this.closest(\'.scatter-interval-row\').remove();refreshIntervalSetDropdowns();const w=parseInt(document.getElementById(\'rtp-screen-width\').value)||5,m=parseInt(document.getElementById(\'rtp-min-match\').value)||3;updatePaytablePlaceholders(w,m);">✕</button>';
+  if (from !== undefined && from !== null) row.querySelector('.scatter-from').placeholder = from;
+  if (to   !== undefined && to   !== null) row.querySelector('.scatter-to').placeholder   = to;
+  rowsDiv.appendChild(row);
+  const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+  updatePaytablePlaceholders(w, m);
+}
+
+function getIntervalSetNames() {
+  return Array.from(document.querySelectorAll('.interval-set-card'))
+    .map(card => card.dataset.setName || 'default');
+}
+
+function refreshIntervalSetDropdowns() {
+  const names = getIntervalSetNames();
+  document.querySelectorAll('.rtp-sym-row .rtp-interval-set-sel').forEach(sel => {
+    const prev = sel.value;
+    sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    if (names.includes(prev)) sel.value = prev;
+  });
+  const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+  const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+  updatePaytablePlaceholders(w, m);
+}
+
+function collectContactsIntervalSets() {
+  const cards = document.querySelectorAll('.interval-set-card');
+  const result = [];
+  const errors = [];
+  const setNames = new Set();
+  cards.forEach((card, si) => {
+    const name = card.dataset.setName || ('interval-set-' + (si + 1));
+    if (setNames.has(name)) { errors.push('Duplicate interval set name: "' + name + '"'); return; }
+    setNames.add(name);
+    const rows = card.querySelectorAll('.scatter-interval-row');
+    const intervals = [];
+    rows.forEach((row, i) => {
+      const fromInp = row.querySelector('.scatter-from');
+      const toInp   = row.querySelector('.scatter-to');
+      const from = parseInt(fromInp.value || fromInp.placeholder);
+      const to   = parseInt(toInp.value   || toInp.placeholder);
+      if (isNaN(from) || isNaN(to))
+        errors.push('Set "' + name + '" interval ' + (i + 1) + ': both from and to are required');
+      else if (from > to)
+        errors.push('Set "' + name + '" interval ' + (i + 1) + ': from (' + from + ') must be ≤ to (' + to + ')');
+      else
+        intervals.push({ from, to });
+    });
+    if (intervals.length === 0) errors.push('Set "' + name + '" must have at least one interval');
+    for (let i = 0; i < intervals.length; i++) {
+      for (let j = i + 1; j < intervals.length; j++) {
+        if (intervals[i].from <= intervals[j].to && intervals[j].from <= intervals[i].to)
+          errors.push('Set "' + name + '" intervals ' + (i + 1) + ' and ' + (j + 1) + ' overlap');
+      }
+    }
+    result.push({ name, intervals });
+  });
+  return { contactsIntervalSets: result, errors };
 }
 function onScreenSizeChange() {
   const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+  const h = parseInt(document.getElementById('rtp-screen-height').value) || 3;
   const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
   updatePaytablePlaceholders(w, m);
   // Refresh sequence placeholders for any SEQUENCE wilds
   const seqPh = Array.from({length: w}, (_, i) => (i + 1).toFixed(1)).join(', ');
   document.querySelectorAll('.rtp-wild-seq').forEach(inp => { inp.placeholder = seqPh; });
+  // Update titles and re-validate all scatter interval inputs
+  const maxContacts = w * h;
+  document.querySelectorAll('.scatter-from, .scatter-to').forEach(inp => {
+    inp.title = 'Valid range: 1 – reels × rows = ' + maxContacts;
+    validateIntervalField(inp);
+  });
 }
 
 function updatePaytablePlaceholders(w, m) {
-  const count = Math.max(1, w - m + 1);
-  const NORMAL_TABLE = {
+  const strat = document.getElementById('rtp-strategy')?.value;
+  const isScatters = strat === 'SCATTERS';
+
+  // Build a map: setName -> intervalCount for fast lookup
+  const setIntervalCounts = {};
+  if (isScatters) {
+    document.querySelectorAll('.interval-set-card').forEach(card => {
+      const name = card.dataset.setName || 'default';
+      setIntervalCounts[name] = card.querySelectorAll('.scatter-interval-row').length;
+    });
+  }
+
+  const defaultIntervalCount = isScatters
+    ? (Object.values(setIntervalCounts)[0] || 1)
+    : 0;
+  const fallbackCount = isScatters ? defaultIntervalCount : Math.max(1, w - m + 1);
+  // Per-symbol placeholder paytables (ascending within a row = higher interval → higher pay;
+  // descending across symbols = higher symId → lower pay).
+  const SYM3_TABLE = {
+    1: '5.0',
+    2: '2.0, 5.0',
+    3: '1.0, 2.0, 5.0',
+    4: '0.5, 1.0, 2.0, 5.0',
+    5: '0.2, 0.5, 1.0, 2.0, 5.0',
+    6: '0.1, 0.2, 0.5, 1.0, 2.0, 5.0',
+    7: '0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0',
+  };
+  const SYM4_TABLE = {
+    1: '2.5',
+    2: '1.0, 2.5',
+    3: '0.5, 1.0, 2.5',
+    4: '0.2, 0.5, 1.0, 2.5',
+    5: '0.1, 0.2, 0.5, 1.0, 2.5',
+    6: '0.1, 0.1, 0.2, 0.5, 1.0, 2.5',
+    7: '0.1, 0.1, 0.2, 0.5, 1.0, 2.5, 5.0',
+  };
+  const SYM5_TABLE = {
+    1: '1.5',
+    2: '0.5, 1.5',
+    3: '0.2, 0.5, 1.5',
+    4: '0.1, 0.2, 0.5, 1.5',
+    5: '0.1, 0.1, 0.2, 0.5, 1.5',
+    6: '0.1, 0.1, 0.1, 0.2, 0.5, 1.5',
+    7: '0.1, 0.1, 0.1, 0.2, 0.5, 1.5, 3.0',
+  };
+  const SYM6_TABLE = {
     1: '1.0',
-    2: '1.0, 2.0',
-    3: '1.0, 2.0, 4.0',
-    4: '0.5, 1.0, 2.0, 4.0',
-    5: '0.2, 0.5, 1.0, 2.0, 4.0',
-    6: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0',
-    7: '0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 8.0',
+    2: '0.3, 1.0',
+    3: '0.1, 0.3, 1.0',
+    4: '0.1, 0.1, 0.3, 1.0',
+    5: '0.1, 0.1, 0.1, 0.3, 1.0',
+    6: '0.1, 0.1, 0.1, 0.1, 0.3, 1.0',
+    7: '0.1, 0.1, 0.1, 0.1, 0.3, 1.0, 2.0',
+  };
+  const SYM7_TABLE = {
+    1: '0.5',
+    2: '0.2, 0.5',
+    3: '0.1, 0.2, 0.5',
+    4: '0.1, 0.1, 0.2, 0.5',
+    5: '0.1, 0.1, 0.1, 0.2, 0.5',
+    6: '0.1, 0.1, 0.1, 0.1, 0.2, 0.5',
+    7: '0.1, 0.1, 0.1, 0.1, 0.2, 0.5, 1.0',
   };
   const WILD_TABLE = {
     1: '50.0',
@@ -1265,30 +1795,57 @@ function updatePaytablePlaceholders(w, m) {
     6: '0.5, 1.0, 2.0, 5.0, 10.0, 50.0',
     7: '0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0',
   };
-  const normalPh = NORMAL_TABLE[count] || Array.from({length: count}, (_, i) => (i + 1).toFixed(1)).join(', ');
-  const wildPh   = WILD_TABLE[count]   || Array.from({length: count}, (_, i) => ((i + 1) * 2).toFixed(1)).join(', ');
-  const LOW_TABLE = {
-    1: '2.0',
-    2: '1.0, 2.0',
-    3: '0.5, 1.0, 2.0',
-    4: '0.2, 0.5, 1.0, 2.0',
-    5: '0.1, 0.2, 0.5, 1.0, 2.0',
-    6: '0.1, 0.1, 0.2, 0.5, 1.0, 2.0',
-    7: '0.1, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0',
-  };
-  const lowPh = LOW_TABLE[count] || Array.from({length: count}, (_, i) => ((i + 1) * 0.5).toFixed(1)).join(', ');
+
   document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
-    if (inp.disabled) return; // scatter — keep n/a
-    if (inp.dataset.fixedPlaceholder) return; // SYM_DEFAULTS placeholder — don't overwrite
+    if (inp.disabled) return;
+    if (inp.dataset.fixedPlaceholder) return;
     const row = inp.closest('.rtp-sym-row');
     const symId = row ? parseInt(row.dataset.symId) : 0;
-    const isWild = row && row.querySelector('select') && row.querySelector('select').value === 'WILD';
+    const typeVal = row && row.querySelector('select') ? row.querySelector('select').value : 'NORMAL';
+    const isWild = typeVal === 'WILD';
+    const isScatterSym = typeVal === 'SCATTER';
+
+    let count;
+    if (isScatters) {
+      const setSel = row ? row.querySelector('.rtp-interval-set-sel') : null;
+      const selName = setSel ? setSel.value : null;
+      count = (selName && setIntervalCounts[selName]) ? setIntervalCounts[selName] : fallbackCount;
+    } else {
+      count = fallbackCount;
+    }
+
     let ph;
-    if (isWild)          ph = wildPh;
-    else if (symId <= 3) ph = normalPh;
-    else                 ph = lowPh;
+    if (isScatterSym) {
+      ph = Array.from({length: count}, () => '0').join(', ');
+    } else if (isScatters) {
+      // SCATTERS: 0.1, 0.2, 0.4, 0.8, ... (each value doubles)
+      let v = 0.1;
+      const vals = [];
+      for (let i = 0; i < count; i++) {
+        vals.push(parseFloat(v.toPrecision(10)));
+        v *= 2;
+      }
+      ph = vals.map(x => {
+        const s = x.toString();
+        return s.includes('.') ? s : s + '.0';
+      }).join(', ');
+    } else if (isWild) {
+      ph = WILD_TABLE[count] || Array.from({length: count}, (_, i) => ((i + 1) * 2).toFixed(1)).join(', ');
+    } else {
+      const symTable = symId <= 3 ? SYM3_TABLE
+                     : symId === 4 ? SYM4_TABLE
+                     : symId === 5 ? SYM5_TABLE
+                     : symId === 6 ? SYM6_TABLE
+                     : SYM7_TABLE;
+      ph = symTable[count] || Array.from({length: count}, (_, i) => ((count - i) * 0.1).toFixed(1)).join(', ');
+    }
+
+    const titleSuffix = isScatters
+      ? count + ' value(s) required (one per interval in selected set)'
+      : count + ' value(s) required (screenWidth − minMatch + 1)';
+
     inp.placeholder = ph;
-    inp.title = count + ' value(s) required (screenWidth − minMatch + 1)';
+    inp.title = titleSuffix;
   });
 }
 
@@ -1340,10 +1897,10 @@ function collectRtpRequest() {
     errors.push('Min Match (' + minMatch + ') cannot exceed screen width (' + screenWidth + ')');
 
   // Line definitions — three-pass validation: format → positions → duplicates
-  // WAYS strategy does not use paylines — skip line validation entirely
+  // WAYS and SCATTERS strategies do not use paylines — skip line validation entirely
   const lineRows = document.querySelectorAll('.rtp-line-row');
   const _strategyForLineCheck = document.getElementById('rtp-strategy').value;
-  const isWays = _strategyForLineCheck === 'WAYS';
+  const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'SCATTERS';
   if (!isWays && lineRows.length === 0) errors.push('At least one line definition is required');
   const lineDefinitions = [];
   const parsedLines = [];   // store per-row parse results for later passes
@@ -1411,10 +1968,24 @@ function collectRtpRequest() {
       errors.push('Symbol ' + symId + ': paytable contains invalid numbers');
     if (paytable.some(v => !isNaN(v) && Math.round(v * 10) !== v * 10))
       errors.push('Symbol ' + symId + ': paytable values must be multiples of 0.1');
+    const setSel = row.querySelector('.rtp-interval-set-sel');
+    const contactsIntervalSetName = setSel ? (setSel.value || null) : null;
     if (paytable.length > 0 && (type === 'NORMAL' || type === 'WILD')) {
-      const required = Math.max(1, screenWidth - minMatch + 1);
+      const _strat = document.getElementById('rtp-strategy').value;
+      let required, requiredDesc;
+      if (_strat === 'SCATTERS') {
+        const setName = contactsIntervalSetName;
+        const card = setName
+          ? Array.from(document.querySelectorAll('.interval-set-card')).find(c => (c.dataset.setName || 'default') === setName)
+          : document.querySelector('.interval-set-card');
+        required = card ? card.querySelectorAll('.scatter-interval-row').length : 0;
+        requiredDesc = required + ' (one per interval in set "' + (setName || 'default') + '")';
+      } else {
+        required = Math.max(1, screenWidth - minMatch + 1);
+        requiredDesc = required + ' (screenWidth − minMatch + 1 = ' + screenWidth + ' − ' + minMatch + ' + 1)';
+      }
       if (!isNaN(screenWidth) && !isNaN(minMatch) && paytable.length !== required)
-        errors.push('Symbol ' + symId + ': paytable must have exactly ' + required + ' value(s) (screenWidth − minMatch + 1 = ' + screenWidth + ' − ' + minMatch + ' + 1)');
+        errors.push('Symbol ' + symId + ': paytable must have exactly ' + requiredDesc + ' value(s)');
     }
     if (type === 'WILD' && wildAgg !== 'SEQUENCE' && wildAgg !== 'NONE' && (isNaN(wildMult) || wildMult <= 0))
       errors.push('Symbol ' + symId + ': wild multiplier must be > 0');
@@ -1424,7 +1995,7 @@ function collectRtpRequest() {
       if (wildSequence.length !== screenWidth)
         errors.push('Symbol ' + symId + ': sequence must have exactly ' + screenWidth + ' value(s) (one per reel)');
     }
-    symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence });
+    symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence, contactsIntervalSetName });
   });
 
   if (symbols.length === 0) errors.push('At least one symbol must be configured');
@@ -1447,6 +2018,13 @@ function collectRtpRequest() {
   else if (Math.round(betSize * 10) !== betSize * 10)
     errors.push('Bet size must be a multiple of 0.1 (min bet)');
 
+  let contactsIntervalSets = null;
+  if (strategy === 'SCATTERS') {
+    const sc = collectContactsIntervalSets();
+    sc.errors.forEach(e => errors.push(e));
+    contactsIntervalSets = sc.contactsIntervalSets;
+  }
+
   if (errors.length > 0) return { errors };
 
   return {
@@ -1462,7 +2040,8 @@ function collectRtpRequest() {
       lineDefinitions,
       spins,
       threadCount,
-      betSize
+      betSize,
+      contactsIntervalSets
     }
   };
 }
@@ -1594,12 +2173,14 @@ function renderRtpResult(container, r, payload) {
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${{
-              LTR: 'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
-              RTL: 'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
-              BW:  'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
-              ADJ: 'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.'
+              LTR:      'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
+              RTL:      'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
+              BW:       'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
+              ADJ:      'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.',
+              WAYS:     'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
+              SCATTERS: 'Scatter Pays — symbols pay based on total tile count anywhere on the screen. No paylines needed.'
             }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatter Pays'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>
@@ -1914,7 +2495,9 @@ function buildSpinTestPayload() {
     const nums = row.querySelector('.rtp-line-input').value.trim().split(',').map(s => parseInt(s.trim(), 10));
     if (!nums.some(isNaN)) lineDefinitions.push(nums);
   });
-  if (lineDefinitions.length === 0) errors.push('No line definitions — configure in Simulation tab');
+  const _spinTestStrat = document.getElementById('rtp-strategy')?.value;
+  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS')
+    errors.push('No line definitions — configure in Simulation tab');
 
   const symbols = [];
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
@@ -1926,7 +2509,8 @@ function buildSpinTestPayload() {
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
     const seqRaw   = row.querySelector('.rtp-wild-seq')?.value.trim() || '';
     const wildSequence = (wildAgg === 'SEQUENCE' && seqRaw) ? seqRaw.split(',').map(s => parseFloat(s.trim())) : [];
-    symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence });
+    symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence,
+      contactsIntervalSetName: (row.querySelector('.rtp-interval-set-sel')?.value || null) });
   });
   if (symbols.length === 0) errors.push('No symbols configured — configure in Simulation tab');
 
@@ -1951,6 +2535,14 @@ function buildSpinTestPayload() {
     }
   }
 
+  let contactsIntervalSets = null;
+  if (strategy === 'SCATTERS') {
+    const sc = collectContactsIntervalSets();
+    sc.errors.forEach(e => errors.push(e));
+    contactsIntervalSets = sc.contactsIntervalSets;
+  }
+  if (errors.length > 0) return { errors };
+
   return {
     errors: [],
     payload: {
@@ -1965,7 +2557,8 @@ function buildSpinTestPayload() {
       count,
       reelSetIndex,
       stops,
-      screen
+      screen,
+      contactsIntervalSets
     }
   };
 }
@@ -2290,4 +2883,83 @@ function compactJson(obj) {
     if (!wrap) return;
     if (!wrap.contains(e.relatedTarget)) resetTip(wrap);
   });
+
+  // ── Generic panel resize factory ────────────────────────────────────────────
+  function makeResizable(handleId, layoutSelector, cssVar, defaultWidth, storageKey, minWidth, maxWidth) {
+    const handle = document.getElementById(handleId);
+    if (!handle) return;
+    const layout = handle.closest(layoutSelector);
+    if (!layout) return;
+    const saved = parseInt(localStorage.getItem(storageKey), 10);
+    if (saved && saved >= minWidth && saved <= maxWidth) {
+      layout.style.setProperty(cssVar, saved + 'px');
+    }
+    let startX = 0, startWidth = 0;
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = parseInt(getComputedStyle(layout).getPropertyValue(cssVar)) || defaultWidth;
+      handle.classList.add('dragging');
+      function onMove(ev) {
+        const newWidth = Math.min(maxWidth, Math.max(minWidth, startWidth + (ev.clientX - startX)));
+        layout.style.setProperty(cssVar, newWidth + 'px');
+      }
+      function onUp() {
+        handle.classList.remove('dragging');
+        localStorage.setItem(storageKey, parseInt(getComputedStyle(layout).getPropertyValue(cssVar)) || defaultWidth);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+
+  makeResizable('gen-resize-handle',  '.gen-layout',       '--gen-col-width',  500, 'gen_col_width',  280, 900);
+  makeResizable('spin-resize-handle', '.spin-test-layout', '--spin-col-width', 300, 'spin_col_width', 200, 700);
+
+  // ── RTP panel resize ────────────────────────────────────────────────────────
+  (function () {
+    const MIN_WIDTH = 280;
+    const MAX_WIDTH = 900;
+    const STORAGE_KEY = 'rtp_col_width';
+
+    const handle = document.getElementById('rtp-resize-handle');
+    if (!handle) return;
+
+    const layout = handle.closest('.rtp-layout');
+    if (!layout) return;
+
+    const saved = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+    if (saved && saved >= MIN_WIDTH && saved <= MAX_WIDTH) {
+      layout.style.setProperty('--rtp-col-width', saved + 'px');
+    }
+
+    let startX = 0;
+    let startWidth = 0;
+
+    handle.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = parseInt(getComputedStyle(layout).getPropertyValue('--rtp-col-width')) || 420;
+      handle.classList.add('dragging');
+
+      function onMove(ev) {
+        const delta = ev.clientX - startX;
+        const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+        layout.style.setProperty('--rtp-col-width', newWidth + 'px');
+      }
+
+      function onUp() {
+        handle.classList.remove('dragging');
+        const current = parseInt(getComputedStyle(layout).getPropertyValue('--rtp-col-width')) || 420;
+        localStorage.setItem(STORAGE_KEY, current);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  })();
 })();

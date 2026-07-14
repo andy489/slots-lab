@@ -1,6 +1,8 @@
 package com.slotslab.simulation.web;
 
 import com.slotslab.simulation.config.ReelSetChance;
+import com.slotslab.simulation.config.ScattersIntervalSet;
+import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.config.SymbolTable;
 import com.slotslab.simulation.config.SymbolType;
@@ -76,7 +78,8 @@ public class RtpSimulationService {
                 long workerSpins = base + (i < remainder ? 1 : 0);
                 futures.add(executor.submit(new RtpWorker(
                         workerSpins, reels, reelLengths, cumulativeChances,
-                        screenWidth, screenHeight, minMatch, symbols, strategy, lines)));
+                        screenWidth, screenHeight, minMatch, symbols, strategy, lines,
+                        req.contactsIntervalSets())));
             }
 
             double grandWin = 0.0;
@@ -138,6 +141,39 @@ public class RtpSimulationService {
         }
     }
 
+    static void validateContactsIntervalSets(List<ScattersIntervalSet> sets, int minMatch, int maxMatch) {
+        if (sets == null || sets.isEmpty())
+            throw new IllegalArgumentException("contactsIntervalSets is required for SCATTERS strategy");
+        java.util.Set<String> names = new java.util.HashSet<>();
+        for (int si = 0; si < sets.size(); si++) {
+            ScattersIntervalSet set = sets.get(si);
+            if (set.name() == null || set.name().isBlank())
+                throw new IllegalArgumentException("contactsIntervalSets[" + si + "]: name must not be blank");
+            if (!names.add(set.name()))
+                throw new IllegalArgumentException("Duplicate interval set name: '" + set.name() + "'");
+            List<ScattersPaytableEntry> intervals = set.intervals();
+            if (intervals == null || intervals.isEmpty())
+                throw new IllegalArgumentException("Interval set '" + set.name() + "' must have at least one interval");
+            for (int i = 0; i < intervals.size(); i++) {
+                ScattersPaytableEntry e = intervals.get(i);
+                if (e.from() > e.to())
+                    throw new IllegalArgumentException("Interval set '" + set.name() + "'[" + i + "]: from (" + e.from() + ") > to (" + e.to() + ")");
+                if (e.from() < minMatch)
+                    throw new IllegalArgumentException("Interval set '" + set.name() + "'[" + i + "]: from (" + e.from() + ") < minMatch (" + minMatch + ")");
+                if (e.to() > maxMatch)
+                    throw new IllegalArgumentException("Interval set '" + set.name() + "'[" + i + "]: to (" + e.to() + ") > maxMatch (" + maxMatch + ")");
+            }
+            for (int i = 0; i < intervals.size(); i++) {
+                for (int j = i + 1; j < intervals.size(); j++) {
+                    ScattersPaytableEntry a = intervals.get(i), b = intervals.get(j);
+                    if (a.from() <= b.to() && b.from() <= a.to())
+                        throw new IllegalArgumentException("Interval set '" + set.name() + "': entries " + i + " and " + j
+                                + " overlap: [" + a.from() + "," + a.to() + "] vs [" + b.from() + "," + b.to() + "]");
+                }
+            }
+        }
+    }
+
     private double[] buildCumulative(List<ReelSetChance> chances) {
         double total = chances.stream().mapToDouble(ReelSetChance::chance).sum();
         double[] cum = new double[chances.size()];
@@ -184,9 +220,11 @@ public class RtpSimulationService {
         }
 
         if (req.strategy() != PayoutStrategyType.WAYS &&
+                req.strategy() != PayoutStrategyType.SCATTERS &&
                 (req.lineDefinitions() == null || req.lineDefinitions().isEmpty()))
             throw new IllegalArgumentException("At least one line definition is required");
-        if (req.strategy() != PayoutStrategyType.WAYS) {
+        if (req.strategy() != PayoutStrategyType.WAYS &&
+                req.strategy() != PayoutStrategyType.SCATTERS) {
             for (int li = 0; li < req.lineDefinitions().size(); li++) {
                 List<Integer> line = req.lineDefinitions().get(li);
                 if (line.size() != sw)
@@ -227,6 +265,10 @@ public class RtpSimulationService {
             }
         }
 
+        if (req.strategy() == PayoutStrategyType.SCATTERS) {
+            validateContactsIntervalSets(req.contactsIntervalSets(), req.minMatch(), sw * sh);
+        }
+
         for (SymbolConfig sym : req.symbols()) {
             if (sym.type() == SymbolType.NORMAL || sym.type() == SymbolType.WILD) {
                 if (sym.paytable() != null && sym.paytable().stream().anyMatch(v -> v == null || v < 0))
@@ -234,10 +276,24 @@ public class RtpSimulationService {
                 if (sym.paytable() != null && sym.paytable().stream().anyMatch(v -> v != null && Math.abs(Math.round(v * 10) - v * 10) > 0.0001))
                     throw new IllegalArgumentException("Symbol " + sym.symbolId() + " paytable values must be multiples of 0.1 (min bet)");
                 if (sym.paytable() != null && !sym.paytable().isEmpty()) {
-                    int required = sw - req.minMatch() + 1;
+                    int required;
+                    String requiredDesc;
+                    if (req.strategy() == PayoutStrategyType.SCATTERS && req.contactsIntervalSets() != null) {
+                        String setName = sym.contactsIntervalSetName();
+                        ScattersIntervalSet resolved = req.contactsIntervalSets().stream()
+                                .filter(s -> setName == null ? true : setName.equals(s.name()))
+                                .findFirst()
+                                .orElse(req.contactsIntervalSets().isEmpty() ? null : req.contactsIntervalSets().get(0));
+                        required = (resolved != null && resolved.intervals() != null) ? resolved.intervals().size() : 0;
+                        String usedSet = resolved != null ? resolved.name() : "?";
+                        requiredDesc = required + " (one per interval in set '" + usedSet + "')";
+                    } else {
+                        required = sw - req.minMatch() + 1;
+                        requiredDesc = required + " (screenWidth − minMatch + 1 = " + sw + " − " + req.minMatch() + " + 1)";
+                    }
                     if (sym.paytable().size() != required)
                         throw new IllegalArgumentException("Symbol " + sym.symbolId() + " paytable must have exactly "
-                                + required + " value(s) (screenWidth − minMatch + 1 = " + sw + " − " + req.minMatch() + " + 1)");
+                                + requiredDesc + " value(s)");
                     List<Double> pt = sym.paytable();
                     for (int i = 1; i < pt.size(); i++) {
                         if (pt.get(i) < pt.get(i - 1))
