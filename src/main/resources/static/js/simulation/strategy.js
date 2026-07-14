@@ -88,7 +88,7 @@ function onStrategyChange() {
     const wildFields = row.querySelector('.rtp-wild-fields');
     if (wildFields) wildFields.style.display = isWays ? 'none' : '';
     const aggSel = row.querySelector('.rtp-wild-agg');
-    if (isWays) {
+    if (isWays || isContactsLike) {
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
     } else {
       if (aggSel && aggSel.value === 'NONE') { aggSel.value = 'ADD'; }

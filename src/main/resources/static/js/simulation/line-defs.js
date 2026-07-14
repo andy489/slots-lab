@@ -116,6 +116,21 @@ function toggleScatterDefs() {
   updateScatterDefsToggleBtn();
 }
 
+function toggleClusterDefs() {
+  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  const intervalInputs = document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to');
+  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+    || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
+  if (hasValues) {
+    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
+    intervalInputs.forEach(inp => { inp.value = ''; inp.style.color = ''; inp.style.borderColor = ''; });
+  } else {
+    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
+    intervalInputs.forEach(inp => { if (inp.placeholder) inp.value = inp.placeholder; });
+  }
+  updateScreenDimsToggleBtn();
+}
+
 function updateSymConfigToggleBtn() {
   const btn = document.getElementById('symconfig-toggle-btn');
   if (!btn) return;
@@ -141,8 +156,12 @@ function toggleSymConfig() {
 function updateScreenDimsToggleBtn() {
   const btn = document.getElementById('screendims-toggle-btn');
   if (!btn) return;
+  const strat = document.getElementById('rtp-strategy')?.value;
   const ids = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
-  const hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
+  let hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
+  if (strat === 'CLUSTERS') {
+    hasValues = hasValues || Array.from(document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
+  }
   btn.innerHTML = hasValues
     ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
     : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
@@ -151,6 +170,11 @@ function updateScreenDimsToggleBtn() {
 }
 
 function toggleScreenDims() {
+  const strat = document.getElementById('rtp-strategy')?.value;
+  if (strat === 'CLUSTERS') {
+    toggleClusterDefs();
+    return;
+  }
   const ids = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
   const hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
   ids.forEach(id => {
@@ -227,6 +251,7 @@ function fillSpinTestDefaults() {
 
   const strat = document.getElementById('rtp-strategy')?.value || 'LTR';
   const isContacts = strat === 'SCATTERS';
+  const isClusters = strat === 'CLUSTERS';
   const isWays = strat === 'WAYS';
 
   if (isContacts) {
@@ -237,6 +262,14 @@ function fillSpinTestDefaults() {
         || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
     })();
     if (!scatterHasValues) toggleScatterDefs();
+  } else if (isClusters) {
+    const clusterHasValues = (() => {
+      const screenInputs = ['rtp-screen-width','rtp-screen-height','rtp-min-match'].map(id => document.getElementById(id));
+      const intervalInputs = document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to');
+      return screenInputs.some(inp => inp && inp.value.trim() !== '')
+        || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
+    })();
+    if (!clusterHasValues) toggleClusterDefs();
   } else if (!isWays) {
     const lineHasValues = (() => {
       const screenInputs = ['rtp-screen-width','rtp-screen-height','rtp-min-match'].map(id => document.getElementById(id));

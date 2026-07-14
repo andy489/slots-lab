@@ -2178,9 +2178,9 @@ function renderRtpResult(container, r, payload) {
               BW:       'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
               ADJ:      'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.',
               WAYS:     'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
-              SCATTERS: 'Scatter Pays — symbols pay based on total tile count anywhere on the screen. No paylines needed.'
+              SCATTERS: 'Scatters Pay — symbols pay based on total tile count anywhere on the screen. No paylines needed.'
             }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatter Pays'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatters Pay'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>

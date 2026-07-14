@@ -64,7 +64,8 @@ function addSymbolRow(symbolId) {
       const aggSel = row.querySelector('.rtp-wild-agg');
       if (aggSel) {
         const strat = document.getElementById('rtp-strategy')?.value;
-        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS') ? 'ADD' : def.agg;
+        const isContactsLikeStrat = strat === 'SCATTERS' || strat === 'CLUSTERS';
+        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS' && !isContactsLikeStrat) ? 'ADD' : def.agg;
         aggSel.value = resolvedAgg;
         onWildAggChange(aggSel);
       }
