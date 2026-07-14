@@ -21,7 +21,7 @@ function onStrategyChange() {
   if (addBtn) addBtn.style.display = noLines ? 'none' : '';
   if (lineToggleBtn) lineToggleBtn.style.display = noLines ? 'none' : '';
   if (scatterToggleBtn) scatterToggleBtn.style.display = isContacts ? '' : 'none';
-  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = isWays ? '' : 'none';
+  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = noLines ? '' : 'none';
 
   const scattersSection = document.getElementById('scatters-paytable-section');
   if (scattersSection) {
@@ -88,7 +88,7 @@ function onStrategyChange() {
     const wildFields = row.querySelector('.rtp-wild-fields');
     if (wildFields) wildFields.style.display = isWays ? 'none' : '';
     const aggSel = row.querySelector('.rtp-wild-agg');
-    if (isWays || isContactsLike) {
+    if (isWays) {
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
     } else {
       if (aggSel && aggSel.value === 'NONE') { aggSel.value = 'ADD'; }
