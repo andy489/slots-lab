@@ -200,11 +200,15 @@ function addIntervalSet(name, intervals, forClusters) {
 }
 
 function refreshIntervalSetCardLabels() {
-  document.querySelectorAll('.interval-set-card').forEach((card, i) => {
-    const lbl = card.querySelector('.interval-set-card-label');
-    const name = 'int-set-' + (i + 1);
-    if (lbl) lbl.textContent = name;
-    card.dataset.setName = name;
+  ['interval-sets-container', 'clusters-interval-sets-container'].forEach(cid => {
+    const container = document.getElementById(cid);
+    if (!container) return;
+    container.querySelectorAll('.interval-set-card').forEach((card, i) => {
+      const lbl = card.querySelector('.interval-set-card-label');
+      const name = 'int-set-' + (i + 1);
+      if (lbl) lbl.textContent = name;
+      card.dataset.setName = name;
+    });
   });
 }
 
@@ -308,7 +312,9 @@ function addScatterInterval(card, from, to) {
 }
 
 function getIntervalSetNames() {
-  return Array.from(document.querySelectorAll('.interval-set-card'))
+  const strat = document.getElementById('rtp-strategy')?.value;
+  const containerId = strat === 'CLUSTERS' ? 'clusters-interval-sets-container' : 'interval-sets-container';
+  return Array.from(document.querySelectorAll('#' + containerId + ' .interval-set-card'))
     .map(card => card.dataset.setName || 'default');
 }
 
@@ -325,7 +331,7 @@ function refreshIntervalSetDropdowns() {
 }
 
 function collectContactsIntervalSets() {
-  const cards = document.querySelectorAll('.interval-set-card');
+  const cards = document.querySelectorAll('#interval-sets-container .interval-set-card');
   const result = [];
   const errors = [];
   const setNames = new Set();
