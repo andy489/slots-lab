@@ -42,7 +42,7 @@ function onStrategyChange() {
     }
   }
 
-  if (isContacts) {
+  if (isContacts || isClusters) {
     document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
       delete inp.dataset.fixedPlaceholder;
     });
