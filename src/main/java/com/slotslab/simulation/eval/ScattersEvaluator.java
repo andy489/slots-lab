@@ -209,7 +209,7 @@ public final class ScattersEvaluator {
 
             anyNormalWon = true;
             total += win;
-            ComboKey key = new ComboKey(sym, contactSize);
+            ComboKey key = new ComboKey(sym, intervalIdx);
             hitMap.computeIfAbsent(key, k -> new long[1])[0]++;
             payMap.computeIfAbsent(key, k -> new double[1])[0] += win;
         }
@@ -226,7 +226,7 @@ public final class ScattersEvaluator {
                         double win = Math.round(singularPay * wildOnlyMultiplierAcc * 100.0) / 100.0;
                         if (win > 0) {
                             total += win;
-                            ComboKey key = new ComboKey(best.symbolId(), wildOnlyCount);
+                            ComboKey key = new ComboKey(best.symbolId(), intervalIdx);
                             hitMap.computeIfAbsent(key, k -> new long[1])[0]++;
                             payMap.computeIfAbsent(key, k -> new double[1])[0] += win;
                         }
@@ -241,7 +241,7 @@ public final class ScattersEvaluator {
     // ── interval paytable lookup ──────────────────────────────────────────────
 
     /** Resolves the interval list for a symbol: by name if given, otherwise first set. */
-    static List<ScattersPaytableEntry> resolveSet(List<ScattersIntervalSet> sets, String name) {
+    public static List<ScattersPaytableEntry> resolveSet(List<ScattersIntervalSet> sets, String name) {
         if (sets == null || sets.isEmpty()) return List.of();
         if (name != null) {
             for (ScattersIntervalSet s : sets) {

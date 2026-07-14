@@ -413,7 +413,7 @@ function renderRtpResult(container, r, payload) {
           const pct = maxPay > 0 ? Math.round(c.totalPayout / maxPay * 100) : 0;
           return `<tr>
             <td><span class="combo-sym-badge">S${c.symbolId}</span></td>
-            <td>${c.matchCount}</td>
+            <td>${c.matchLabel ?? c.matchCount}</td>
             <td>${c.hitCount.toLocaleString()}</td>
             <td>${hitRate}%</td>
             <td>${avgPayout}</td>
@@ -573,7 +573,7 @@ function _comboRender(tbl) {
     const cls = symParity.get(c.symbolId) === 1 ? ' class="combo-sym-odd"' : '';
     return `<tr${cls}>
       <td><span class="combo-sym-badge">S${c.symbolId}</span></td>
-      <td>${c.matchCount}</td>
+      <td>${c.matchLabel ?? c.matchCount}</td>
       <td>${c.hitCount.toLocaleString()}</td>
       <td>${hitRate}%</td>
       <td>${avgPayout}</td>

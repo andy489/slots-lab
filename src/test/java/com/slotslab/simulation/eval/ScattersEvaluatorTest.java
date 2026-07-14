@@ -251,9 +251,9 @@ class ScattersEvaluatorTest {
                 symbols(), MIN_MATCH, INTERVALS, hitMap, payMap);
 
         assertEquals(10.0, win, 0.001);
-        long hits = hitMap.getOrDefault(new ComboKey(1, 9), new long[]{0})[0];
+        long hits = hitMap.getOrDefault(new ComboKey(1, 1), new long[]{0})[0];
         assertEquals(1, hits);
-        double pay = payMap.getOrDefault(new ComboKey(1, 9), new double[]{0.0})[0];
+        double pay = payMap.getOrDefault(new ComboKey(1, 1), new double[]{0.0})[0];
         assertEquals(10.0, pay, 0.001);
     }
 
@@ -266,8 +266,8 @@ class ScattersEvaluatorTest {
                 symbols(), MIN_MATCH, INTERVALS, hitMap, payMap);
 
         assertEquals(10.0, win, 0.001);
-        // tracked under sym1 (highest paying normal) with count=9
-        long hits = hitMap.getOrDefault(new ComboKey(1, 9), new long[]{0})[0];
+        // tracked under sym1 (highest paying normal) with intervalIdx=1 (range 6–9)
+        long hits = hitMap.getOrDefault(new ComboKey(1, 1), new long[]{0})[0];
         assertEquals(1, hits);
     }
 

@@ -149,7 +149,7 @@ public final class ClustersEvaluator {
                     if (win <= 0) continue;
 
                     total += win;
-                    ComboKey key = new ComboKey(sym, clusterSize);
+                    ComboKey key = new ComboKey(sym, intervalIdx);
                     hitMap.computeIfAbsent(key, k -> new long[1])[0]++;
                     payMap.computeIfAbsent(key, k -> new double[1])[0] += win;
                 }

@@ -7,6 +7,7 @@ import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.config.SymbolTable;
 import com.slotslab.simulation.config.SymbolType;
 import com.slotslab.simulation.config.WildMultiplierAggregation;
+import com.slotslab.simulation.eval.ScattersEvaluator;
 import com.slotslab.simulation.stats.ComboKey;
 import com.slotslab.simulation.stats.ComboStats;
 import com.slotslab.simulation.stats.MedianTracker;
@@ -125,10 +126,23 @@ public class RtpSimulationService {
                     String.format("%.4f", avgWin), String.format("%.4f", stdDev),
                     volatilityLabel, String.format("%.2f", hitRatePct), elapsedMs);
 
+            boolean isContacts = req.strategy() == PayoutStrategyType.SCATTERS
+                    || req.strategy() == PayoutStrategyType.CLUSTERS;
             List<ComboStats> comboBreakdown = new ArrayList<>(globalHits.size());
             globalHits.forEach((k, hits) -> {
                 double pay = globalPays.getOrDefault(k, 0.0);
-                comboBreakdown.add(new ComboStats(k.symbolId(), k.matchCount(), hits, pay));
+                String label = null;
+                if (isContacts && req.contactsIntervalSets() != null) {
+                    SymbolConfig symCfg = symbols.get(k.symbolId());
+                    String setName = symCfg != null ? symCfg.contactsIntervalSetName() : null;
+                    List<ScattersPaytableEntry> intervals = ScattersEvaluator.resolveSet(req.contactsIntervalSets(), setName);
+                    int idx = k.matchCount();
+                    if (idx >= 0 && idx < intervals.size()) {
+                        ScattersPaytableEntry e = intervals.get(idx);
+                        label = e.from() == e.to() ? String.valueOf(e.from()) : e.from() + "–" + e.to();
+                    }
+                }
+                comboBreakdown.add(new ComboStats(k.symbolId(), k.matchCount(), label, hits, pay));
             });
             comboBreakdown.sort(Comparator.comparingDouble(ComboStats::totalPayout).reversed());
 
