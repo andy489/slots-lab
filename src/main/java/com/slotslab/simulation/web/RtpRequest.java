@@ -1,5 +1,6 @@
 package com.slotslab.simulation.web;
 
+import com.slotslab.simulation.config.AdjacencyOffset;
 import com.slotslab.simulation.config.ReelSetChance;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
@@ -19,7 +20,9 @@ public record RtpRequest(
         long spins,
         int threadCount,
         double betSize,
-        List<ScattersIntervalSet> contactsIntervalSets
+        List<ScattersIntervalSet> contactsIntervalSets,
+        List<AdjacencyOffset> adjacencyOffsets
 ) {
     public record ReelSetEntry(String setName, List<List<Integer>> reelSet) {}
 }
+

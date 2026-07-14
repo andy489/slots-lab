@@ -1,8 +1,9 @@
 package com.slotslab.simulation.web;
 
+import com.slotslab.simulation.config.AdjacencyOffset;
 import com.slotslab.simulation.config.ScattersIntervalSet;
-import com.slotslab.simulation.config.ScattersPaytableEntry;
 import com.slotslab.simulation.config.SymbolTable;
+import com.slotslab.simulation.eval.ClustersEvaluator;
 import com.slotslab.simulation.eval.ScattersEvaluator;
 import com.slotslab.simulation.eval.LineEvaluator;
 import com.slotslab.simulation.eval.WaysEvaluator;
@@ -11,6 +12,7 @@ import com.slotslab.simulation.stats.MedianTracker;
 import com.slotslab.simulation.stats.SpinStats;
 import com.slotslab.simulation.strategy.AdjPayoutStrategy;
 import com.slotslab.simulation.strategy.BwPayoutStrategy;
+import com.slotslab.simulation.strategy.ClustersPayoutStrategy;
 import com.slotslab.simulation.strategy.ScattersPayoutStrategy;
 import com.slotslab.simulation.strategy.LtrPayoutStrategy;
 import com.slotslab.simulation.strategy.PayoutStrategy;
@@ -36,6 +38,7 @@ public class RtpWorker implements Callable<SpinStats> {
     private final PayoutStrategy strategy;
     private final int[][] lines;
     private final List<ScattersIntervalSet> contactsIntervalSets;
+    private final List<AdjacencyOffset> adjacencyOffsets;
 
     public RtpWorker(long spins,
                      int[][][] reels,
@@ -47,7 +50,8 @@ public class RtpWorker implements Callable<SpinStats> {
                      SymbolTable symbols,
                      PayoutStrategy strategy,
                      int[][] lines,
-                     List<ScattersIntervalSet> contactsIntervalSets) {
+                     List<ScattersIntervalSet> contactsIntervalSets,
+                     List<AdjacencyOffset> adjacencyOffsets) {
         this.spins = spins;
         this.reels = reels;
         this.reelLengths = reelLengths;
@@ -59,6 +63,7 @@ public class RtpWorker implements Callable<SpinStats> {
         this.strategy = strategy;
         this.lines = lines;
         this.contactsIntervalSets = contactsIntervalSets;
+        this.adjacencyOffsets = adjacencyOffsets;
     }
 
     @Override
@@ -78,6 +83,7 @@ public class RtpWorker implements Callable<SpinStats> {
         boolean isAdj      = strategy instanceof AdjPayoutStrategy;
         boolean isWays     = strategy instanceof WaysPayoutStrategy;
         boolean isScatters = strategy instanceof ScattersPayoutStrategy;
+        boolean isClusters = strategy instanceof ClustersPayoutStrategy;
 
         int[][] screen = new int[screenWidth][screenHeight];
 
@@ -108,6 +114,8 @@ public class RtpWorker implements Callable<SpinStats> {
                 win = WaysEvaluator.evalWaysTracked(screen, screenWidth, screenHeight, symbols, minMatch, hitMap, payMap);
             } else if (isScatters) {
                 win = ScattersEvaluator.evalScattersTracked(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, hitMap, payMap);
+            } else if (isClusters) {
+                win = ClustersEvaluator.evalClustersTracked(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, adjacencyOffsets, hitMap, payMap);
             } else {
                 win = strategy.evaluate(screen, screenWidth, symbols, lines, minMatch);
             }

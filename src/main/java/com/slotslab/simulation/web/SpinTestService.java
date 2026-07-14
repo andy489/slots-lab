@@ -6,14 +6,17 @@ import com.slotslab.dto.lines.SimpleLinesDto;
 import com.slotslab.dto.spin.PayoutEntry;
 import com.slotslab.dto.spin.SpinData;
 import com.slotslab.dto.ways.WayLinesDto;
+import com.slotslab.simulation.config.AdjacencyOffset;
 import com.slotslab.simulation.config.ReelSetChance;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
 import com.slotslab.simulation.config.SymbolTable;
 import com.slotslab.simulation.config.SymbolType;
 import com.slotslab.simulation.config.WildMultiplierAggregation;
+import com.slotslab.simulation.eval.ClustersEvaluator;
 import com.slotslab.simulation.eval.ScattersEvaluator;
 import com.slotslab.simulation.eval.WaysEvaluator;
+import com.slotslab.simulation.strategy.ClustersPayoutStrategy;
 import com.slotslab.simulation.strategy.AdjPayoutStrategy;
 import com.slotslab.simulation.strategy.BwPayoutStrategy;
 import com.slotslab.simulation.strategy.ScattersPayoutStrategy;
@@ -127,7 +130,7 @@ public class SpinTestService {
             }
         }
 
-        List<PayoutEntry> payoutData = evalPerLine(screen, screenWidth, symbols, lines, req.minMatch(), strategy, req.contactsIntervalSets());
+        List<PayoutEntry> payoutData = evalPerLine(screen, screenWidth, symbols, lines, req.minMatch(), strategy, req.contactsIntervalSets(), req.adjacencyOffsets());
 
         List<List<Integer>> screenList = new ArrayList<>(screenWidth);
         for (int r = 0; r < screenWidth; r++) {
@@ -142,7 +145,8 @@ public class SpinTestService {
     private List<PayoutEntry> evalPerLine(
             int[][] screen, int screenWidth, SymbolTable symbols,
             int[][] lines, int minMatch, PayoutStrategy strategy,
-            List<ScattersIntervalSet> contactsIntervalSets) {
+            List<ScattersIntervalSet> contactsIntervalSets,
+            List<AdjacencyOffset> adjacencyOffsets) {
 
         boolean isLtr      = strategy instanceof LtrPayoutStrategy;
         boolean isRtl      = strategy instanceof RtlPayoutStrategy;
@@ -150,6 +154,7 @@ public class SpinTestService {
         boolean isAdj      = strategy instanceof AdjPayoutStrategy;
         boolean isWays     = strategy instanceof WaysPayoutStrategy;
         boolean isScatters = strategy instanceof ScattersPayoutStrategy;
+        boolean isClusters = strategy instanceof ClustersPayoutStrategy;
 
         List<PayoutEntry> result = new ArrayList<>();
 
@@ -186,6 +191,11 @@ public class SpinTestService {
             int screenHeight = screen[0].length;
             ScattersDto contacts = ScattersEvaluator.evalScatters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets);
             if (contacts != null) result.add(contacts);
+        }
+        if (isClusters) {
+            int screenHeight = screen[0].length;
+            ScattersDto clusters = ClustersEvaluator.evalClusters(screen, screenWidth, screenHeight, symbols, minMatch, contactsIntervalSets, adjacencyOffsets);
+            if (clusters != null) result.add(clusters);
         }
         return result;
     }
@@ -366,6 +376,7 @@ public class SpinTestService {
             throw new IllegalArgumentException("screenHeight must be >= 1");
         if (req.strategy() != PayoutStrategyType.WAYS &&
                 req.strategy() != PayoutStrategyType.SCATTERS &&
+                req.strategy() != PayoutStrategyType.CLUSTERS &&
                 (req.lineDefinitions() == null || req.lineDefinitions().isEmpty()))
             throw new IllegalArgumentException("At least one line definition is required");
         if (!hasFixedScreen && req.reelSetIndex() != null) {
@@ -385,6 +396,10 @@ public class SpinTestService {
             }
         }
         if (req.strategy() == PayoutStrategyType.SCATTERS) {
+            RtpSimulationService.validateContactsIntervalSets(
+                    req.contactsIntervalSets(), req.minMatch(), req.screenWidth() * req.screenHeight());
+        }
+        if (req.strategy() == PayoutStrategyType.CLUSTERS) {
             RtpSimulationService.validateContactsIntervalSets(
                     req.contactsIntervalSets(), req.minMatch(), req.screenWidth() * req.screenHeight());
         }

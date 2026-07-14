@@ -209,7 +209,8 @@
                     <option value="BW">BW (Both Ways)</option>
                     <option value="ADJ">ADJ (Adjacent)</option>
                     <option value="WAYS">WAYS (All Ways)</option>
-                    <option value="SCATTERS">SCATTERS (Scatter Pays)</option>
+                    <option value="SCATTERS">SCATTERS (Scatters Pay)</option>
+                    <option value="CLUSTERS">CLUSTERS (Clusters Pay)</option>
                   </select>
                 </div>
                 <div class="field-item">
@@ -289,6 +290,21 @@
                 <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem">Contacts Paytable — interval sets</div>
                 <div id="interval-sets-container" style="display:flex;flex-direction:column;gap:0.5rem"></div>
                 <button class="add-btn" id="add-interval-set-btn" onclick="addIntervalSet()">+ Add interval set</button>
+              </div>
+              <div id="clusters-adjacency-section" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
+                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem">Contacts Paytable — interval sets</div>
+                <div id="clusters-interval-sets-container" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+                <button class="add-btn" id="add-clusters-interval-set-btn" onclick="addIntervalSet(null, null, true)">+ Add interval set</button>
+                <div style="margin-top:0.4rem;display:flex;flex-direction:column;gap:0.3rem">
+                  <div style="font-size:0.75rem;opacity:0.65">Adjacency — neighbour offsets (x=reel, y=row)</div>
+                  <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
+                    <button class="add-btn" onclick="setAdjacencyPreset(4)" title="4-direction: up/down/left/right">4-dir</button>
+                    <button class="add-btn" onclick="setAdjacencyPreset(8)" title="8-direction: all neighbours including diagonals">8-dir</button>
+                    <span style="font-size:0.72rem;opacity:0.5">or custom:</span>
+                    <button class="add-btn" onclick="addAdjacencyOffset()">+ Add offset</button>
+                  </div>
+                  <div id="adjacency-offsets-container" style="display:flex;flex-direction:column;gap:0.25rem;margin-top:0.15rem"></div>
+                </div>
               </div>
             </div>
           </div>

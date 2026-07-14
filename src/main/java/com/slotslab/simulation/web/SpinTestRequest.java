@@ -1,5 +1,6 @@
 package com.slotslab.simulation.web;
 
+import com.slotslab.simulation.config.AdjacencyOffset;
 import com.slotslab.simulation.config.ReelSetChance;
 import com.slotslab.simulation.config.ScattersIntervalSet;
 import com.slotslab.simulation.config.SymbolConfig;
@@ -20,5 +21,7 @@ public record SpinTestRequest(
         Integer reelSetIndex,
         List<Integer> stops,
         List<List<Integer>> screen,
-        List<ScattersIntervalSet> contactsIntervalSets
+        List<ScattersIntervalSet> contactsIntervalSets,
+        List<AdjacencyOffset> adjacencyOffsets
 ) {}
+

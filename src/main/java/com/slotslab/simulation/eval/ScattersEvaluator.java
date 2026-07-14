@@ -241,7 +241,7 @@ public final class ScattersEvaluator {
     // ── interval paytable lookup ──────────────────────────────────────────────
 
     /** Resolves the interval list for a symbol: by name if given, otherwise first set. */
-    private static List<ScattersPaytableEntry> resolveSet(List<ScattersIntervalSet> sets, String name) {
+    static List<ScattersPaytableEntry> resolveSet(List<ScattersIntervalSet> sets, String name) {
         if (sets == null || sets.isEmpty()) return List.of();
         if (name != null) {
             for (ScattersIntervalSet s : sets) {

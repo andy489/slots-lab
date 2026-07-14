@@ -77,7 +77,8 @@ class SpinTestServiceTest {
                 null,        // reelSetIndex
                 null,        // stops
                 screenList,
-                null         // contactsIntervalSets
+                null,        // contactsIntervalSets
+                null         // adjacencyOffsets
         );
     }
 
@@ -120,7 +121,8 @@ class SpinTestServiceTest {
                 reelSetIndex,
                 stops,
                 null,   // no fixed screen
-                null    // no contactsIntervalSets
+                null,   // no contactsIntervalSets
+                null    // adjacencyOffsets
         );
     }
 
@@ -191,7 +193,8 @@ class SpinTestServiceTest {
                 3,    // count=3
                 null, null,
                 screenList,
-                null
+                null,
+                null  // adjacencyOffsets
         );
         SpinTestService service = new SpinTestService();
 
@@ -229,7 +232,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 1, null, null,
                 screenList,
-                null
+                null,
+                null  // adjacencyOffsets
         );
         SpinTestService service = new SpinTestService();
 
@@ -297,7 +301,8 @@ class SpinTestServiceTest {
                 1,    // reelSetIndex = 1
                 List.of(0, 0, 0, 0, 0),
                 null,
-                null
+                null,
+                null  // adjacencyOffsets
         );
         SpinTestService service = new SpinTestService();
 
@@ -321,7 +326,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.LTR,
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
-                1, null, null, null, null
+                1, null, null, null, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -335,7 +341,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.LTR,
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
-                1, null, null, null, null
+                1, null, null, null, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -353,7 +360,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.LTR,
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
-                1, null, null, screenList, null
+                1, null, null, screenList, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -369,7 +377,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 1, null, null,
                 List.of(List.of(1, 0, 0)),
-                null
+                null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -386,7 +395,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 1, null, null,
                 List.of(List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0)),
-                null
+                null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -404,7 +414,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.LTR,
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 List.of(),   // no line definitions
-                1, null, null, screenList, null
+                1, null, null, screenList, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -422,7 +433,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 1,
                 5,   // index out of range (only index 0 exists)
-                null, null, null
+                null, null, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -444,7 +456,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 1, null, null,
                 tooNarrow,      // only 3 columns
-                null
+                null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -466,7 +479,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.WAYS,  // WAYS does not support wild multipliers
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 null,   // no lines needed for WAYS
-                1, null, null, screenList, null
+                1, null, null, screenList, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -490,7 +504,8 @@ class SpinTestServiceTest {
                 PayoutStrategyType.LTR,
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
-                1, null, null, screenList, null
+                1, null, null, screenList, null,
+                null  // adjacencyOffsets
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -584,7 +599,8 @@ class SpinTestServiceTest {
                 Arrays.stream(screen)
                         .map(col -> Arrays.stream(col).boxed().collect(Collectors.toList()))
                         .collect(Collectors.toList()),
-                null
+                null,
+                null  // adjacencyOffsets
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -611,7 +627,8 @@ class SpinTestServiceTest {
                 Arrays.stream(screen)
                         .map(col -> Arrays.stream(col).boxed().collect(Collectors.toList()))
                         .collect(Collectors.toList()),
-                null
+                null,
+                null  // adjacencyOffsets
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -646,7 +663,8 @@ class SpinTestServiceTest {
                 null,   // no line defs
                 1, null, null,
                 screenList,
-                List.of(intervalSet)
+                List.of(intervalSet),
+                null  // adjacencyOffsets
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -728,7 +746,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
                 0,   // count=0
-                null, null, screenList, null
+                null, null, screenList, null,
+                null  // adjacencyOffsets
         );
         List<SpinData> results = new SpinTestService().generate(req);
 

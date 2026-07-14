@@ -12,6 +12,7 @@ public final class PayoutStrategyFactory {
             case ADJ      -> new AdjPayoutStrategy();
             case WAYS     -> new WaysPayoutStrategy();
             case SCATTERS -> new ScattersPayoutStrategy();
+            case CLUSTERS -> new ClustersPayoutStrategy();
         };
     }
 }

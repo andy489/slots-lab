@@ -41,7 +41,7 @@ function buildSpinTestPayload() {
     if (!nums.some(isNaN)) lineDefinitions.push(nums);
   });
   const _spinTestStrat = document.getElementById('rtp-strategy')?.value;
-  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS')
+  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS' && _spinTestStrat !== 'CLUSTERS')
     errors.push('No line definitions — configure in Simulation tab');
 
   const symbols = [];
@@ -85,6 +85,17 @@ function buildSpinTestPayload() {
     sc.errors.forEach(e => errors.push(e));
     contactsIntervalSets = sc.contactsIntervalSets;
   }
+  if (strategy === 'CLUSTERS') {
+    const sc = collectClustersIntervalSets();
+    sc.errors.forEach(e => errors.push(e));
+    contactsIntervalSets = sc.contactsIntervalSets;
+  }
+  let adjacencyOffsets = null;
+  if (strategy === 'CLUSTERS') {
+    adjacencyOffsets = collectAdjacencyOffsets();
+    if (!adjacencyOffsets || adjacencyOffsets.length === 0)
+      errors.push('At least one adjacency offset is required for CLUSTERS strategy');
+  }
   if (errors.length > 0) return { errors };
 
   return {
@@ -102,7 +113,8 @@ function buildSpinTestPayload() {
       reelSetIndex,
       stops,
       screen,
-      contactsIntervalSets
+      contactsIntervalSets,
+      adjacencyOffsets
     }
   };
 }

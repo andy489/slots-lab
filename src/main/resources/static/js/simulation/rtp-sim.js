@@ -101,7 +101,7 @@ function collectRtpRequest() {
 
   const lineRows = document.querySelectorAll('.rtp-line-row');
   const _strategyForLineCheck = document.getElementById('rtp-strategy').value;
-  const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'SCATTERS';
+  const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'SCATTERS' || _strategyForLineCheck === 'CLUSTERS';
   if (!isWays && lineRows.length === 0) errors.push('At least one line definition is required');
   const lineDefinitions = [];
   const parsedLines = [];
@@ -170,11 +170,12 @@ function collectRtpRequest() {
     if (paytable.length > 0 && (type === 'NORMAL' || type === 'WILD')) {
       const _strat = document.getElementById('rtp-strategy').value;
       let required, requiredDesc;
-      if (_strat === 'SCATTERS') {
+      if (_strat === 'SCATTERS' || _strat === 'CLUSTERS') {
         const setName = contactsIntervalSetName;
+        const containerId = _strat === 'CLUSTERS' ? 'clusters-interval-sets-container' : 'interval-sets-container';
         const card = setName
-          ? Array.from(document.querySelectorAll('.interval-set-card')).find(c => (c.dataset.setName || 'default') === setName)
-          : document.querySelector('.interval-set-card');
+          ? Array.from(document.querySelectorAll('#' + containerId + ' .interval-set-card')).find(c => (c.dataset.setName || 'default') === setName)
+          : document.querySelector('#' + containerId + ' .interval-set-card');
         required = card ? card.querySelectorAll('.scatter-interval-row').length : 0;
         requiredDesc = required + ' (one per interval in set "' + (setName || 'default') + '")';
       } else {
@@ -219,6 +220,17 @@ function collectRtpRequest() {
     sc.errors.forEach(e => errors.push(e));
     contactsIntervalSets = sc.contactsIntervalSets;
   }
+  if (strategy === 'CLUSTERS') {
+    const sc = collectClustersIntervalSets();
+    sc.errors.forEach(e => errors.push(e));
+    contactsIntervalSets = sc.contactsIntervalSets;
+  }
+  let adjacencyOffsets = null;
+  if (strategy === 'CLUSTERS') {
+    adjacencyOffsets = collectAdjacencyOffsets();
+    if (!adjacencyOffsets || adjacencyOffsets.length === 0)
+      errors.push('At least one adjacency offset is required for CLUSTERS strategy');
+  }
 
   if (errors.length > 0) return { errors };
 
@@ -236,7 +248,8 @@ function collectRtpRequest() {
       spins,
       threadCount,
       betSize,
-      contactsIntervalSets
+      contactsIntervalSets,
+      adjacencyOffsets
     }
   };
 }
@@ -373,9 +386,10 @@ function renderRtpResult(container, r, payload) {
               BW:       'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
               ADJ:      'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.',
               WAYS:     'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
-              SCATTERS: 'Scatter Pays — symbols pay based on total tile count anywhere on the screen. No paylines needed.'
+              SCATTERS: 'Scatters Pay — symbols pay based on total tile count anywhere on the screen. No paylines needed.',
+              CLUSTERS: 'Clusters Pay — symbols pay based on the size of connected clusters. Two tiles connect if adjacent according to configured offsets.'
             }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatter Pays'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatters Pay','CLUSTERS':'Clusters Pay'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>

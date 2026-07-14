@@ -44,10 +44,19 @@ function restoreRtpForm(payload) {
   (payload.lineDefinitions || []).forEach(line => addLineDef(line.join(', ')));
   updateLineCount();
   document.getElementById('interval-sets-container').innerHTML = '';
+  document.getElementById('clusters-interval-sets-container').innerHTML = '';
+  const isClustersRestore = payload.strategy === 'CLUSTERS';
   const setsToRestore = payload.contactsIntervalSets || payload.scattersPaytable
     ? (payload.contactsIntervalSets || [{ name: 'default', intervals: payload.scattersPaytable || [] }])
     : [];
-  setsToRestore.forEach(s => addIntervalSet(s.name, s.intervals || []));
+  setsToRestore.forEach(s => addIntervalSet(s.name, s.intervals || [], isClustersRestore));
+  if (isClustersRestore && payload.adjacencyOffsets && payload.adjacencyOffsets.length > 0) {
+    const container = document.getElementById('adjacency-offsets-container');
+    if (container) {
+      container.innerHTML = '';
+      payload.adjacencyOffsets.forEach(o => addAdjacencyOffset(o.x, o.y));
+    }
+  }
   document.getElementById('rtp-symbol-rows').innerHTML = '';
   _symRowCounter = 0;
   (payload.symbols || []).forEach(sym => {

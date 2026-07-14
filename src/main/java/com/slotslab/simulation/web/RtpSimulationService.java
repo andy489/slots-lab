@@ -79,7 +79,7 @@ public class RtpSimulationService {
                 futures.add(executor.submit(new RtpWorker(
                         workerSpins, reels, reelLengths, cumulativeChances,
                         screenWidth, screenHeight, minMatch, symbols, strategy, lines,
-                        req.contactsIntervalSets())));
+                        req.contactsIntervalSets(), req.adjacencyOffsets())));
             }
 
             double grandWin = 0.0;
@@ -221,10 +221,12 @@ public class RtpSimulationService {
 
         if (req.strategy() != PayoutStrategyType.WAYS &&
                 req.strategy() != PayoutStrategyType.SCATTERS &&
+                req.strategy() != PayoutStrategyType.CLUSTERS &&
                 (req.lineDefinitions() == null || req.lineDefinitions().isEmpty()))
             throw new IllegalArgumentException("At least one line definition is required");
         if (req.strategy() != PayoutStrategyType.WAYS &&
-                req.strategy() != PayoutStrategyType.SCATTERS) {
+                req.strategy() != PayoutStrategyType.SCATTERS &&
+                req.strategy() != PayoutStrategyType.CLUSTERS) {
             for (int li = 0; li < req.lineDefinitions().size(); li++) {
                 List<Integer> line = req.lineDefinitions().get(li);
                 if (line.size() != sw)
@@ -269,6 +271,10 @@ public class RtpSimulationService {
             validateContactsIntervalSets(req.contactsIntervalSets(), req.minMatch(), sw * sh);
         }
 
+        if (req.strategy() == PayoutStrategyType.CLUSTERS) {
+            validateContactsIntervalSets(req.contactsIntervalSets(), req.minMatch(), sw * sh);
+        }
+
         for (SymbolConfig sym : req.symbols()) {
             if (sym.type() == SymbolType.NORMAL || sym.type() == SymbolType.WILD) {
                 if (sym.paytable() != null && sym.paytable().stream().anyMatch(v -> v == null || v < 0))
@@ -278,7 +284,8 @@ public class RtpSimulationService {
                 if (sym.paytable() != null && !sym.paytable().isEmpty()) {
                     int required;
                     String requiredDesc;
-                    if (req.strategy() == PayoutStrategyType.SCATTERS && req.contactsIntervalSets() != null) {
+                    if (req.strategy() == PayoutStrategyType.SCATTERS && req.contactsIntervalSets() != null
+                            || req.strategy() == PayoutStrategyType.CLUSTERS && req.contactsIntervalSets() != null) {
                         String setName = sym.contactsIntervalSetName();
                         ScattersIntervalSet resolved = req.contactsIntervalSets().stream()
                                 .filter(s -> setName == null ? true : setName.equals(s.name()))

@@ -4,7 +4,8 @@ function onStrategyChange() {
   const strat = document.getElementById('rtp-strategy').value;
   const isWays = strat === 'WAYS';
   const isContacts = strat === 'SCATTERS';
-  const noLines = isWays || isContacts;
+  const isClusters = strat === 'CLUSTERS';
+  const noLines = isWays || isContacts || isClusters;
 
   // Snapshot BEFORE any DOM changes (addIntervalSet → updatePaytablePlaceholders fires below)
   const _ptSnapshotInputs = document.querySelectorAll('.rtp-paytable-input:not([disabled])');
@@ -22,13 +23,38 @@ function onStrategyChange() {
   if (scatterToggleBtn) scatterToggleBtn.style.display = isContacts ? '' : 'none';
   if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = isWays ? '' : 'none';
 
+  const scattersSection = document.getElementById('scatters-paytable-section');
+  if (scattersSection) {
+    scattersSection.style.display = isContacts ? 'flex' : 'none';
+    if (isContacts && document.getElementById('interval-sets-container').children.length === 0) {
+      addIntervalSet(null, [{ from: 8, to: 10 }, { from: 11, to: 14 }, { from: 15, to: 19 }, { from: 20, to: 25 }]);
+    }
+  }
+
+  const clustersSection = document.getElementById('clusters-adjacency-section');
+  if (clustersSection) {
+    clustersSection.style.display = isClusters ? 'flex' : 'none';
+    if (isClusters && document.getElementById('clusters-interval-sets-container').children.length === 0) {
+      addIntervalSet(null, [{ from: 5, to: 7 }, { from: 8, to: 10 }, { from: 11, to: 15 }, { from: 16, to: 25 }], true);
+    }
+    if (isClusters && document.getElementById('adjacency-offsets-container').children.length === 0) {
+      setAdjacencyPreset(4);
+    }
+  }
+
+  if (isContacts) {
+    document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
+      delete inp.dataset.fixedPlaceholder;
+    });
+  }
+
   const wEl = document.getElementById('rtp-screen-width');
   const hEl = document.getElementById('rtp-screen-height');
   const mEl = document.getElementById('rtp-min-match');
-  const newH = isContacts ? '5' : '3';
-  const newM = isContacts ? '5' : '3';
-  const oldH = isContacts ? '3' : '5';
-  const oldM = isContacts ? '3' : '5';
+  const newH = (isContacts || isClusters) ? '5' : '3';
+  const newM = (isContacts || isClusters) ? '5' : '3';
+  const oldH = (isContacts || isClusters) ? '3' : '5';
+  const oldM = (isContacts || isClusters) ? '3' : '5';
   if (wEl) { wEl.placeholder = '5'; if (wEl.value === '5') wEl.value = ''; }
   if (hEl) {
     hEl.placeholder = newH;
@@ -39,19 +65,7 @@ function onStrategyChange() {
     if (!mEl.value || mEl.value === oldM || mEl.value === newM) mEl.value = '';
   }
 
-  const scattersSection = document.getElementById('scatters-paytable-section');
-  if (scattersSection) {
-    scattersSection.style.display = isContacts ? 'flex' : 'none';
-    if (isContacts && document.getElementById('interval-sets-container').children.length === 0) {
-      addIntervalSet(null, [{ from: 8, to: 10 }, { from: 11, to: 14 }, { from: 15, to: 19 }, { from: 20, to: 25 }]);
-    }
-  }
-
-  if (isContacts) {
-    document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
-      delete inp.dataset.fixedPlaceholder;
-    });
-  }
+  const isContactsLike = isContacts || isClusters;
 
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const typeSel = row.querySelector('select');
@@ -60,28 +74,28 @@ function onStrategyChange() {
     const isScatter = typeSel && typeSel.value === 'SCATTER';
     const ptInput = row.querySelector('.rtp-paytable-input');
 
-    if ((isScatter || (isWild && isContacts)) && ptInput) {
+    if ((isScatter || (isWild && isContactsLike)) && ptInput) {
       ptInput.disabled = true;
       ptInput.placeholder = 'n/a';
       ptInput.value = '';
       if (setSel) setSel.style.display = 'none';
     } else {
       if (ptInput && !isScatter) ptInput.disabled = false;
-      if (setSel) setSel.style.display = (isContacts && !isScatter && !isWild) ? '' : 'none';
+      if (setSel) setSel.style.display = (isContactsLike && !isScatter && !isWild) ? '' : 'none';
     }
 
     if (!typeSel || !isWild) return;
     const wildFields = row.querySelector('.rtp-wild-fields');
     if (wildFields) wildFields.style.display = isWays ? 'none' : '';
     const aggSel = row.querySelector('.rtp-wild-agg');
-    if (isWays || isContacts) {
+    if (isWays || isContactsLike) {
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
     } else {
       if (aggSel && aggSel.value === 'NONE') { aggSel.value = 'ADD'; }
       if (aggSel) onWildAggChange(aggSel);
     }
   });
-  if (isContacts) refreshIntervalSetDropdowns();
+  if (isContactsLike) refreshIntervalSetDropdowns();
   else {
     const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
     const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
@@ -115,6 +129,11 @@ function onStrategyChange() {
         '<div class="tip-rule">Contacts paytable — interval sets: each set maps a range of matching symbol counts to a payout multiplier. ' +
         'A symbol wins when its total count on the screen falls within an interval; the interval boundaries are <strong>inclusive</strong> ' +
         '(e.g. from 3 to 5 triggers for counts 3, 4, or 5). Each symbol row can be assigned to a specific interval set via the dropdown.</div>';
+    } else if (isClusters) {
+      tip.innerHTML = 'Defines the grid and contacts paytable.' + gridRows +
+        '<div class="tip-rule">Contacts paytable — interval sets: same as Scatters Pay, but only connected clusters count. ' +
+        'Two tiles are connected if they are adjacent according to the configured neighbour offsets.</div>' +
+        '<div class="tip-rule">Adjacency — choose 4-direction (up/down/left/right), 8-direction (all neighbours including diagonals), or define custom offsets (x=reel, y=row).</div>';
     } else if (isWays) {
       tip.innerHTML = 'Defines the grid.' + gridRows +
         '<div class="tip-rule">WAYS pays for every combination of matching symbols across consecutive reels — no fixed paylines required.</div>';
@@ -141,6 +160,10 @@ function onStrategyChange() {
         '<div class="tip-rule"><strong>SCATTERS strategy:</strong> Each NORMAL symbol\'s paytable entries correspond to the interval set assigned to it — ' +
         'the first entry pays when the contact count falls in the first interval, the second entry for the second interval, and so on. ' +
         'SCATTER symbols act as blockers (no payout). WILD symbols inherit the payout of the highest-paying NORMAL symbol for the same contact count.</div>';
+    } else if (isClusters) {
+      symTip.innerHTML = paytableExample + wildBase +
+        '<div class="tip-rule"><strong>CLUSTERS strategy:</strong> Same interval-based paytable as Scatters Pay, but only connected clusters of symbols count. ' +
+        'Connectivity is determined by the configured adjacency offsets. SCATTER symbols act as blockers. WILD symbols extend clusters.</div>';
     } else if (isWays) {
       symTip.innerHTML = paytableExample + wildBase +
         '<div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — ' +
@@ -154,12 +177,14 @@ function onStrategyChange() {
 }
 
 let _setCardCounter = 0;
-function addIntervalSet(name, intervals) {
+function addIntervalSet(name, intervals, forClusters) {
   const cid = _setCardCounter++;
-  const container = document.getElementById('interval-sets-container');
+  const containerId = forClusters ? 'clusters-interval-sets-container' : 'interval-sets-container';
+  const container = document.getElementById(containerId);
   const card = document.createElement('div');
   card.className = 'interval-set-card';
   card.dataset.setId = cid;
+  card.dataset.forClusters = forClusters ? '1' : '';
   card.style.cssText = 'border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;display:flex;flex-direction:column;gap:0.3rem';
   card.innerHTML =
     '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem">' +
@@ -185,7 +210,9 @@ function refreshIntervalSetCardLabels() {
 
 function removeIntervalSet(btn) {
   const card = btn.closest('.interval-set-card');
-  if (document.getElementById('interval-sets-container').children.length <= 1) {
+  const forClusters = card.dataset.forClusters === '1';
+  const containerId = forClusters ? 'clusters-interval-sets-container' : 'interval-sets-container';
+  if (document.getElementById(containerId).children.length <= 1) {
     showToast('At least one interval set is required', true); return;
   }
   card.remove();
@@ -332,6 +359,79 @@ function collectContactsIntervalSets() {
   return { contactsIntervalSets: result, errors };
 }
 
+function collectClustersIntervalSets() {
+  const cards = document.querySelectorAll('#clusters-interval-sets-container .interval-set-card');
+  const result = [];
+  const errors = [];
+  const setNames = new Set();
+  cards.forEach((card, si) => {
+    const name = card.dataset.setName || ('interval-set-' + (si + 1));
+    if (setNames.has(name)) { errors.push('Duplicate interval set name: "' + name + '"'); return; }
+    setNames.add(name);
+    const rows = card.querySelectorAll('.scatter-interval-row');
+    const intervals = [];
+    rows.forEach((row, i) => {
+      const fromInp = row.querySelector('.scatter-from');
+      const toInp   = row.querySelector('.scatter-to');
+      const from = parseInt(fromInp.value || fromInp.placeholder);
+      const to   = parseInt(toInp.value   || toInp.placeholder);
+      if (isNaN(from) || isNaN(to))
+        errors.push('Set "' + name + '" interval ' + (i + 1) + ': both from and to are required');
+      else if (from > to)
+        errors.push('Set "' + name + '" interval ' + (i + 1) + ': from (' + from + ') must be ≤ to (' + to + ')');
+      else
+        intervals.push({ from, to });
+    });
+    if (intervals.length === 0) errors.push('Set "' + name + '" must have at least one interval');
+    for (let i = 0; i < intervals.length; i++) {
+      for (let j = i + 1; j < intervals.length; j++) {
+        if (intervals[i].from <= intervals[j].to && intervals[j].from <= intervals[i].to)
+          errors.push('Set "' + name + '" intervals ' + (i + 1) + ' and ' + (j + 1) + ' overlap');
+      }
+    }
+    result.push({ name, intervals });
+  });
+  return { contactsIntervalSets: result, errors };
+}
+
+function setAdjacencyPreset(dirs) {
+  const container = document.getElementById('adjacency-offsets-container');
+  if (!container) return;
+  container.innerHTML = '';
+  const offsets4 = [[0, -1], [-1, 0], [1, 0], [0, 1]];
+  const offsets8 = [[0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+  const offsets = dirs === 8 ? offsets8 : offsets4;
+  offsets.forEach(([x, y]) => addAdjacencyOffset(x, y));
+}
+
+function addAdjacencyOffset(x, y) {
+  const container = document.getElementById('adjacency-offsets-container');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.className = 'adjacency-offset-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:0.4rem';
+  row.innerHTML =
+    '<label style="font-size:0.72rem;opacity:0.7;min-width:1.2rem">x</label>' +
+    '<input type="number" class="adj-x" style="width:2.6rem;text-align:center" placeholder="0" value="' + (x !== undefined ? x : '') + '"/>' +
+    '<label style="font-size:0.72rem;opacity:0.7;min-width:1.2rem">y</label>' +
+    '<input type="number" class="adj-y" style="width:2.6rem;text-align:center" placeholder="0" value="' + (y !== undefined ? y : '') + '"/>' +
+    '<button class="icon-btn remove" title="Remove offset" style="margin-left:0.2rem" onclick="this.closest(\'.adjacency-offset-row\').remove()">✕</button>';
+  container.appendChild(row);
+}
+
+function collectAdjacencyOffsets() {
+  const rows = document.querySelectorAll('.adjacency-offset-row');
+  const offsets = [];
+  rows.forEach(row => {
+    const xInp = row.querySelector('.adj-x');
+    const yInp = row.querySelector('.adj-y');
+    const x = parseInt(xInp.value);
+    const y = parseInt(yInp.value);
+    if (!isNaN(x) && !isNaN(y)) offsets.push({ x, y });
+  });
+  return offsets;
+}
+
 function onScreenSizeChange() {
   const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
   const h = parseInt(document.getElementById('rtp-screen-height').value) || 3;
@@ -349,19 +449,22 @@ function onScreenSizeChange() {
 function updatePaytablePlaceholders(w, m) {
   const strat = document.getElementById('rtp-strategy')?.value;
   const isScatters = strat === 'SCATTERS';
+  const isClustersStrat = strat === 'CLUSTERS';
+  const isIntervalBased = isScatters || isClustersStrat;
 
   const setIntervalCounts = {};
-  if (isScatters) {
-    document.querySelectorAll('.interval-set-card').forEach(card => {
+  if (isIntervalBased) {
+    const containerId = isClustersStrat ? 'clusters-interval-sets-container' : 'interval-sets-container';
+    document.querySelectorAll('#' + containerId + ' .interval-set-card').forEach(card => {
       const name = card.dataset.setName || 'default';
       setIntervalCounts[name] = card.querySelectorAll('.scatter-interval-row').length;
     });
   }
 
-  const defaultIntervalCount = isScatters
+  const defaultIntervalCount = isIntervalBased
     ? (Object.values(setIntervalCounts)[0] || 1)
     : 0;
-  const fallbackCount = isScatters ? defaultIntervalCount : Math.max(1, w - m + 1);
+  const fallbackCount = isIntervalBased ? defaultIntervalCount : Math.max(1, w - m + 1);
   const SYM3_TABLE = {
     1: '5.0',
     2: '2.0, 5.0',
@@ -427,7 +530,7 @@ function updatePaytablePlaceholders(w, m) {
     const isScatterSym = typeVal === 'SCATTER';
 
     let count;
-    if (isScatters) {
+    if (isIntervalBased) {
       const setSel = row ? row.querySelector('.rtp-interval-set-sel') : null;
       const selName = setSel ? setSel.value : null;
       count = (selName && setIntervalCounts[selName]) ? setIntervalCounts[selName] : fallbackCount;
@@ -438,7 +541,7 @@ function updatePaytablePlaceholders(w, m) {
     let ph;
     if (isScatterSym) {
       ph = Array.from({length: count}, () => '0').join(', ');
-    } else if (isScatters) {
+    } else if (isIntervalBased) {
       let v = 0.1;
       const vals = [];
       for (let i = 0; i < count; i++) {
@@ -460,7 +563,7 @@ function updatePaytablePlaceholders(w, m) {
       ph = symTable[count] || Array.from({length: count}, (_, i) => ((count - i) * 0.1).toFixed(1)).join(', ');
     }
 
-    const titleSuffix = isScatters
+    const titleSuffix = isIntervalBased
       ? count + ' value(s) required (one per interval in selected set)'
       : count + ' value(s) required (screenWidth − minMatch + 1)';
 
