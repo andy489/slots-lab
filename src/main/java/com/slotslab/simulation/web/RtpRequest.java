@@ -21,7 +21,11 @@ public record RtpRequest(
         int threadCount,
         double betSize,
         List<ScattersIntervalSet> contactsIntervalSets,
-        List<AdjacencyOffset> adjacencyOffsets
+        List<AdjacencyOffset> adjacencyOffsets,
+        // MEGAWAYS: per-reel-set, per-reel height probability distribution.
+        // Outer list index = reel-set index; inner list index = reel index;
+        // each element is 6 probabilities for heights 2..7 (must sum to 100).
+        List<List<List<Double>>> megawaysReelHeightChances
 ) {
     public record ReelSetEntry(String setName, List<List<Integer>> reelSet) {}
 }

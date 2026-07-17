@@ -44,8 +44,10 @@ function addSymbolRow(symbolId) {
     </div>
   `;
   container.appendChild(row);
-  const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
-  const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+  const wEl = document.getElementById('rtp-screen-width');
+  const mEl = document.getElementById('rtp-min-match');
+  const w = parseInt((wEl && (wEl.value || wEl.placeholder)) || 5);
+  const m = parseInt((mEl && (mEl.value || mEl.placeholder)) || 3);
   const SYM_DEFAULTS = {
     1: { type: 'SCATTER', paytable: '' },
     2: { type: 'WILD',    paytable: '5.0, 10.0, 50.0', agg: 'NONE' },
@@ -63,19 +65,11 @@ function addSymbolRow(symbolId) {
     if (def.agg) {
       const aggSel = row.querySelector('.rtp-wild-agg');
       if (aggSel) {
-        const strat = document.getElementById('rtp-strategy')?.value;
-        const isContactsLikeStrat = strat === 'SCATTERS' || strat === 'CLUSTERS';
-        const resolvedAgg = (def.agg === 'NONE' && strat !== 'WAYS' && !isContactsLikeStrat) ? 'ADD' : def.agg;
-        aggSel.value = resolvedAgg;
+        aggSel.value = def.agg;
         onWildAggChange(aggSel);
       }
     }
     updatePaytablePlaceholders(w, m);
-    const strat2 = document.getElementById('rtp-strategy')?.value;
-    if (def.paytable && strat2 !== 'SCATTERS' && strat2 !== 'CLUSTERS') {
-      const ptInput = row.querySelector('.rtp-paytable-input');
-      if (ptInput) { ptInput.placeholder = def.paytable; ptInput.dataset.fixedPlaceholder = '1'; }
-    }
   } else {
     updatePaytablePlaceholders(w, m);
   }
@@ -101,14 +95,11 @@ function onSymbolTypeChange(sel) {
   const setSel = row.querySelector('.rtp-interval-set-sel');
   const isWild = sel.value === 'WILD';
   const isScatter = sel.value === 'SCATTER';
-  const isContacts = ['SCATTERS', 'CLUSTERS'].includes(document.getElementById('rtp-strategy')?.value);
+  const strat = document.getElementById('rtp-strategy')?.value;
+  const isContacts = ['SCATTERS', 'CLUSTERS'].includes(strat);
+  const isWaysLike = ['WAYS', 'MEGAWAYS'].includes(strat);
 
-  if (isScatter || (isWild && isContacts)) {
-    ptInput.disabled = true;
-    ptInput.placeholder = 'n/a';
-    ptInput.value = '';
-    if (setSel) setSel.style.display = 'none';
-  } else if (isScatter) {
+  if (isScatter || (isWild && (isContacts || isWaysLike))) {
     ptInput.disabled = true;
     ptInput.placeholder = 'n/a';
     ptInput.value = '';
@@ -125,8 +116,7 @@ function onSymbolTypeChange(sel) {
   const aggSel = row.querySelector('.rtp-wild-agg');
   if (isWild) {
     if (aggSel) onWildAggChange(aggSel);
-    const isWays = document.getElementById('rtp-strategy').value === 'WAYS';
-    if (isWays) {
+    if (isWaysLike) {
       wildFields.style.display = 'none';
       if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
     }

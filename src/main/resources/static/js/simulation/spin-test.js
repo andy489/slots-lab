@@ -28,9 +28,12 @@ function buildSpinTestPayload() {
       errors.push('Reel set chances must sum to 100.0% (current: ' + chanceSum.toFixed(1) + '%). Configure in the Simulation tab.');
   }
 
-  const screenWidth  = parseInt(document.getElementById('rtp-screen-width')?.value);
-  const screenHeight = parseInt(document.getElementById('rtp-screen-height')?.value);
-  const minMatch     = parseInt(document.getElementById('rtp-min-match')?.value);
+  const _wEl = document.getElementById('rtp-screen-width');
+  const _hEl = document.getElementById('rtp-screen-height');
+  const _mEl = document.getElementById('rtp-min-match');
+  const screenWidth  = parseInt((_wEl?.value || _wEl?.placeholder) || '');
+  const screenHeight = parseInt((_hEl?.value || _hEl?.placeholder) || '');
+  const minMatch     = parseInt((_mEl?.value || _mEl?.placeholder) || '');
   if (isNaN(screenWidth)  || screenWidth  < 1) errors.push('Screen width not set — configure in Simulation tab');
   if (isNaN(screenHeight) || screenHeight < 1) errors.push('Screen height not set — configure in Simulation tab');
   if (isNaN(minMatch) || minMatch < 1)         errors.push('Min Match not set — configure in Simulation tab');
@@ -41,7 +44,7 @@ function buildSpinTestPayload() {
     if (!nums.some(isNaN)) lineDefinitions.push(nums);
   });
   const _spinTestStrat = document.getElementById('rtp-strategy')?.value;
-  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS' && _spinTestStrat !== 'CLUSTERS')
+  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'MEGAWAYS' && _spinTestStrat !== 'SCATTERS' && _spinTestStrat !== 'CLUSTERS')
     errors.push('No line definitions — configure in Simulation tab');
 
   const symbols = [];
@@ -98,6 +101,8 @@ function buildSpinTestPayload() {
   }
   if (errors.length > 0) return { errors };
 
+  const megawaysReelHeightChances = strategy === 'MEGAWAYS' ? collectMegawaysHeightChances() : null;
+
   return {
     errors: [],
     payload: {
@@ -114,7 +119,8 @@ function buildSpinTestPayload() {
       stops,
       screen,
       contactsIntervalSets,
-      adjacencyOffsets
+      adjacencyOffsets,
+      megawaysReelHeightChances
     }
   };
 }
@@ -178,8 +184,9 @@ function renderSpinTestResults(container, spins, payload) {
       const cells = col.map(sym => {
         const isWild    = wildIds.has(sym);
         const isScatter = scatterIds.has(sym);
-        const cls = isWild ? ' wild' : isScatter ? ' scatter' : '';
-        return `<div class="spin-screen-cell${cls}">${sym}</div>`;
+        const isMask    = sym === 0;
+        const cls = isMask ? ' mask' : isWild ? ' wild' : isScatter ? ' scatter' : '';
+        return `<div class="spin-screen-cell${cls}">${isMask ? '' : sym}</div>`;
       }).join('');
       return `<div class="spin-screen-col">${cells}</div>`;
     }).join('');

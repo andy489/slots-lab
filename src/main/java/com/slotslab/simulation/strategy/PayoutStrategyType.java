@@ -6,6 +6,8 @@ public enum PayoutStrategyType {
     BW,
     ADJ,
     WAYS,
+    MEGAWAYS,
     SCATTERS,
-    CLUSTERS
+    CLUSTERS,
+    SL
 }

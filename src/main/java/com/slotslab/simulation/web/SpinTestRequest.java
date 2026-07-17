@@ -22,6 +22,8 @@ public record SpinTestRequest(
         List<Integer> stops,
         List<List<Integer>> screen,
         List<ScattersIntervalSet> contactsIntervalSets,
-        List<AdjacencyOffset> adjacencyOffsets
+        List<AdjacencyOffset> adjacencyOffsets,
+        // MEGAWAYS: per-reel-set, per-reel height probabilities (6 values each for heights 2..7)
+        List<List<List<Double>>> megawaysReelHeightChances
 ) {}
 

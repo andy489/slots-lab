@@ -250,6 +250,7 @@ public final class WaysEvaluator {
         List<Integer> pos = new ArrayList<>();
         for (int row = 0; row < screenHeight; row++) {
             int s = screen[reel][row];
+            if (s == 0) continue; // mask symbol
             if (symbols.isScatter(s)) continue;
             if (symbols.isWild(s)) pos.add(row);
         }
@@ -263,6 +264,7 @@ public final class WaysEvaluator {
         List<Integer> pos = new ArrayList<>();
         for (int row = 0; row < screenHeight; row++) {
             int s = screen[reel][row];
+            if (s == 0) continue; // mask symbol — non-existent position
             if (symbols.isScatter(s)) continue;
             if (s == targetSym || symbols.isWild(s)) pos.add(row);
         }

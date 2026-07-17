@@ -198,7 +198,7 @@
 
           <!-- Simulation Settings -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:260px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win direction (LTR / RTL / BW / ADJ / WAYS / SCATTERS)</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
+            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="sim-settings-tip" class="stat-tip-box tip-below" style="width:290px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win evaluation method</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
@@ -207,8 +207,10 @@
                     <option value="LTR">LTR (Left to Right)</option>
                     <option value="RTL">RTL (Right to Left)</option>
                     <option value="BW">BW (Both Ways)</option>
+                    <option value="SL">SL (Super Lines)</option>
                     <option value="ADJ">ADJ (Adjacent)</option>
                     <option value="WAYS">WAYS (All Ways)</option>
+                    <option value="MEGAWAYS">MEGAWAYS&#8482;</option>
                     <option value="SCATTERS">SCATTERS (Scatters Pay)</option>
                     <option value="CLUSTERS">CLUSTERS (Clusters Pay)</option>
                   </select>
@@ -251,7 +253,7 @@
           <!-- Screen and Paytable Configuration -->
           <div class="section-card" id="line-defs-card">
             <div class="section-card-header" style="flex-wrap:nowrap">
-              <span class="section-label" style="min-width:0;flex-shrink:1">Screen and Paytable Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="screen-paytable-tip" class="stat-tip-box tip-right" style="width:540px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
+              <span class="section-label" style="min-width:0;flex-shrink:1">Screen and Paytable Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="screen-paytable-tip" class="stat-tip-box tip-right" style="width:540px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-rule">For MEGAWAYS&#8482; this is the maximum possible height — the actual visible tile count per reel is drawn each spin from the Reel Tiles Count Chances below.</div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
               <div id="line-defs-header-btns" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
                 <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -304,6 +306,12 @@
                     <button class="add-btn" onclick="addAdjacencyOffset()">+ Add offset</button>
                   </div>
                   <div id="adjacency-offsets-container" style="display:flex;flex-direction:column;gap:0.25rem;margin-top:0.15rem"></div>
+                </div>
+              </div>
+              <div id="megaways-heights-card" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
+                <div style="font-size:0.75rem;opacity:0.65">Reel Tiles Count Chances<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:400px">Per-reel probability distribution for the number of visible tiles per reel. Each row is 6 comma-separated percentage values corresponding to tile counts <strong>2, 3, 4, 5, 6, 7</strong> — i.e. the 1st value is the chance a reel shows 2 tiles, the 2nd is for 3 tiles, …, the 6th is for 7 tiles. Values must sum to 100. Leave a row blank to use a uniform distribution.<div class="tip-rule">Default: <span style="font-family:monospace">20, 25, 20, 15, 10, 10</span> — biased toward 3 tiles, tapering off at higher counts. Filled automatically by the ✦ button above.</div></span></span></span></div>
+                <div id="megaways-heights-list">
+                  <span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>
                 </div>
               </div>
             </div>

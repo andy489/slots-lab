@@ -1,5 +1,6 @@
 package com.slotslab.dto.spin;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.List;
@@ -12,6 +13,8 @@ public record SpinData(
         List<Integer> screenSize,
         List<PayoutEntry> payoutData,
         double winAmount,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        List<Integer> reelHeights,
         String className
 ) implements PayoutEntry {
 
@@ -20,6 +23,15 @@ public record SpinData(
             List<Integer> reelsStopPositions,
             List<List<Integer>> screen,
             List<PayoutEntry> payoutData) {
+        return of(reelSetIndex, reelsStopPositions, screen, payoutData, null);
+    }
+
+    public static SpinData of(
+            int reelSetIndex,
+            List<Integer> reelsStopPositions,
+            List<List<Integer>> screen,
+            List<PayoutEntry> payoutData,
+            List<Integer> reelHeights) {
 
         int reels = screen.size();
         int rows  = reels > 0 ? screen.get(0).size() : 0;
@@ -31,6 +43,7 @@ public record SpinData(
                 List.of(reels, rows),
                 payoutData,
                 total,
+                reelHeights,
                 SpinData.class.getName()
         );
     }

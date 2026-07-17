@@ -140,7 +140,7 @@ function addRestriction(containerId, data, scroll) {
       </div>
       <div class="restriction-row">
         <span class="restriction-row-label">minDistance</span>
-        <input type="text" class="array-input dist-input" value="${dist}" placeholder="4"/>
+        <input type="text" class="array-input dist-input" value="${dist}" placeholder="1"/>
       </div>
     </div>
   `;

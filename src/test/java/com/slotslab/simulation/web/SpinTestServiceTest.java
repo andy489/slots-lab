@@ -78,11 +78,10 @@ class SpinTestServiceTest {
                 null,        // stops
                 screenList,
                 null,        // contactsIntervalSets
-                null         // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
     }
-
-    // ── reel-based request builder ────────────────────────────────────────────
 
     /**
      * Minimal 5-reel set where each reel holds exactly screenHeight tiles of the same symbol,
@@ -122,7 +121,8 @@ class SpinTestServiceTest {
                 stops,
                 null,   // no fixed screen
                 null,   // no contactsIntervalSets
-                null    // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
     }
 
@@ -194,7 +194,8 @@ class SpinTestServiceTest {
                 null, null,
                 screenList,
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         SpinTestService service = new SpinTestService();
 
@@ -233,7 +234,8 @@ class SpinTestServiceTest {
                 1, null, null,
                 screenList,
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         SpinTestService service = new SpinTestService();
 
@@ -302,7 +304,8 @@ class SpinTestServiceTest {
                 List.of(0, 0, 0, 0, 0),
                 null,
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         SpinTestService service = new SpinTestService();
 
@@ -327,7 +330,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
                 1, null, null, null, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -342,7 +346,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
                 1, null, null, null, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -361,7 +366,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
                 1, null, null, screenList, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -378,7 +384,8 @@ class SpinTestServiceTest {
                 1, null, null,
                 List.of(List.of(1, 0, 0)),
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -396,7 +403,8 @@ class SpinTestServiceTest {
                 1, null, null,
                 List.of(List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0), List.of(1, 0, 0)),
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -415,7 +423,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 List.of(),   // no line definitions
                 1, null, null, screenList, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -434,7 +443,8 @@ class SpinTestServiceTest {
                 1,
                 5,   // index out of range (only index 0 exists)
                 null, null, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -457,7 +467,8 @@ class SpinTestServiceTest {
                 1, null, null,
                 tooNarrow,      // only 3 columns
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -480,7 +491,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 null,   // no lines needed for WAYS
                 1, null, null, screenList, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -505,7 +517,8 @@ class SpinTestServiceTest {
                 SCREEN_WIDTH, SCREEN_HEIGHT, MIN_MATCH,
                 row0Lines(),
                 1, null, null, screenList, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         assertThrows(IllegalArgumentException.class, () -> new SpinTestService().generate(req));
     }
@@ -600,7 +613,8 @@ class SpinTestServiceTest {
                         .map(col -> Arrays.stream(col).boxed().collect(Collectors.toList()))
                         .collect(Collectors.toList()),
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -628,7 +642,8 @@ class SpinTestServiceTest {
                         .map(col -> Arrays.stream(col).boxed().collect(Collectors.toList()))
                         .collect(Collectors.toList()),
                 null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -664,7 +679,8 @@ class SpinTestServiceTest {
                 1, null, null,
                 screenList,
                 List.of(intervalSet),
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         List<SpinData> results = new SpinTestService().generate(req);
 
@@ -747,7 +763,8 @@ class SpinTestServiceTest {
                 row0Lines(),
                 0,   // count=0
                 null, null, screenList, null,
-                null  // adjacencyOffsets
+                null,  // adjacencyOffsets
+                null  // megawaysReelHeightChances
         );
         List<SpinData> results = new SpinTestService().generate(req);
 

@@ -7,6 +7,7 @@ function storeGeneratedReels(reelSetsJson) {
   try {
     _latestReelSets = JSON.parse(reelSetsJson);
     syncRtpChances();
+    syncMegawaysHeights();
     syncRtpSymbolsFromReels();
     updateSpinTestPlaceholders();
   } catch(e) {
@@ -31,6 +32,7 @@ function restoreRtpForm(payload) {
   if (payload.reelSets) {
     _latestReelSets = payload.reelSets;
     syncRtpChances();
+    syncMegawaysHeights();
   }
   if (payload.reelSetChances) {
     payload.reelSetChances.forEach((c, i) => {
@@ -38,6 +40,16 @@ function restoreRtpForm(payload) {
       if (el) el.value = c.chance;
     });
     updateChanceTotal();
+  }
+  if (payload.megawaysReelHeightChances) {
+    payload.megawaysReelHeightChances.forEach((setData, s) => {
+      if (!setData) return;
+      setData.forEach((reelData, r) => {
+        if (!reelData) return;
+        const inp = document.getElementById('mw-h-' + s + '-' + r);
+        if (inp) inp.value = reelData.join(', ');
+      });
+    });
   }
   document.getElementById('rtp-lines-list').innerHTML = '';
   _lineCounter = 0;
@@ -151,4 +163,65 @@ function syncRtpSymbolsFromReels() {
       addLineDef(line);
     }
   }
+}
+
+// ── MEGAWAYS reel height chances ─────────────────────────────────────────────
+
+function syncMegawaysHeights() {
+  const container = document.getElementById('megaways-heights-list');
+  if (!container) return;
+  if (!_latestReelSets || _latestReelSets.length === 0) {
+    container.innerHTML = '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>';
+    return;
+  }
+  const setCount = _latestReelSets.length;
+  const reelCount = _latestReelSets[0].reelSet.length;
+
+  container.innerHTML = '';
+  for (let s = 0; s < setCount; s++) {
+    const setName = _latestReelSets[s].setName || ('ReelSet#' + s);
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:0.7rem;font-weight:600;color:var(--text2);margin-bottom:0.25rem;margin-top:' + (s > 0 ? '0.6rem' : '0');
+    header.textContent = setName;
+    container.appendChild(header);
+    for (let r = 0; r < reelCount; r++) {
+      const row = document.createElement('div');
+      row.className = 'rtp-chance-row';
+      row.style.cssText = 'display:flex;align-items:center;gap:0.4rem;margin-bottom:0.2rem';
+      row.innerHTML =
+        '<span style="font-size:0.68rem;color:var(--text3);min-width:3.5rem">Reel ' + (r+1) + '</span>' +
+        '<input type="text" class="array-input mw-height-input" id="mw-h-' + s + '-' + r + '" ' +
+        'placeholder="20, 25, 20, 15, 10, 10" style="flex:1;font-size:0.7rem" ' +
+        'title="6 values for tile counts 2,3,4,5,6,7 — must sum to 100"/>';
+      container.appendChild(row);
+    }
+  }
+}
+
+function fillMegawaysHeightDefaults() {
+  document.querySelectorAll('.mw-height-input').forEach(inp => {
+    if (!inp.value.trim()) inp.value = '20, 25, 20, 15, 10, 10';
+  });
+}
+
+function collectMegawaysHeightChances() {
+  if (!_latestReelSets || _latestReelSets.length === 0) return null;
+  const setCount = _latestReelSets.length;
+  const reelCount = _latestReelSets[0].reelSet.length;
+  const result = [];
+  for (let s = 0; s < setCount; s++) {
+    const reelData = [];
+    for (let r = 0; r < reelCount; r++) {
+      const inp = document.getElementById('mw-h-' + s + '-' + r);
+      const raw = inp ? inp.value.trim() : '';
+      if (!raw) {
+        reelData.push(null);
+      } else {
+        const vals = raw.split(',').map(v => parseFloat(v.trim()));
+        reelData.push(vals);
+      }
+    }
+    result.push(reelData);
+  }
+  return result;
 }

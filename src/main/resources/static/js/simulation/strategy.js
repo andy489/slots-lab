@@ -3,9 +3,12 @@
 function onStrategyChange() {
   const strat = document.getElementById('rtp-strategy').value;
   const isWays = strat === 'WAYS';
+  const isMegaways = strat === 'MEGAWAYS';
   const isContacts = strat === 'SCATTERS';
   const isClusters = strat === 'CLUSTERS';
-  const noLines = isWays || isContacts || isClusters;
+  const isSuperLines = strat === 'SL';
+  const isAdj = strat === 'ADJ';
+  const noLines = isWays || isMegaways || isContacts || isClusters;
 
   // Snapshot BEFORE any DOM changes (addIntervalSet → updatePaytablePlaceholders fires below)
   const _ptSnapshotInputs = document.querySelectorAll('.rtp-paytable-input:not([disabled])');
@@ -21,7 +24,11 @@ function onStrategyChange() {
   if (addBtn) addBtn.style.display = noLines ? 'none' : '';
   if (lineToggleBtn) lineToggleBtn.style.display = noLines ? 'none' : '';
   if (scatterToggleBtn) scatterToggleBtn.style.display = isContacts ? '' : 'none';
-  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = (isWays || isClusters) ? '' : 'none';
+  if (screenDimsToggleBtn) screenDimsToggleBtn.style.display = (isWays || isMegaways || isClusters) ? '' : 'none';
+
+  // Show/hide MEGAWAYS reel tiles count chances subsection
+  const megawaysCard = document.getElementById('megaways-heights-card');
+  if (megawaysCard) megawaysCard.style.display = isMegaways ? 'flex' : 'none';
 
   const scattersSection = document.getElementById('scatters-paytable-section');
   if (scattersSection) {
@@ -42,20 +49,20 @@ function onStrategyChange() {
     }
   }
 
-  if (isContacts || isClusters) {
-    document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
-      delete inp.dataset.fixedPlaceholder;
-    });
-  }
 
   const wEl = document.getElementById('rtp-screen-width');
   const hEl = document.getElementById('rtp-screen-height');
   const mEl = document.getElementById('rtp-min-match');
-  const newH = (isContacts || isClusters) ? '5' : '3';
-  const newM = (isContacts || isClusters) ? '5' : '3';
-  const oldH = (isContacts || isClusters) ? '3' : '5';
-  const oldM = (isContacts || isClusters) ? '3' : '5';
-  if (wEl) { wEl.placeholder = '5'; if (wEl.value === '5') wEl.value = ''; }
+  const newW = isMegaways ? '6' : '5';
+  const newH = isMegaways ? '7' : (isContacts || isClusters) ? '5' : '3';
+  const newM = isMegaways ? '3' : (isContacts || isClusters) ? '5' : '3';
+  const oldW = isMegaways ? '5' : '6';
+  const oldH = isMegaways ? '3' : (isContacts || isClusters) ? '3' : '7';
+  const oldM = isMegaways ? '3' : (isContacts || isClusters) ? '3' : '7';
+  if (wEl) {
+    wEl.placeholder = newW;
+    if (!wEl.value || wEl.value === oldW || wEl.value === newW) wEl.value = '';
+  }
   if (hEl) {
     hEl.placeholder = newH;
     if (!hEl.value || hEl.value === oldH || hEl.value === newH) hEl.value = '';
@@ -74,7 +81,7 @@ function onStrategyChange() {
     const isScatter = typeSel && typeSel.value === 'SCATTER';
     const ptInput = row.querySelector('.rtp-paytable-input');
 
-    if ((isScatter || (isWild && isContactsLike)) && ptInput) {
+    if ((isScatter || (isWild && (isContactsLike || isWays || isMegaways))) && ptInput) {
       ptInput.disabled = true;
       ptInput.placeholder = 'n/a';
       ptInput.value = '';
@@ -86,19 +93,16 @@ function onStrategyChange() {
 
     if (!typeSel || !isWild) return;
     const wildFields = row.querySelector('.rtp-wild-fields');
-    if (wildFields) wildFields.style.display = isWays ? 'none' : '';
+    if (wildFields) wildFields.style.display = (isWays || isMegaways) ? 'none' : '';
     const aggSel = row.querySelector('.rtp-wild-agg');
-    if (isWays || isContactsLike) {
-      if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
-    } else {
-      if (aggSel && aggSel.value === 'NONE') { aggSel.value = 'ADD'; }
-      if (aggSel) onWildAggChange(aggSel);
-    }
+    if (aggSel) { aggSel.value = 'NONE'; onWildAggChange(aggSel); }
   });
   if (isContactsLike) refreshIntervalSetDropdowns();
   else {
-    const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
-    const m = parseInt(document.getElementById('rtp-min-match').value) || 3;
+    const wEl2 = document.getElementById('rtp-screen-width');
+    const mEl2 = document.getElementById('rtp-min-match');
+    const w = parseInt((wEl2 && (wEl2.value || wEl2.placeholder)) || 5);
+    const m = parseInt((mEl2 && (mEl2.value || mEl2.placeholder)) || 3);
     updatePaytablePlaceholders(w, m);
   }
 
@@ -137,6 +141,26 @@ function onStrategyChange() {
     } else if (isWays) {
       tip.innerHTML = 'Defines the grid.' + gridRows +
         '<div class="tip-rule">WAYS pays for every combination of matching symbols across consecutive reels — no fixed paylines required.</div>';
+    } else if (isMegaways) {
+      tip.innerHTML = 'Defines the grid (default 6×7).' + gridRows +
+        '<div class="tip-rule"><strong>MEGAWAYS:</strong> Each reel independently draws a visible height (2–7 rows) from the configured probability distribution. ' +
+        'Remaining rows are filled with a mask symbol (id=0) and do not participate in wins. ' +
+        'Payout is identical to WAYS — all symbol combinations across consecutive reels are awarded.</div>' +
+        '<div class="tip-rule">Configure per-reel tile count probabilities in the <strong>Reel Tiles Count Chances</strong> section.</div>';
+    } else if (isSuperLines) {
+      tip.innerHTML = 'Defines the grid and winning lines.' + gridRows +
+        '<div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. ' +
+        'e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels. ' +
+        'Only symbols landing on a defined payline can contribute to a win.</div>' +
+        '<div class="tip-rule"><strong>SL:</strong> Matching symbols on the same payline win even when they are not adjacent — gaps between them are allowed. ' +
+        'Think of every regular symbol as a scatter, but <em>only within its payline</em>.</div>';
+    } else if (isAdj) {
+      tip.innerHTML = 'Defines the grid and winning lines.' + gridRows +
+        '<div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. ' +
+        'e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels. ' +
+        'Only symbols landing on a defined payline can contribute to a win.</div>' +
+        '<div class="tip-rule"><strong>ADJ:</strong> Symbols must be <strong>consecutive and adjacent</strong> on the same payline, ' +
+        'but the streak can start from any reel — the best-paying window per payline is awarded.</div>';
     } else {
       tip.innerHTML = 'Defines the grid and winning lines.' + gridRows +
         '<div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. ' +
@@ -164,16 +188,53 @@ function onStrategyChange() {
       symTip.innerHTML = paytableExample + wildBase +
         '<div class="tip-rule"><strong>CLUSTERS strategy:</strong> Same interval-based paytable as Scatters Pay, but only connected clusters of symbols count. ' +
         'Connectivity is determined by the configured adjacency offsets. SCATTER symbols act as blockers. WILD symbols extend clusters.</div>';
-    } else if (isWays) {
+    } else if (isWays || isMegaways) {
       symTip.innerHTML = paytableExample + wildBase +
-        '<div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — ' +
+        '<div class="tip-rule"><strong>' + strat + ' strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — ' +
         'they would double-count the wild\'s contribution, which is already reflected in the ways count. ' +
         '<em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div>';
+    } else if (isSuperLines) {
+      symTip.innerHTML = paytableExample + wildBase +
+        '<div class="tip-rule"><strong>SL strategy:</strong> Identical paytable structure to LTR — each entry corresponds to a match count starting from Min Match. ' +
+        'Symbols do <em>not</em> need to be consecutive on the payline; gaps are ignored and all matching symbols on the same line count together.</div>';
     } else {
       symTip.innerHTML = paytableExample + wildBase;
     }
   }
+  updateSimSettingsTip();
   updateSymConfigToggleBtn();
+}
+
+const _simStrategyDescriptions = {
+  LTR:      { label: 'Left to Right', desc: 'Symbols pay on consecutive adjacent reels starting from the <strong>leftmost reel</strong> and running right. The streak breaks as soon as a non-matching symbol (or scatter) is encountered.' },
+  RTL:      { label: 'Right to Left', desc: 'Mirror of LTR — streak starts from the <strong>rightmost reel</strong> and runs left. Useful for both-ways games when combined with LTR.' },
+  BW:       { label: 'Both Ways', desc: 'Evaluates both <strong>LTR and RTL</strong> independently and awards the combined total. Each payline is scored in both directions; wins from both are summed.' },
+  SL:       { label: 'Super Lines', desc: 'Like LTR but <strong>gaps are allowed</strong>. All matching symbols on the same payline count together regardless of adjacency — every symbol behaves like a scatter within its own payline.' },
+  ADJ:      { label: 'Adjacent', desc: 'Symbols pay on <strong>consecutive adjacent reels</strong> within the same payline definition. Unlike LTR the streak can start from any reel — the best-paying window on each payline is awarded.' },
+  WAYS:     { label: 'All Ways', desc: 'No paylines needed. Symbols pay for <strong>every combination</strong> of matching positions across consecutive reels — the ways count multiplies the payout.' },
+  MEGAWAYS: { label: 'Megaways™', desc: 'Like WAYS but each reel draws a <strong>random visible height</strong> (2–7 rows) per spin according to a configurable probability distribution. Masked positions do not participate in wins.' },
+  SCATTERS: { label: 'Scatters Pay', desc: 'No paylines needed. Symbols pay based on their <strong>total tile count anywhere on the screen</strong>. Payout is determined by interval sets assigned per symbol.' },
+  CLUSTERS: { label: 'Clusters Pay', desc: 'No paylines needed. Symbols pay based on the size of <strong>connected clusters</strong>. Two tiles connect when they are adjacent according to the configured neighbour offsets.' },
+};
+
+function updateSimSettingsTip() {
+  const tip = document.getElementById('sim-settings-tip');
+  if (!tip) return;
+  const strat = document.getElementById('rtp-strategy')?.value;
+  const info = _simStrategyDescriptions[strat];
+  const stratLine = info
+    ? `<div class="tip-rule"><strong>${strat} — ${info.label}:</strong> ${info.desc}</div>`
+    : '';
+  tip.innerHTML =
+    'Core simulation parameters.' +
+    '<div class="tip-rule">' +
+      '<div class="tip-row"><span>Strategy</span><span>Win evaluation method</span></div>' +
+      '<div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div>' +
+      '<div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div>' +
+      '<div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div>' +
+    '</div>' +
+    stratLine +
+    '<div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div>';
 }
 
 let _setCardCounter = 0;
@@ -528,7 +589,6 @@ function updatePaytablePlaceholders(w, m) {
 
   document.querySelectorAll('.rtp-paytable-input').forEach(inp => {
     if (inp.disabled) return;
-    if (inp.dataset.fixedPlaceholder) return;
     const row = inp.closest('.rtp-sym-row');
     const symId = row ? parseInt(row.dataset.symId) : 0;
     const typeVal = row && row.querySelector('select') ? row.querySelector('select').value : 'NORMAL';

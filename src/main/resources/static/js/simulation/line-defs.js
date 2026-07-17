@@ -162,6 +162,9 @@ function updateScreenDimsToggleBtn() {
   if (strat === 'CLUSTERS') {
     hasValues = hasValues || Array.from(document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
   }
+  if (strat === 'MEGAWAYS') {
+    hasValues = hasValues || Array.from(document.querySelectorAll('.mw-height-input')).some(inp => inp.value.trim() !== '');
+  }
   btn.innerHTML = hasValues
     ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
     : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
@@ -186,6 +189,13 @@ function toggleScreenDims() {
       el.value = el.placeholder;
     }
   });
+  if (strat === 'MEGAWAYS') {
+    if (hasValues) {
+      document.querySelectorAll('.mw-height-input').forEach(inp => { inp.value = ''; });
+    } else {
+      fillMegawaysHeightDefaults();
+    }
+  }
   updateScreenDimsToggleBtn();
 }
 

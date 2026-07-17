@@ -35,6 +35,12 @@ public final class LineEvaluator {
         return total;
     }
 
+    public static double evalSl(int[][] screen, int reelCount, SymbolTable symbols, int[][] lines, int minMatch) {
+        double total = 0.0;
+        for (int[] line : lines) total += evalSuperLine(screen, reelCount, symbols, line, minMatch).win();
+        return total;
+    }
+
     // ── tracked variants ─────────────────────────────────────────────────────
 
     public static double evalLtrTracked(int[][] screen, int reelCount, SymbolTable symbols,
@@ -76,6 +82,19 @@ public final class LineEvaluator {
         return total;
     }
 
+    public static double evalSlTracked(int[][] screen, int reelCount, SymbolTable symbols,
+                                 int[][] lines, int minMatch,
+                                 Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
+        double total = 0.0;
+        for (int[] line : lines) {
+            LineResult r = evalSuperLine(screen, reelCount, symbols, line, minMatch);
+            total += r.win();
+            if (r.win() > 0 && r.paySymbol() >= 0)
+                record(r.paySymbol(), r.streak(), r.win(), hitMap, payMap);
+        }
+        return total;
+    }
+
     private static void record(int sym, int streak, double win,
                                Map<ComboKey, long[]> hitMap, Map<ComboKey, double[]> payMap) {
         ComboKey key = new ComboKey(sym, streak);
@@ -93,6 +112,101 @@ public final class LineEvaluator {
             LineResult r = evalLine(screen, reelCount, symbols, line, startReel, false, minMatch);
             if (r.win() > best.win()) best = r;
         }
+        return best;
+    }
+
+    // ── super-lines evaluator (gaps allowed within a payline) ────────────────
+
+    private static LineResult evalSuperLine(int[][] screen, int reelCount, SymbolTable symbols,
+                                            int[] line, int minMatch) {
+        // First pass: collect all symbols on this payline up to (but not including) a scatter.
+        // Also accumulate wild multiplier data (shared across every candidate pay-symbol).
+        int totalWilds = 0;
+        double wildAcc = 0.0;
+        boolean hasWild = false;
+        WildMultiplierAggregation aggregationType = null;
+        SymbolConfig firstWildCfg = null;
+
+        // Count occurrences of each normal symbol on the line.
+        java.util.Map<Integer, Integer> symCounts = new java.util.LinkedHashMap<>();
+
+        for (int reel = 0; reel < reelCount; reel++) {
+            int row = line[reel];
+            int sym = screen[reel][row];
+
+            if (symbols.isScatter(sym)) break;
+
+            boolean isWild = symbols.isWild(sym);
+
+            if (isWild) {
+                totalWilds++;
+                SymbolConfig wCfg = symbols.get(sym);
+                if (wCfg != null) {
+                    if (!hasWild) {
+                        aggregationType = wCfg.wildAggregation();
+                        firstWildCfg = wCfg;
+                        hasWild = true;
+                        if (aggregationType == WildMultiplierAggregation.ADD) {
+                            wildAcc = wCfg.wildMultiplier();
+                        } else if (aggregationType == WildMultiplierAggregation.MULTIPLY) {
+                            wildAcc = wCfg.wildMultiplier();
+                        }
+                    } else {
+                        if (aggregationType == WildMultiplierAggregation.ADD) {
+                            wildAcc += wCfg.wildMultiplier();
+                        } else if (aggregationType == WildMultiplierAggregation.MULTIPLY) {
+                            wildAcc *= wCfg.wildMultiplier();
+                        }
+                    }
+                }
+            } else {
+                // Normal symbol — count it (wilds are counted separately and added per-symbol below)
+                symCounts.merge(sym, 1, Integer::sum);
+            }
+        }
+
+        // Compute shared line multiplier (same regardless of which symbol wins)
+        double lineMultiplier;
+        if (!hasWild) {
+            lineMultiplier = 1.0;
+        } else if (aggregationType == WildMultiplierAggregation.NONE) {
+            lineMultiplier = 1.0;
+        } else if (aggregationType == WildMultiplierAggregation.SEQUENCE) {
+            List<Double> seq = firstWildCfg.wildSequence();
+            int idx = totalWilds - 1;
+            lineMultiplier = (seq != null && idx >= 0 && idx < seq.size()) ? seq.get(idx) : 1.0;
+        } else {
+            lineMultiplier = wildAcc > 0 ? wildAcc : 1.0;
+        }
+
+        // Second pass: for every normal symbol found, matchCount = ownCount + totalWilds.
+        // Pick the highest win across all candidates.
+        LineResult best = new LineResult(0.0, -1, 0);
+
+        for (java.util.Map.Entry<Integer, Integer> entry : symCounts.entrySet()) {
+            int sym = entry.getKey();
+            int matchCount = entry.getValue() + totalWilds;
+            if (matchCount < minMatch) continue;
+            SymbolConfig cfg = symbols.get(sym);
+            if (cfg == null) continue;
+            double win = payoutAt(cfg, matchCount, minMatch) * lineMultiplier;
+            if (win > best.win()) best = new LineResult(win, sym, matchCount);
+        }
+
+        // All-wild case: no normal symbols seen, wilds alone form the line
+        if (symCounts.isEmpty() && totalWilds >= minMatch && firstWildCfg != null) {
+            double wildWin = payoutAt(firstWildCfg, totalWilds, minMatch);
+            if (wildWin == 0.0) {
+                for (SymbolConfig sc : symbols.all()) {
+                    if (sc.type() == SymbolType.NORMAL) {
+                        double v = payoutAt(sc, totalWilds, minMatch);
+                        if (v > wildWin) wildWin = v;
+                    }
+                }
+            }
+            if (wildWin > best.win()) best = new LineResult(wildWin, firstWildCfg.symbolId(), totalWilds);
+        }
+
         return best;
     }
 

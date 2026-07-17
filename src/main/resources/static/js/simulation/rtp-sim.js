@@ -101,7 +101,7 @@ function collectRtpRequest() {
 
   const lineRows = document.querySelectorAll('.rtp-line-row');
   const _strategyForLineCheck = document.getElementById('rtp-strategy').value;
-  const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'SCATTERS' || _strategyForLineCheck === 'CLUSTERS';
+  const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'MEGAWAYS' || _strategyForLineCheck === 'SCATTERS' || _strategyForLineCheck === 'CLUSTERS';
   if (!isWays && lineRows.length === 0) errors.push('At least one line definition is required');
   const lineDefinitions = [];
   const parsedLines = [];
@@ -232,6 +232,27 @@ function collectRtpRequest() {
       errors.push('At least one adjacency offset is required for CLUSTERS strategy');
   }
 
+  let megawaysReelHeightChances = null;
+  if (strategy === 'MEGAWAYS') {
+    megawaysReelHeightChances = collectMegawaysHeightChances();
+    if (megawaysReelHeightChances) {
+      megawaysReelHeightChances.forEach((setData, s) => {
+        (setData || []).forEach((reelData, r) => {
+          if (!reelData) return;
+          if (reelData.length !== 6)
+            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' must have exactly 6 values (tile counts 2–7)');
+          else if (reelData.some(isNaN) || reelData.some(v => v < 0))
+            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' contains invalid values');
+          else {
+            const sum = reelData.reduce((a, b) => a + b, 0);
+            if (Math.abs(sum - 100) > 0.1)
+              errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' must sum to 100 (current: ' + sum.toFixed(1) + ')');
+          }
+        });
+      });
+    }
+  }
+
   if (errors.length > 0) return { errors };
 
   return {
@@ -249,7 +270,8 @@ function collectRtpRequest() {
       threadCount,
       betSize,
       contactsIntervalSets,
-      adjacencyOffsets
+      adjacencyOffsets,
+      megawaysReelHeightChances
     }
   };
 }
@@ -381,15 +403,17 @@ function renderRtpResult(container, r, payload) {
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${{
-              LTR:      'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
-              RTL:      'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
-              BW:       'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
-              ADJ:      'Adjacent — symbols pay on consecutive adjacent reels starting from any valid reel, not only the leftmost.',
-              WAYS:     'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
-              SCATTERS: 'Scatters Pay — symbols pay based on total tile count anywhere on the screen. No paylines needed.',
-              CLUSTERS: 'Clusters Pay — symbols pay based on the size of connected clusters. Two tiles connect if adjacent according to configured offsets.'
+              LTR:         'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
+              RTL:         'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
+              BW:          'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
+              ADJ:         'Adjacent — symbols pay on consecutive adjacent reels within the same payline definition. Unlike LTR the winning streak can start from any reel; the best-paying window per payline is awarded.',
+              SL: 'Super Lines — identical to LTR but matching symbols on the same payline win even when they are not adjacent. Gaps between matching symbols are ignored.',
+              WAYS:        'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
+              MEGAWAYS:    'Megaways™ — like All Ways but each reel draws a random visible height (2–7 rows) per spin from a configurable probability distribution. Mask symbol (id=0) fills unused row positions.',
+              SCATTERS:    'Scatters Pay — symbols pay based on total tile count anywhere on the screen. No paylines needed.',
+              CLUSTERS:    'Clusters Pay — symbols pay based on the size of connected clusters. Two tiles connect if adjacent according to configured offsets.'
             }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','WAYS':'All Ways','SCATTERS':'Scatters Pay','CLUSTERS':'Clusters Pay'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','SL':'Super Lines','WAYS':'All Ways','MEGAWAYS':'Megaways™','SCATTERS':'Scatters Pay','CLUSTERS':'Clusters Pay'}[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
             <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>

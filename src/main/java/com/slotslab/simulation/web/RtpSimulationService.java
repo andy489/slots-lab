@@ -55,11 +55,13 @@ public class RtpSimulationService {
             }
         }
 
-        int[][] lines = req.lineDefinitions().stream()
+        int[][] lines = (req.lineDefinitions() != null ? req.lineDefinitions() : List.<List<Integer>>of()).stream()
                 .map(l -> l.stream().mapToInt(Integer::intValue).toArray())
                 .toArray(int[][]::new);
 
         double[] cumulativeChances = buildCumulative(req.reelSetChances());
+
+        double[][][] megawaysCumHeights = buildMegawaysCumHeights(req);
 
         SymbolTable symbols = new SymbolTable(req.symbols());
         PayoutStrategy strategy = PayoutStrategyFactory.create(req.strategy());
@@ -80,7 +82,7 @@ public class RtpSimulationService {
                 futures.add(executor.submit(new RtpWorker(
                         workerSpins, reels, reelLengths, cumulativeChances,
                         screenWidth, screenHeight, minMatch, symbols, strategy, lines,
-                        req.contactsIntervalSets(), req.adjacencyOffsets())));
+                        req.contactsIntervalSets(), req.adjacencyOffsets(), megawaysCumHeights)));
             }
 
             double grandWin = 0.0;
@@ -200,6 +202,41 @@ public class RtpSimulationService {
         return cum;
     }
 
+    private double[][][] buildMegawaysCumHeights(RtpRequest req) {
+        if (req.strategy() != PayoutStrategyType.MEGAWAYS) return null;
+        int setCount = req.reelSets().size();
+        int sw = req.screenWidth();
+        double[][][] result = new double[setCount][sw][];
+        List<List<List<Double>>> raw = req.megawaysReelHeightChances();
+        for (int s = 0; s < setCount; s++) {
+            for (int r = 0; r < sw; r++) {
+                double[] probs = null;
+                if (raw != null && s < raw.size() && raw.get(s) != null
+                        && r < raw.get(s).size() && raw.get(s).get(r) != null) {
+                    List<Double> p = raw.get(s).get(r);
+                    if (p.size() == 6) {
+                        probs = p.stream().mapToDouble(Double::doubleValue).toArray();
+                    }
+                }
+                if (probs == null) {
+                    // default uniform distribution across heights 2..7
+                    probs = new double[]{1, 1, 1, 1, 1, 1};
+                }
+                double total = 0;
+                for (double v : probs) total += v;
+                double[] cum = new double[6];
+                double acc = 0;
+                for (int i = 0; i < 6; i++) {
+                    acc += probs[i] / total;
+                    cum[i] = acc;
+                }
+                cum[5] = 1.0;
+                result[s][r] = cum;
+            }
+        }
+        return result;
+    }
+
     private void validate(RtpRequest req) {
         if (req.reelSets() == null || req.reelSets().isEmpty())
             throw new IllegalArgumentException("No reel sets provided");
@@ -233,14 +270,15 @@ public class RtpSimulationService {
             }
         }
 
-        if (req.strategy() != PayoutStrategyType.WAYS &&
-                req.strategy() != PayoutStrategyType.SCATTERS &&
-                req.strategy() != PayoutStrategyType.CLUSTERS &&
+        boolean needsNoLineDefs = req.strategy() == PayoutStrategyType.WAYS
+                || req.strategy() == PayoutStrategyType.MEGAWAYS
+                || req.strategy() == PayoutStrategyType.SCATTERS
+                || req.strategy() == PayoutStrategyType.CLUSTERS;
+
+        if (!needsNoLineDefs &&
                 (req.lineDefinitions() == null || req.lineDefinitions().isEmpty()))
             throw new IllegalArgumentException("At least one line definition is required");
-        if (req.strategy() != PayoutStrategyType.WAYS &&
-                req.strategy() != PayoutStrategyType.SCATTERS &&
-                req.strategy() != PayoutStrategyType.CLUSTERS) {
+        if (!needsNoLineDefs) {
             for (int li = 0; li < req.lineDefinitions().size(); li++) {
                 List<Integer> line = req.lineDefinitions().get(li);
                 if (line.size() != sw)
@@ -273,11 +311,11 @@ public class RtpSimulationService {
             throw new IllegalArgumentException(
                     "Reel set chances must sum to 100.0% (got " + String.format("%.1f", chanceSum) + ")");
 
-        if (req.strategy() == PayoutStrategyType.WAYS) {
+        if (req.strategy() == PayoutStrategyType.WAYS || req.strategy() == PayoutStrategyType.MEGAWAYS) {
             for (SymbolConfig sym : req.symbols()) {
                 if (sym.type() == SymbolType.WILD && sym.wildAggregation() != WildMultiplierAggregation.NONE)
                     throw new IllegalArgumentException(
-                            "WAYS strategy does not support wild multipliers — symbol " + sym.symbolId() + " must use wildAggregation=NONE");
+                            req.strategy() + " strategy does not support wild multipliers — symbol " + sym.symbolId() + " must use wildAggregation=NONE");
             }
         }
 
