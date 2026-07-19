@@ -29,6 +29,10 @@ hs_err_pid*
 result.txt
 /history/
 
+# scratch screenshots
+*.png
+*.jpg
+
 # hidden directories and local config files
 .*
 !.gitignore
