@@ -603,6 +603,10 @@
           <span class="info-key" data-i18n="info.key_run_gen">▶ Run</span>
           <span class="info-val" data-i18n-html="info.val_run_gen">Validates the current configuration, submits it to the backend via <code>POST /api/generate</code>, and writes the resulting JSON reel array to the Result pane. The result is also saved to the history.</span>
         </div>
+        <div class="info-row" style="background:var(--accent-dim);border-radius:6px;padding:0.4rem 0.6rem;margin:0 -0.6rem;">
+          <span class="info-key" style="color:var(--accent)" data-i18n="info.key_fill_defaults">✦ Fill / Clear</span>
+          <span class="info-val" data-i18n-html="info.val_fill_defaults"><strong>The fastest way to get started.</strong> Every reel set card has a toggle button in its header (the <em>sun/sparkle</em> icon <svg style="vertical-align:middle;display:inline" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>). When all inputs are empty it fills every field with the placeholder values — tile counts, stack sizes, stack chances, and min distance — creating a fully valid example configuration you can run immediately. When fields already have values the same button turns red and clears them all. Use this to quickly try the generator without typing anything, or to reset a reel set and start fresh.</span>
+        </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_import">Import (↓ button)</span>
           <span class="info-val" data-i18n-html="info.val_import">Opens a dialog to paste the output of a <code>COUNT</code> conversion. The imported data populates the reel sets with the given tile counts. All existing reel sets are replaced. No restrictions are added — configure them manually before running.</span>
