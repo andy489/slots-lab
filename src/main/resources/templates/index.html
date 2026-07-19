@@ -45,23 +45,24 @@
   </div>
   <div class="header-text">
     <span class="header-title">Slot Lab</span>
-    <span class="header-sub">Slot machine reel strip and configuration laboratory</span>
+    <span class="header-sub" data-i18n="header.sub">Slot machine reel strip and configuration laboratory</span>
   </div>
   <div class="header-spacer"></div>
-  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+  <div id="lang-toggle-slot"></div>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" data-i18n="header.toggle_theme" data-i18n-attr="title" title="Toggle theme">
     <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
   </button>
 </header>
 
 <div class="tabbar">
-  <button class="info-btn" id="info-tab-btn" onclick="openInfo()" title="About this tab">
+  <button class="info-btn" id="info-tab-btn" onclick="openInfo()" data-i18n="tab.about_title" data-i18n-attr="title" title="About this tab">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
   </button>
   <div class="tabbar-sep"></div>
   <button class="tab-btn active" onclick="switchTab('generate', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h0"/><path d="M17.8 6.2L19 5"/><path d="M3 21l9-9"/><path d="M12.2 6.2L11 5"/></svg>
-    Generate
+    <span data-i18n="tab.generate">Generate</span>
   </button>
   <button class="tab-btn" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -72,15 +73,15 @@
       <rect x="20" y="20" width="4" height="3"/>
       <rect x="0"  y="23" width="24" height="1" fill="currentColor" opacity=".4"/>
     </svg>
-    SIMULATION
+    <span data-i18n="tab.simulation">SIMULATION</span>
   </button>
   <button class="tab-btn" onclick="switchTab('spin-test', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-    Spin Test
+    <span data-i18n="tab.spin_test">Spin Test</span>
   </button>
   <button class="tab-btn" onclick="switchTab('convert', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-    Convert
+    <span data-i18n="tab.convert">Convert</span>
   </button>
 </div>
 
@@ -93,10 +94,10 @@
       <!-- Left: config form -->
       <div class="form-col">
         <div class="form-col-header">
-          <span class="form-col-title">Configuration</span>
+          <span class="form-col-title" data-i18n="gen.config">Configuration</span>
           <button class="run-btn" id="gen-btn" onclick="runGenerate()">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Run
+            <span data-i18n="gen.run">Run</span>
           </button>
         </div>
         <div class="form-scroll" id="form-scroll">
@@ -104,18 +105,18 @@
           <!-- Generation Settings -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Generation Settings</span>
+              <span class="section-label" data-i18n="gen.settings">Generation Settings</span>
             </div>
             <div class="section-card-body">
               <div class="field-full">
-                <label for="f-strategy">Strategy</label>
+                <label for="f-strategy" data-i18n="gen.strategy">Strategy</label>
                 <select id="f-strategy">
                   <option value="SHUFFLE">SHUFFLE</option>
                   <option value="FLAT">FLAT</option>
                 </select>
               </div>
               <div class="field-full">
-                <label for="f-history-size">History size</label>
+                <label for="f-history-size" data-i18n="gen.history_size">History size</label>
                 <select id="f-history-size" onchange="onHistorySizeChange()">
                   <option value="1">1</option>
                   <option value="3">3</option>
@@ -130,12 +131,12 @@
           <!-- Reel Sets -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Reel Sets<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:260px">Each reel set is an independent strip configuration that can be selected during gameplay.<div class="tip-rule"><strong>Reels (Tiles Count)</strong> — comma-separated tile counts per symbol for each reel. Each reel strip is generated by distributing symbols according to these counts then shuffling.</div><div class="tip-rule">Multiple reel sets allow weighted selection (see Reel Set Chances in the Simulation tab). Use different sets for base game, bonus rounds, etc.</div></span></span></span>
+              <span class="section-label"><span data-i18n="gen.reel_sets">Reel Sets</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:260px" data-i18n-html="gen.reel_sets_tip_html">Each reel set is an independent strip configuration that can be selected during gameplay.<div class="tip-rule"><strong>Reels (Tiles Count)</strong> — comma-separated tile counts per symbol for each reel. Each reel strip is generated by distributing symbols according to these counts then shuffling.</div><div class="tip-rule">Multiple reel sets allow weighted selection (see Reel Set Chances in the Simulation tab). Use different sets for base game, bonus rounds, etc.</div></span></span></span>
               <div style="display:flex;gap:0.35rem">
-                <button class="icon-btn" onclick="openImportCounts()" title="Import from COUNT output">
+                <button class="icon-btn" onclick="openImportCounts()" data-i18n="gen.import_counts" data-i18n-attr="title" title="Import from COUNT output">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="12 15 12 11"/><polyline points="10 13 12 15 14 13"/></svg>
                 </button>
-                <button class="icon-btn add" onclick="addReelSet(null, true)" title="Add reel set">
+                <button class="icon-btn add" onclick="addReelSet(null, true)" data-i18n="gen.add_reel_set" data-i18n-attr="title" title="Add reel set">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
               </div>
@@ -153,13 +154,13 @@
       <!-- Right: result -->
       <div class="output-col">
         <div class="output-col-header">
-          <span class="output-col-title">Result</span>
+          <span class="output-col-title" data-i18n="gen.result">Result</span>
           <div class="output-col-actions">
             <span class="status" id="gen-status"></span>
-            <button class="copy-btn" id="gen-copy" onclick="copyResult('gen-output', this)" title="Copy">
+            <button class="copy-btn" id="gen-copy" onclick="copyResult('gen-output', this)" data-i18n="gen.copy" data-i18n-attr="title" title="Copy">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
-            <button class="copy-btn" id="gen-clear" onclick="clearGenerateResult()" title="Clear result">
+            <button class="copy-btn" id="gen-clear" onclick="clearGenerateResult()" data-i18n="gen.clear_result" data-i18n-attr="title" title="Clear result">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
             </button>
           </div>
@@ -167,13 +168,13 @@
         <div class="output-body"><textarea id="gen-output" readonly></textarea></div>
         <div class="history-panel">
           <div class="history-header">
-            <span class="history-title">History</span>
-            <button class="icon-btn danger" onclick="clearHistory()" title="Clear history" style="width:22px;height:22px">
+            <span class="history-title" data-i18n="gen.history">History</span>
+            <button class="icon-btn danger" onclick="clearHistory()" data-i18n="gen.clear_history" data-i18n-attr="title" title="Clear history" style="width:22px;height:22px">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
             </button>
           </div>
           <div class="history-list" id="history-list">
-            <span class="history-empty" id="history-empty">No generations yet</span>
+            <span class="history-empty" id="history-empty" data-i18n="gen.no_generations">No generations yet</span>
           </div>
         </div>
       </div>
@@ -188,21 +189,21 @@
       <!-- Left: configuration -->
       <div class="rtp-config-col">
         <div class="form-col-header">
-          <span class="form-col-title">RTP Configuration</span>
+          <span class="form-col-title" data-i18n="rtp.config">RTP Configuration</span>
           <button class="run-btn" id="rtp-run-btn" onclick="runRtp()">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Run RTP
+            <span data-i18n="rtp.run">Run RTP</span>
           </button>
         </div>
         <div class="form-scroll" id="rtp-form-scroll">
 
           <!-- Simulation Settings -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Simulation Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="sim-settings-tip" class="stat-tip-box tip-below" style="width:290px">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win evaluation method</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
+            <div class="section-card-header"><span class="section-label"><span data-i18n="rtp.sim_settings">Simulation Settings</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="sim-settings-tip" class="stat-tip-box tip-below" style="width:290px" data-i18n-html="rtp.sim_settings_tip_html">Core simulation parameters.<div class="tip-rule"><div class="tip-row"><span>Strategy</span><span>Win evaluation method</span></div><div class="tip-row"><span>Spins</span><span>Total spin count to simulate</span></div><div class="tip-row"><span>Threads</span><span>1–8 worker threads (parallel spins)</span></div><div class="tip-row"><span>Bet Size</span><span>Stake per spin · 0.10–200.00, step 0.1</span></div></div><div class="tip-rule">More threads = faster run, but results are statistically equivalent regardless of thread count.</div></span></span></span></div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
-                  <label for="rtp-strategy">Strategy</label>
+                  <label for="rtp-strategy" data-i18n="rtp.strategy">Strategy</label>
                   <select id="rtp-strategy" onchange="onStrategyChange()">
                     <option value="LTR">LTR (Left to Right)</option>
                     <option value="RTL">RTL (Right to Left)</option>
@@ -216,7 +217,7 @@
                   </select>
                 </div>
                 <div class="field-item">
-                  <label for="rtp-spins">Spins</label>
+                  <label for="rtp-spins" data-i18n="rtp.spins">Spins</label>
                   <select id="rtp-spins">
                     <option value="100000">100,000</option>
                     <option value="1000000" selected>1,000,000</option>
@@ -226,11 +227,11 @@
               </div>
               <div class="field-grid">
                 <div class="field-item">
-                  <label for="rtp-threads">Threads (1–8)</label>
+                  <label for="rtp-threads" data-i18n="rtp.threads">Threads (1–8)</label>
                   <input type="number" id="rtp-threads" value="4" min="1" max="8"/>
                 </div>
                 <div class="field-item">
-                  <label for="rtp-bet-size" title="Stake per spin (0.1–200.0, divisible by 0.1)">Bet Size</label>
+                  <label for="rtp-bet-size" data-i18n="rtp.bet_size" data-i18n-attr-title="rtp.bet_size_title" title="Stake per spin (0.1–200.0, divisible by 0.1)">Bet Size</label>
                   <input type="number" id="rtp-bet-size" value="1.00" min="0.10" max="200.00" step="0.1" title="0.10 – 200.00, must be a multiple of 0.1"/>
                 </div>
               </div>
@@ -240,7 +241,7 @@
           <!-- Reel Set Chances -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Reel Set Chances</span>
+              <span class="section-label" data-i18n="rtp.reel_set_chances">Reel Set Chances</span>
               <span class="rtp-chance-total" id="rtp-chance-total"></span>
             </div>
             <div class="section-card-body">
@@ -253,18 +254,21 @@
           <!-- Screen and Paytable Configuration -->
           <div class="section-card" id="line-defs-card">
             <div class="section-card-header" style="flex-wrap:nowrap">
-              <span class="section-label" style="min-width:0;flex-shrink:1">Screen and Paytable Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="screen-paytable-tip" class="stat-tip-box tip-right" style="width:540px">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-rule">For MEGAWAYS&#8482; this is the maximum possible height — the actual visible tile count per reel is drawn each spin from the Reel Tiles Count Chances below.</div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
+              <span class="section-label" style="min-width:0;flex-shrink:1"><span data-i18n="rtp.screen_config">Screen and Paytable Configuration</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="screen-paytable-tip" class="stat-tip-box tip-right" style="width:540px" data-i18n-html="rtp.screen_config_tip_html">Defines the grid and winning lines.<div class="tip-rule"><div class="tip-row"><span>Width</span><span>Number of reels (columns)</span></div><div class="tip-row"><span>Height</span><span>Visible rows per reel</span></div><div class="tip-rule">For MEGAWAYS&#8482; this is the maximum possible height — the actual visible tile count per reel is drawn each spin from the Reel Tiles Count Chances below.</div><div class="tip-row"><span>Min Match</span><span>Consecutive symbols needed for a win</span></div></div><div class="tip-rule">Line definitions: each payline is a list of row indices (0-based), one per reel. e.g. <span style="font-family:monospace">[1,1,1,1,1]</span> = middle row across all 5 reels (only valid when width=5, height=3). Only symbols landing on a defined payline can contribute to a win.</div></span></span></span>
               <div id="line-defs-header-btns" style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
-                <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" title="Fill with 10 default lines">
+                <button class="icon-btn" id="linedefs-toggle-btn" onclick="toggleLineDefs()" data-i18n="rtp.fill_defaults" data-i18n-attr="title" title="Fill with 10 default lines">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
-                <button class="icon-btn" id="scatterdefs-toggle-btn" onclick="toggleScatterDefs()" title="Fill interval fields with default values" style="display:none">
+                <button class="icon-btn" id="scatterdefs-toggle-btn" onclick="toggleScatterDefs()" data-i18n="rtp.fill_scatter_defaults" data-i18n-attr="title" title="Fill interval fields with default values" style="display:none">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
-                <button class="icon-btn" id="screendims-toggle-btn" onclick="toggleScreenDims()" title="Fill screen dimension fields with default values" style="display:none">
+                <button class="icon-btn" id="screendims-toggle-btn" onclick="toggleScreenDims()" data-i18n="rtp.fill_screen_dims" data-i18n-attr="title" title="Fill screen dimension fields with default values" style="display:none">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
-                <button class="icon-btn add" id="linedef-add-btn" onclick="addLineDef()" title="Add line">
+                <button class="icon-btn" id="inject-chances-btn" onclick="injectReelSetChances()" data-i18n="rtp.inject_chances" data-i18n-attr="title" title="Add reel set chances to Generate tab result">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="icon-btn add" id="linedef-add-btn" onclick="addLineDef()" data-i18n="rtp.add_line" data-i18n-attr="title" title="Add line">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
               </div>
@@ -272,44 +276,44 @@
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
-                  <label for="rtp-screen-width">Width (reels)</label>
+                <label for="rtp-screen-width" data-i18n="rtp.width">Width (reels)</label>
                   <input type="number" id="rtp-screen-width" placeholder="5" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
                 <div class="field-item">
-                  <label for="rtp-screen-height">Height (rows)</label>
+                <label for="rtp-screen-height" data-i18n="rtp.height">Height (rows)</label>
                   <input type="number" id="rtp-screen-height" placeholder="3" min="1" max="10" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
                 <div class="field-item">
-                  <label for="rtp-min-match" title="Minimum consecutive matching symbols on a line to count as a win">Min Match</label>
+                <label for="rtp-min-match" data-i18n="rtp.min_match" data-i18n-attr-title="rtp.min_match_title" title="Minimum consecutive matching symbols on a line to count as a win">Min Match</label>
                   <input type="number" id="rtp-min-match" placeholder="3" min="1" max="20" oninput="onScreenSizeChange();updateLineDefsToggleBtn();updateScreenDimsToggleBtn()"/>
                 </div>
               </div>
               <div id="line-defs-section" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem">
                 <div class="rtp-lines-grid" id="rtp-lines-list"></div>
-                <button class="add-btn" id="add-payline-btn" onclick="addLineDef()" style="margin-top:0.4rem">+ Add payline (0)</button>
+              <button class="add-btn" id="add-payline-btn" onclick="addLineDef()" style="margin-top:0.4rem"><span data-i18n="rtp.add_payline">+ Add payline</span> (0)</button>
               </div>
               <div id="scatters-paytable-section" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
-                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem">Contacts Paytable — interval sets</div>
+                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem" data-i18n="rtp.contacts_paytable">Contacts Paytable — interval sets</div>
                 <div id="interval-sets-container" style="display:flex;flex-direction:column;gap:0.5rem"></div>
-                <button class="add-btn" id="add-interval-set-btn" onclick="addIntervalSet()">+ Add interval set</button>
+                <button class="add-btn" id="add-interval-set-btn" onclick="addIntervalSet()"><span data-i18n="rtp.add_interval_set">+ Add interval set</span></button>
               </div>
               <div id="clusters-adjacency-section" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
-                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem">Contacts Paytable — interval sets</div>
+                <div style="font-size:0.75rem;opacity:0.65;margin-bottom:0.15rem" data-i18n="rtp.contacts_paytable">Contacts Paytable — interval sets</div>
                 <div id="clusters-interval-sets-container" style="display:flex;flex-direction:column;gap:0.5rem"></div>
-                <button class="add-btn" id="add-clusters-interval-set-btn" onclick="addIntervalSet(null, null, true)">+ Add interval set</button>
+                <button class="add-btn" id="add-clusters-interval-set-btn" onclick="addIntervalSet(null, null, true)"><span data-i18n="rtp.add_interval_set">+ Add interval set</span></button>
                 <div style="margin-top:0.4rem;display:flex;flex-direction:column;gap:0.3rem">
-                  <div style="font-size:0.75rem;opacity:0.65">Adjacency — neighbour offsets (x=reel, y=row)</div>
+                  <div style="font-size:0.75rem;opacity:0.65" data-i18n="rtp.adjacency">Adjacency — neighbour offsets (x=reel, y=row)</div>
                   <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
-                    <button class="add-btn" onclick="setAdjacencyPreset(4)" title="4-direction: up/down/left/right">4-dir</button>
-                    <button class="add-btn" onclick="setAdjacencyPreset(8)" title="8-direction: all neighbours including diagonals">8-dir</button>
-                    <span style="font-size:0.72rem;opacity:0.5">or custom:</span>
-                    <button class="add-btn" onclick="addAdjacencyOffset()">+ Add offset</button>
+                    <button class="add-btn" onclick="setAdjacencyPreset(4)" data-i18n="rtp.4dir" data-i18n-attr-title="rtp.4dir_title" title="4-direction: up/down/left/right">4-dir</button>
+                    <button class="add-btn" onclick="setAdjacencyPreset(8)" data-i18n="rtp.8dir" data-i18n-attr-title="rtp.8dir_title" title="8-direction: all neighbours including diagonals">8-dir</button>
+                    <span style="font-size:0.72rem;opacity:0.5" data-i18n="rtp.or_custom">or custom:</span>
+                    <button class="add-btn" onclick="addAdjacencyOffset()"><span data-i18n="rtp.add_offset">+ Add offset</span></button>
                   </div>
                   <div id="adjacency-offsets-container" style="display:flex;flex-direction:column;gap:0.25rem;margin-top:0.15rem"></div>
                 </div>
               </div>
               <div id="megaways-heights-card" style="display:none;margin-top:0.5rem;flex-direction:column;gap:0.4rem">
-                <div style="font-size:0.75rem;opacity:0.65">Reel Tiles Count Chances<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:400px">Per-reel probability distribution for the number of visible tiles per reel. Each row is 6 comma-separated percentage values corresponding to tile counts <strong>2, 3, 4, 5, 6, 7</strong> — i.e. the 1st value is the chance a reel shows 2 tiles, the 2nd is for 3 tiles, …, the 6th is for 7 tiles. Values must sum to 100. Leave a row blank to use a uniform distribution.<div class="tip-rule">Default: <span style="font-family:monospace">20, 25, 20, 15, 10, 10</span> — biased toward 3 tiles, tapering off at higher counts. Filled automatically by the ✦ button above.</div></span></span></span></div>
+                <div style="font-size:0.75rem;opacity:0.65"><span data-i18n="rtp.reel_tiles_chances">Reel Tiles Count Chances</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:400px" data-i18n-html="rtp.reel_tiles_chances_tip_html">Per-reel probability distribution for the number of visible tiles per reel. Each row is 6 comma-separated percentage values corresponding to tile counts <strong>2, 3, 4, 5, 6, 7</strong> — i.e. the 1st value is the chance a reel shows 2 tiles, the 2nd is for 3 tiles, …, the 6th is for 7 tiles. Values must sum to 100. Leave a row blank to use a uniform distribution.<div class="tip-rule">Default: <span style="font-family:monospace">35, 35, 20, 5, 3, 2</span> — biased toward 2–3 tiles, tapering off sharply at higher counts. Filled automatically by the ✦ button above.</div></span></span></span></div>
                 <div id="megaways-heights-list">
                   <span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>
                 </div>
@@ -320,12 +324,12 @@
           <!-- Symbol Configuration -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Symbol Configuration<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="symconfig-tip" class="stat-tip-box tip-right" style="width:540px">Paytable multipliers apply to the total stake per screen (bet size).<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">e.g. bet = 1.00, paytable = [1.0, 3.0, 10.0]</div><div class="tip-row"><span>x3 match</span><span>1.0 × 1.00 = 1.00</span></div><div class="tip-row"><span>x4 match</span><span>3.0 × 1.00 = 3.00</span></div><div class="tip-row"><span>x5 match</span><span>10.0 × 1.00 = 10.00</span></div></div><div class="tip-rule">values count = screenWidth − minMatch + 1</div><div class="tip-rule">At least one <strong>NORMAL</strong> symbol with a paytable is required. A <strong>WILD</strong> without a paytable automatically pays the highest NORMAL symbol's payout for a wild-only streak.</div><div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — they would double-count the wild's contribution, which is already reflected in the ways count. <em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div></span></span></span>
+              <span class="section-label"><span data-i18n="rtp.sym_config">Symbol Configuration</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span id="symconfig-tip" class="stat-tip-box tip-right" style="width:540px" data-i18n-html="rtp.sym_config_tip_html">Paytable multipliers apply to the total stake per screen (bet size).<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.2rem;font-size:0.67rem">e.g. bet = 1.00, paytable = [1.0, 3.0, 10.0]</div><div class="tip-row"><span>x3 match</span><span>1.0 × 1.00 = 1.00</span></div><div class="tip-row"><span>x4 match</span><span>3.0 × 1.00 = 3.00</span></div><div class="tip-row"><span>x5 match</span><span>10.0 × 1.00 = 10.00</span></div></div><div class="tip-rule">values count = screenWidth − minMatch + 1</div><div class="tip-rule">At least one <strong>NORMAL</strong> symbol with a paytable is required. A <strong>WILD</strong> without a paytable automatically pays the highest NORMAL symbol's payout for a wild-only streak.</div><div class="tip-rule"><strong>WAYS strategy:</strong> ADD/MULTIPLY/SEQUENCE wild multipliers are disabled — they would double-count the wild's contribution, which is already reflected in the ways count. <em>Ways-with-ways-multipliers</em> (wild expands ways per reel) is a separate, orthogonal feature and is supported.</div></span></span></span>
               <div style="display:flex;gap:0.35rem">
-                <button class="icon-btn" id="symconfig-toggle-btn" onclick="toggleSymConfig()" title="Fill paytable fields with default values">
+                <button class="icon-btn" id="symconfig-toggle-btn" onclick="toggleSymConfig()" data-i18n="rtp.fill_paytable_defaults" data-i18n-attr="title" title="Fill paytable fields with default values">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
-                <button class="icon-btn add" onclick="addSymbolRow()" title="Add symbol">
+                <button class="icon-btn add" onclick="addSymbolRow()" data-i18n="rtp.add_symbol" data-i18n-attr="title" title="Add symbol">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
               </div>
@@ -333,16 +337,16 @@
             <div class="section-card-body" style="padding:0">
               <div id="rtp-symbol-table">
                 <div class="rtp-sym-header">
-                  <span>ID</span>
-                  <span>Tile Type</span>
-                  <span>Paytable (x1,x2,… multipliers)</span>
+                  <span data-i18n="rtp.sym_id">ID</span>
+                  <span data-i18n="rtp.sym_tile_type">Tile Type</span>
+                  <span data-i18n="rtp.sym_paytable">Paytable (x1,x2,… multipliers)</span>
                   <span></span>
                 </div>
                 <div id="rtp-symbol-rows"></div>
               </div>
             </div>
             <div style="padding:0.6rem 0.75rem 0.75rem">
-              <button class="add-btn" onclick="addSymbolRow()">+ Add symbol</button>
+              <button class="add-btn" onclick="addSymbolRow()" data-i18n="rtp.add_symbol_btn">+ Add symbol</button>
             </div>
           </div>
 
@@ -355,7 +359,7 @@
       <!-- Right: result -->
       <div class="rtp-result-col">
         <div class="output-col-header">
-          <span class="output-col-title">RTP Result</span>
+          <span class="output-col-title" data-i18n="rtp.result">RTP Result</span>
           <div class="output-col-actions">
             <span class="status" id="rtp-status"></span>
           </div>
@@ -370,18 +374,18 @@
               <rect x="20" y="20" width="4" height="3"/>
               <rect x="0"  y="23" width="24" height="1" opacity=".5"/>
             </svg>
-            <span>Configure symbols and run the simulation</span>
+            <span data-i18n="rtp.configure_run">Configure symbols and run the simulation</span>
           </div>
         </div>
         <div class="history-panel">
           <div class="history-header">
-            <span class="history-title">Simulation History</span>
-            <button class="icon-btn danger" onclick="clearRtpHistory()" title="Clear history" style="width:22px;height:22px">
+            <span class="history-title" data-i18n="rtp.sim_history">Simulation History</span>
+            <button class="icon-btn danger" onclick="clearRtpHistory()" data-i18n="rtp.clear_history" data-i18n-attr="title" title="Clear history" style="width:22px;height:22px">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
             </button>
           </div>
           <div class="history-list" id="rtp-history-list">
-            <span class="history-empty" id="rtp-history-empty">No simulations yet</span>
+            <span class="history-empty" id="rtp-history-empty" data-i18n="rtp.no_simulations">No simulations yet</span>
           </div>
         </div>
       </div>
@@ -396,17 +400,17 @@
       <!-- Left: controls -->
       <div class="spin-test-nav">
         <div class="form-col-header">
-          <span class="form-col-title">Options</span>
+          <span class="form-col-title" data-i18n="spin.dto">DTO</span>
           <button class="run-btn" id="spin-test-run-btn" onclick="runSpinTest()">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Run
+            <span data-i18n="spin.run">Spin</span>
           </button>
         </div>
         <div class="form-scroll">
 
           <!-- Spin Count -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Spin Count</span></div>
+            <div class="section-card-header"><span class="section-label" data-i18n="spin.spin_count">Spin Count</span></div>
             <div class="section-card-body">
               <div class="spin-count-group">
                 <label class="spin-count-opt"><input type="radio" name="spin-count" value="1" checked/><span>1</span></label>
@@ -420,16 +424,16 @@
           <!-- Option 2: Fixed reel set + stops -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Fixed Reel Set &amp; Stops</span>
-              <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional</span>
+              <span class="section-label" data-i18n="spin.fixed_reel">Fixed Reel Set &amp; Stops</span>
+              <span style="font-size:0.67rem;color:var(--text3);font-style:italic" data-i18n="spin.optional">optional</span>
             </div>
             <div class="section-card-body">
               <div class="field-full">
-                <label for="spin-test-reel-idx">Reel Set Index</label>
+                <label for="spin-test-reel-idx" data-i18n="spin.reel_set_idx">Reel Set Index</label>
                 <input type="number" id="spin-test-reel-idx" placeholder="leave blank for random" min="0"/>
               </div>
               <div class="field-full">
-                <label for="spin-test-stops">Stop Positions (comma-separated)</label>
+                <label for="spin-test-stops" data-i18n="spin.stops">Stop Positions (comma-separated)</label>
                 <input type="text" id="spin-test-stops" class="array-input" placeholder="e.g. 0,5,12,3,7"/>
               </div>
             </div>
@@ -438,17 +442,17 @@
           <!-- Option 3: Fixed screen -->
           <div class="section-card">
             <div class="section-card-header">
-              <span class="section-label">Fixed Screen Override</span>
+              <span class="section-label" data-i18n="spin.fixed_screen">Fixed Screen Override</span>
               <div style="display:flex;align-items:center;gap:0.5rem">
-                <span style="font-size:0.67rem;color:var(--text3);font-style:italic">optional — overrides above</span>
-                <button class="icon-btn" id="spin-screen-fill-btn" onclick="fillSpinTestDefaults()" title="Use placeholders as defaults">
+                <span style="font-size:0.67rem;color:var(--text3);font-style:italic" data-i18n="spin.optional_overrides">optional — overrides above</span>
+                <button class="icon-btn" id="spin-screen-fill-btn" onclick="fillSpinTestDefaults()" data-i18n="spin.use_placeholders" data-i18n-attr="title" title="Use placeholders as defaults">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
                 </button>
               </div>
             </div>
             <div class="section-card-body">
               <div class="field-full">
-                <label for="spin-test-screen">Screen [[col],[col],…]</label>
+                <label for="spin-test-screen" data-i18n="spin.screen_label">Screen [[col],[col],…]</label>
                 <textarea id="spin-test-screen" rows="4" style="height:80px;resize:vertical;font-family:monospace;font-size:0.8rem" placeholder="e.g. [[1,2,3],[4,5,6],[7,8,9],[1,2,3],[4,5,6]]" oninput="updateSpinScreenFillBtn()"></textarea>
               </div>
             </div>
@@ -463,11 +467,11 @@
       <!-- Right: output -->
       <div class="spin-test-output-col">
         <div class="output-col-header">
-          <span class="output-col-title">Spin Results</span>
+          <span class="output-col-title" data-i18n="spin.results">Spin Results</span>
         </div>
         <div class="spin-test-results-body" id="spin-test-results-body">
           <div class="rtp-placeholder">
-            <span>Configure options and click Run</span>
+            <span data-i18n="spin.configure_run">Configure options and click Run</span>
           </div>
         </div>
       </div>
@@ -480,7 +484,7 @@
     <div class="conv-layout">
       <div class="conv-toolbar">
         <div class="field-group">
-          <label class="toolbar-label">Format</label>
+          <label class="toolbar-label" data-i18n="conv.format">Format</label>
           <select id="conv-format" class="sm" onchange="onConvFormatChange()">
             <option value="COUNT">COUNT</option>
             <option value="JSON_ARRAY">JSON_ARRAY</option>
@@ -489,29 +493,29 @@
         </div>
         <div class="sep"></div>
         <div class="field-group" id="conv-gameid-group" style="display:none">
-          <label class="toolbar-label">Game ID</label>
+          <label class="toolbar-label" data-i18n="conv.game_id">Game ID</label>
           <input id="conv-gameid" type="text" class="sm-s" placeholder="123"/>
         </div>
         <div class="sep" id="conv-gameid-sep" style="display:none"></div>
-        <button class="icon-btn" onclick="copyFromGenerate()" title="Copy reel sets from Generate tab">
+        <button class="icon-btn" onclick="copyFromGenerate()" data-i18n="conv.copy_from_gen" data-i18n-attr="title" title="Copy reel sets from Generate tab">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><path d="M21 3L9 15"/><path d="M10 3H3v18h18v-7"/></svg>
         </button>
         <div class="sep"></div>
-        <button class="run-btn" id="conv-btn" onclick="runConvert()">
+          <button class="run-btn" id="conv-btn" onclick="runConvert()">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run
+          <span data-i18n="conv.run">Run</span>
         </button>
         <span class="status" id="conv-status"></span>
       </div>
       <div class="conv-split">
         <div class="pane">
-          <div class="pane-header"><span class="pane-title">Input — array of {setName, reelSet}</span></div>
+          <div class="pane-header"><span class="pane-title" data-i18n="conv.input">Input — array of {setName, reelSet}</span></div>
           <div class="pane-body"><textarea id="conv-input"></textarea></div>
         </div>
         <div class="pane">
           <div class="pane-header">
-            <span class="pane-title">Result</span>
-            <button class="copy-btn" id="conv-copy" onclick="copyResult('conv-output', this)" title="Copy">
+            <span class="pane-title" data-i18n="conv.result">Result</span>
+            <button class="copy-btn" id="conv-copy" onclick="copyResult('conv-output', this)" data-i18n="conv.copy" data-i18n-attr="title" title="Copy">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
           </div>
@@ -525,6 +529,7 @@
 
 <div id="toast"></div>
 
+<script src="/js/core/i18n.js"></script>
 <script src="/js/core/theme.js"></script>
 <script src="/js/core/ui-utils.js"></script>
 <script src="/js/generate/generate.js"></script>
@@ -661,16 +666,16 @@
 <div class="modal-overlay" id="import-counts-modal" onclick="if(event.target===this)closeImportCounts()">
   <div class="modal" style="max-width:560px;width:90%">
     <div class="modal-header">
-      <span class="modal-title">Import from COUNT output</span>
+      <span class="modal-title" data-i18n="gen.import_title">Import from COUNT output</span>
       <button class="modal-close" onclick="closeImportCounts()" title="Close">&#x2715;</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:0.75rem">
-      <div style="font-size:0.78rem;opacity:0.7">Paste the COUNT conversion result here. Existing reel sets will be replaced.</div>
+      <div style="font-size:0.78rem;opacity:0.7" data-i18n="gen.import_paste">Paste the COUNT conversion result here. Existing reel sets will be replaced.</div>
       <textarea id="import-counts-input" rows="10" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:0.78rem;resize:vertical;background:var(--bg-editor);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:0.5rem;height:auto" placeholder='[&#10;  {&#10;    "setName": "ReelSet#0",&#10;    "reelSetTileCounts": [&#10;      [8, 34, 44, 18],&#10;      [22, 13, 44, 54]&#10;    ]&#10;  }&#10;]'></textarea>
       <div id="import-counts-error" style="color:#e05;font-size:0.78rem;display:none"></div>
       <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-        <button class="theme-btn" onclick="closeImportCounts()" style="padding:0.4rem 0;width:90px">Cancel</button>
-        <button class="theme-btn" onclick="applyImportCounts()" style="font-weight:600;padding:0.4rem 0;width:90px">Import</button>
+        <button class="theme-btn" onclick="closeImportCounts()" style="padding:0.4rem 0;width:90px" data-i18n="gen.import_cancel">Cancel</button>
+        <button class="theme-btn" onclick="applyImportCounts()" style="font-weight:600;padding:0.4rem 0;width:90px" data-i18n="gen.import_btn">Import</button>
       </div>
     </div>
   </div>
@@ -679,14 +684,14 @@
 <div class="modal-overlay" id="confirm-modal" onclick="if(event.target===this)_confirmReject()">
   <div class="modal" style="max-width:380px;width:90%">
     <div class="modal-header">
-      <span class="modal-title" id="confirm-modal-title">Confirm</span>
+      <span class="modal-title" id="confirm-modal-title" data-i18n="modal.confirm">Confirm</span>
       <button class="modal-close" onclick="_confirmReject()" title="Cancel">&#x2715;</button>
     </div>
     <div class="modal-body" style="padding:1rem 1.25rem">
       <p id="confirm-modal-msg" style="margin:0 0 1.1rem;font-size:0.88rem;color:var(--text2)"></p>
       <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-        <button class="theme-btn" onclick="_confirmReject()" style="padding:0.4rem 0;width:90px">Cancel</button>
-        <button class="theme-btn" id="confirm-modal-ok" style="padding:0.4rem 0;width:90px;font-weight:600;background:var(--danger);color:#fff;border-color:var(--danger)">Delete</button>
+        <button class="theme-btn" onclick="_confirmReject()" style="padding:0.4rem 0;width:90px" data-i18n="modal.cancel">Cancel</button>
+        <button class="theme-btn" id="confirm-modal-ok" style="padding:0.4rem 0;width:90px;font-weight:600;background:var(--danger);color:#fff;border-color:var(--danger)" data-i18n="modal.delete">Delete</button>
       </div>
     </div>
   </div>

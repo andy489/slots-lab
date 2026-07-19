@@ -30,10 +30,29 @@ public class CountConverter {
                 reelJoiner.add(sj.toString());
             }
 
-            outer.add("\t{\n\t\t\"setName\": \"" + setName + "\",\n\t\t\"reelSetTileCounts\": [\n"
-                    + reelJoiner + "\n\t\t]\n\t}");
+            var sb = new StringBuilder();
+            sb.append("\t{\n\t\t\"setName\": \"").append(setName).append("\",\n");
+            sb.append("\t\t\"reelSetTileCounts\": [\n").append(reelJoiner).append("\n\t\t]");
+            if (rs.chance() != null) {
+                sb.append(",\n\t\t\"chance\": ").append(formatDouble(rs.chance()));
+            }
+            if (rs.reelTileChances() != null) {
+                var rtcJoiner = new StringJoiner(",\n\t\t\t", "\t\t\t", "");
+                for (List<Double> row : rs.reelTileChances()) {
+                    var sj = new StringJoiner(", ", "[", "]");
+                    for (Double v : row) sj.add(formatDouble(v));
+                    rtcJoiner.add(sj.toString());
+                }
+                sb.append(",\n\t\t\"reelTileChances\": [\n").append(rtcJoiner).append("\n\t\t]");
+            }
+            sb.append("\n\t}");
+            outer.add(sb.toString());
         }
 
         return outer.toString();
+    }
+
+    private static String formatDouble(double v) {
+        return v == Math.floor(v) && !Double.isInfinite(v) ? String.valueOf((long) v) : String.valueOf(v);
     }
 }

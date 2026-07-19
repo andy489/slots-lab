@@ -19,28 +19,28 @@ function addReelSet(data, scroll) {
 
   card.innerHTML = `
     <div class="reel-set-card-header">
-      <span class="reel-set-name">Reel Set #${idx}</span>
+      <span class="reel-set-name">${t('gen.reel_set_label')}${idx}</span>
       <div style="display:flex;gap:0.35rem;align-items:center">
-        <button class="icon-btn" id="${id}-toggle-btn" onclick="toggleDefaultsClear('${id}')" title="Fill all fields with default values">
+        <button class="icon-btn" id="${id}-toggle-btn" onclick="toggleDefaultsClear('${id}')" title="${t('gen.fill_defaults')}">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         </button>
-        <button class="icon-btn add" onclick="addReelRow('${id}-reels', null, true)" title="Add reel">
+        <button class="icon-btn add" onclick="addReelRow('${id}-reels', null, true)" title="${t('gen.add_reel')}">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
-        <button class="icon-btn danger" onclick="removeReelSet('${id}')" title="Remove reel set">
+        <button class="icon-btn danger" onclick="removeReelSet('${id}')" title="${t('gen.remove_reel_set')}">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>
     </div>
     <div class="reel-set-card-body">
       <div>
-        <div class="reels-section-label">Reels (Tiles Count)</div>
+        <div class="reels-section-label">${t('gen.reels_tiles')}</div>
         <div class="reel-rows" id="${id}-reels"></div>
       </div>
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
-          <div class="reels-section-label">Restrictions<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:290px">Controls how symbols are stacked on each reel.<div class="tip-rule"><strong>Stack Sizes</strong> — how many consecutive identical symbols to place (e.g. 1, 2, 3).<br><strong>Chances</strong> — weighted probability for each stack size.<br><strong>Min Distance</strong> — minimum number of <em>other</em> symbols (different tile IDs) that must appear between two stacks of the same symbol. e.g. dist=4 means after a stack of symbol A, at least 4 non-A symbols must follow before A can appear again. The gap positions are filled with symbols whose ID differs from both the symbol ending the previous stack and the symbol starting the next one.</div><div class="tip-rule"><strong>Mapping:</strong> restrictions cycle across reels. 1 restriction → same rule for every reel. 2 restrictions → first applies to reels 1, 3, 5… and second to reels 2, 4, 6… and so on for more.</div><div class="tip-rule" style="font-family:monospace;font-size:0.65rem">e.g. sizes=[1,2,3] chances=[50,30,20] dist=4<br>→ 50% single, 30% double, 20% triple<br>→ A A _ _ _ _ A A A (✓ 4 gaps between stacks)</div></span></span></div>
-          <button class="icon-btn add" onclick="addRestrictionGuarded('${id}-restrictions', '${id}-reels')" title="Add restriction">
+          <div class="reels-section-label"><span>${t('gen.restrictions')}</span><span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:290px">Controls how symbols are stacked on each reel.<div class="tip-rule"><strong>Stack Sizes</strong> — how many consecutive identical symbols to place (e.g. 1, 2, 3).<br><strong>Chances</strong> — weighted probability for each stack size.<br><strong>Min Distance</strong> — minimum number of <em>other</em> symbols (different tile IDs) that must appear between two stacks of the same symbol. e.g. dist=4 means after a stack of symbol A, at least 4 non-A symbols must follow before A can appear again. The gap positions are filled with symbols whose ID differs from both the symbol ending the previous stack and the symbol starting the next one.</div><div class="tip-rule"><strong>Mapping:</strong> restrictions cycle across reels. 1 restriction → same rule for every reel. 2 restrictions → first applies to reels 1, 3, 5… and second to reels 2, 4, 6… and so on for more.</div><div class="tip-rule" style="font-family:monospace;font-size:0.65rem">e.g. sizes=[1,2,3] chances=[50,30,20] dist=4<br>→ 50% single, 30% double, 20% triple<br>→ A A _ _ _ _ A A A (✓ 4 gaps between stacks)</div></span></span></div>
+          <button class="icon-btn add" onclick="addRestrictionGuarded('${id}-restrictions', '${id}-reels')" title="${t('gen.add_restriction')}">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
@@ -125,7 +125,7 @@ function addRestriction(containerId, data, scroll) {
         <span class="restriction-label">#1</span>
         <span class="restr-applies" title="Reels this restriction applies to"></span>
       </div>
-      <button class="icon-btn danger" onclick="removeRestriction('restr-${ri}', '${containerId}')" title="Remove">
+      <button class="icon-btn danger" onclick="removeRestriction('restr-${ri}', '${containerId}')" title="${t('gen.remove')}">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
       </button>
     </div>
@@ -158,7 +158,7 @@ function renumberRestrictions(containerId) {
   const reelCount = reelsContainerId
     ? document.getElementById(reelsContainerId).querySelectorAll('.reel-row').length : 0;
   cards.forEach((card, i) => {
-    card.querySelector('.restriction-label').textContent = 'Restriction #' + (i + 1);
+    card.querySelector('.restriction-label').textContent = t('gen.restriction_label') + (i + 1);
     const badge = card.querySelector('.restr-applies');
     if (!badge) return;
     if (k === 0 || reelCount === 0) { badge.textContent = ''; return; }
@@ -167,7 +167,7 @@ function renumberRestrictions(containerId) {
       if (r % k === i) reels.push('R' + (r + 1));
     }
     badge.textContent = reels.join(', ');
-    badge.title = 'Applies to: ' + reels.join(', ');
+    badge.title = t('gen.applies_to') + reels.join(', ');
   });
 }
 
@@ -183,7 +183,7 @@ function removeReelSet(id) {
 
 function renumberReelSets() {
   document.querySelectorAll('#reel-set-list .reel-set-card').forEach((card, i) => {
-    card.querySelector('.reel-set-name').textContent = 'Reel Set #' + i;
+    card.querySelector('.reel-set-name').textContent = t('gen.reel_set_label') + i;
   });
 }
 
@@ -191,7 +191,7 @@ function addRestrictionGuarded(restrictionsId, reelsId) {
   const reelCount   = document.getElementById(reelsId).querySelectorAll('.reel-row').length;
   const restrCount  = document.getElementById(restrictionsId).querySelectorAll('.restriction-card').length;
   if (restrCount >= reelCount) {
-    showToast('Restrictions count cannot exceed reels count (' + reelCount + ')', true);
+    showToast(t('gen.restr_exceeds_reels') + ' (' + reelCount + ')', true);
     return;
   }
   addRestriction(restrictionsId, null, true);
@@ -219,7 +219,7 @@ function updateToggleBtn(cardId) {
   if (!btn) return;
   const hasValues = cardHasValues(cardId);
   btn.innerHTML = hasValues ? CLEAR_ICON : DEFAULTS_ICON;
-  btn.title = hasValues ? 'Clear all values' : 'Fill all fields with default values';
+  btn.title = hasValues ? t('gen.clear_values') : t('gen.fill_defaults');
   btn.classList.toggle('danger', hasValues);
 }
 
@@ -273,29 +273,29 @@ function validateConfig() {
 
   const reelSetCards = document.querySelectorAll('#reel-set-list .reel-set-card');
   if (reelSetCards.length === 0) {
-    errors.push('At least one Reel Set is required');
+    errors.push(t('gen.at_least_one_reel_set'));
   }
 
   reelSetCards.forEach((card, si) => {
     const reelInputs = card.querySelectorAll('.reel-rows .reel-row input');
     if (reelInputs.length === 0) {
-      errors.push('Reel Set #' + si + ': at least one reel row is required');
+      errors.push(t('gen.reel_set_label') + si + ': ' + t('gen.at_least_one_reel'));
     }
     reelInputs.forEach((inp, ri) => {
       const raw = inp.value.trim() || inp.placeholder;
       const nums = parseNumArray(raw);
       if (nums.length === 0) {
-        errors.push(markError(inp, 'Reel Set #' + si + ' R' + (ri+1) + ': tile counts cannot be empty'));
+        errors.push(markError(inp, t('gen.reel_set_label') + si + ' R' + (ri+1) + ': ' + t('gen.tile_counts_empty')));
       } else if (nums.some(isNaN)) {
-        errors.push(markError(inp, 'Reel Set #' + si + ' R' + (ri+1) + ': all values must be numbers'));
+        errors.push(markError(inp, t('gen.reel_set_label') + si + ' R' + (ri+1) + ': ' + t('gen.tile_counts_must_be_numbers')));
       } else if (nums.some(n => n < 0)) {
-        errors.push(markError(inp, 'Reel Set #' + si + ' R' + (ri+1) + ': counts must be >= 0'));
+        errors.push(markError(inp, t('gen.reel_set_label') + si + ' R' + (ri+1) + ': ' + t('gen.tile_counts_must_be_gte0')));
       }
     });
 
     const restrCards = card.querySelectorAll('.restrictions-list .restriction-card');
     if (restrCards.length > reelInputs.length) {
-      errors.push('Reel Set #' + si + ': restrictions count (' + restrCards.length + ') exceeds reel count (' + reelInputs.length + ')');
+      errors.push(t('gen.reel_set_label') + si + ': ' + t('gen.restr_exceeds_reel_count') + ' (' + restrCards.length + ' > ' + reelInputs.length + ')');
     }
 
     restrCards.forEach((rc, ri) => {
@@ -308,24 +308,24 @@ function validateConfig() {
       const chances = parseNumArray(chancesEl.value.trim() || chancesEl.placeholder);
 
       if (stacks.length === 0) {
-        errors.push(markError(stacksEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackSizes cannot be empty'));
+        errors.push(markError(stacksEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_sizes_empty')));
       } else if (stacks.some(isNaN) || stacks.some(n => n <= 0)) {
-        errors.push(markError(stacksEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackSizes must be positive integers'));
+        errors.push(markError(stacksEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_sizes_positive')));
       }
 
       if (chances.length === 0) {
-        errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackChances cannot be empty'));
+        errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_chances_empty')));
       } else if (chances.some(isNaN) || chances.some(n => n < 0)) {
-        errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackChances must be >= 0'));
+        errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_chances_gte0')));
       }
 
       if (stacks.length > 0 && chances.length > 0 && stacks.length !== chances.length) {
-        errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackSizes and stackChances must have equal length'));
+        errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_equal_length')));
       }
 
       const dist = parseInt(distEl.value);
       if (isNaN(dist) || dist < 0) {
-        errors.push(markError(distEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': minDistance must be >= 0'));
+        errors.push(markError(distEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.min_dist_gte0')));
       }
     });
   });
@@ -370,9 +370,9 @@ function renderHistory(entries) {
   entries.forEach((entry, i) => {
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.title = 'Click to restore';
+    item.title = t('history.click_restore');
     item.innerHTML = `
-      <button class="history-item-del" title="Delete this entry">
+      <button class="history-item-del" title="${t('history.delete_entry')}">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
       </button>
       <span class="history-item-label">#${i + 1} &middot; ${entry.strategy}</span>
@@ -380,7 +380,7 @@ function renderHistory(entries) {
     `;
     item.querySelector('.history-item-del').onclick = async (e) => {
       e.stopPropagation();
-      if (!await confirmDelete(`Delete entry #${i + 1}?`)) return;
+      if (!await confirmDelete(t('gen.delete_entry') + (i + 1) + '?')) return;
       const res = await fetch(`/api/history/generate/${encodeURIComponent(entry.id)}`, { method: 'DELETE' });
       renderHistory(await res.json());
     };
@@ -390,7 +390,7 @@ function renderHistory(entries) {
       if (entry.config) {
         try { restoreGenerateForm(JSON.parse(entry.config)); } catch(e) {}
       }
-      setStatus('gen', true, 'Restored');
+      setStatus('gen', true, t('gen.restored'));
     };
     list.appendChild(item);
   });
@@ -407,7 +407,7 @@ async function onHistorySizeChange() {
 }
 
 async function clearHistory() {
-  if (!await confirmDelete('Delete all generation history?')) return;
+  if (!await confirmDelete(t('gen.delete_history'))) return;
   await fetch('/api/history/generate', { method: 'DELETE' });
   renderHistory([]);
 }
@@ -429,7 +429,7 @@ function clearGenerateResult() {
   setStatus('gen', false, '');
   _latestReelSets = null;
   document.getElementById('rtp-chances-list').innerHTML =
-    '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>';
+    '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">' + t('rtp.generate_reels_first') + '</span>';
   document.getElementById('rtp-chance-total').textContent = '';
   document.getElementById('rtp-chance-total').className = 'rtp-chance-total';
   document.getElementById('rtp-symbol-rows').innerHTML = '';
@@ -443,7 +443,7 @@ function clearGenerateResult() {
     resultBody.innerHTML = `
       <div class="rtp-empty">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span>Configure symbols and run the simulation</span>
+        <span>${t('rtp.configure_run')}</span>
       </div>`;
   }
 }
@@ -451,13 +451,56 @@ function clearGenerateResult() {
 /* ── Copy from Generate → Convert input ── */
 function copyFromGenerate() {
   if (!_latestReelSets || _latestReelSets.length === 0) {
-    showToast('No generated reels available — run Generate first', true);
+    showToast(t('gen.no_reels_for_convert'), true);
     return;
   }
-  const json = JSON.stringify(_latestReelSets, null, 2)
+  const isMegaways = document.getElementById('rtp-strategy')?.value === 'MEGAWAYS';
+  let sets = _latestReelSets;
+  if (isMegaways) {
+    const heightChances = collectMegawaysHeightChances();
+    sets = _latestReelSets.map((rs, s) => {
+      const reelChances = heightChances && heightChances[s]
+        ? heightChances[s].map(v => v !== null ? v : null)
+        : null;
+      if (reelChances && reelChances.some(v => v !== null)) {
+        return { setName: rs.setName, reelSet: rs.reelSet, reelTileChances: reelChances };
+      }
+      return rs;
+    });
+  }
+  const json = JSON.stringify(sets, null, 2)
     .replace(/\[\s*([\d,\s]+?)\s*\]/g, m => '[' + m.slice(1, -1).trim().replace(/\s+/g, ' ') + ']');
   convInput.setValue(json);
-  showToast('Copied from Generate tab');
+  showToast(t('gen.copied_from_generate'));
+}
+
+function injectReelSetChances() {
+  if (!_latestReelSets || _latestReelSets.length === 0) {
+    showToast(t('gen.no_reels_inject'), true);
+    return;
+  }
+  const hasChances = _latestReelSets.some((_, i) => document.getElementById('rtp-chance-' + i));
+  if (!hasChances) {
+    showToast(t('gen.no_chances_inject'), true);
+    return;
+  }
+  const isMegaways = document.getElementById('rtp-strategy')?.value === 'MEGAWAYS';
+  const heightChances = isMegaways ? collectMegawaysHeightChances() : null;
+  _latestReelSets = _latestReelSets.map((rs, i) => {
+    const el = document.getElementById('rtp-chance-' + i);
+    const chance = el ? parseFloat(el.value) : null;
+    const result = { ...rs };
+    if (chance != null && !isNaN(chance)) result.chance = chance;
+    if (heightChances && heightChances[i]) {
+      const reelChances = heightChances[i].map(v => v !== null ? v : null);
+      if (reelChances.some(v => v !== null)) result.reelTileChances = reelChances;
+    }
+    return result;
+  });
+  const json = JSON.stringify(_latestReelSets, null, 2)
+    .replace(/\[\s*([\d,\s]+?)\s*\]/g, m => '[' + m.slice(1, -1).trim().replace(/\s+/g, ' ') + ']');
+  genOutput.setValue(json);
+  showToast(t('gen.chances_injected'));
 }
 
 /* ── API ── */
@@ -470,7 +513,7 @@ async function runGenerate() {
     return;
   }
   btn.disabled = true;
-  setStatus('gen', null, 'Running…');
+  setStatus('gen', null, t('gen.running'));
   const config = buildConfig();
   try {
     const res = await fetch('/api/generate', {
@@ -480,8 +523,8 @@ async function runGenerate() {
     });
     const d = await res.json();
     if (d.error) { setStatus('gen', false, d.error); genOutput.setValue(''); }
-    else         { setStatus('gen', true, 'Done');   genOutput.setValue(d.result); storeGeneratedReels(d.result); await pushHistory(d.result, config); }
-  } catch(e) { setStatus('gen', false, 'Network error'); }
+    else         { setStatus('gen', true, t('gen.done'));   genOutput.setValue(d.result); storeGeneratedReels(d.result); await pushHistory(d.result, config); }
+  } catch(e) { setStatus('gen', false, t('gen.network_error')); }
   finally { btn.disabled = false; }
 }
 
@@ -502,18 +545,18 @@ function applyImportCounts() {
 
   let parsed;
   try { parsed = JSON.parse(raw); } catch (e) {
-    errEl.textContent = 'Invalid JSON: ' + e.message;
+    errEl.textContent = t('gen.import_invalid_json') + e.message;
     errEl.style.display = '';
     return;
   }
   if (!Array.isArray(parsed) || parsed.length === 0) {
-    errEl.textContent = 'Expected a non-empty JSON array.';
+    errEl.textContent = t('gen.import_not_array');
     errEl.style.display = '';
     return;
   }
   for (const rs of parsed) {
     if (!Array.isArray(rs.reelSetTileCounts)) {
-      errEl.textContent = 'Each entry must have a "reelSetTileCounts" array.';
+      errEl.textContent = t('gen.import_no_counts');
       errEl.style.display = '';
       return;
     }

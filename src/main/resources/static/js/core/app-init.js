@@ -1,5 +1,12 @@
 /* ── Application bootstrap ── */
 
+/* Insert language toggle into header */
+(function() {
+  const slot = document.getElementById('lang-toggle-slot');
+  if (slot) slot.appendChild(_buildLangBtn());
+  applyI18n();
+})();
+
 /* Init default reel sets */
 addReelSet();
 addReelSet();

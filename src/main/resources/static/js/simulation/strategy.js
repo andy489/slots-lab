@@ -61,7 +61,12 @@ function onStrategyChange() {
   const oldM = isMegaways ? '3' : (isContacts || isClusters) ? '3' : '7';
   if (wEl) {
     wEl.placeholder = newW;
-    if (!wEl.value || wEl.value === oldW || wEl.value === newW) wEl.value = '';
+    // Only auto-clear/reset width when no reel data is loaded — if reels are present, width is owned by them
+    const reelWidth = (_latestReelSets && _latestReelSets[0] && Array.isArray(_latestReelSets[0].reelSet))
+      ? _latestReelSets[0].reelSet.length : null;
+    if (!reelWidth) {
+      if (!wEl.value || wEl.value === oldW || wEl.value === newW) wEl.value = '';
+    }
   }
   if (hEl) {
     hEl.placeholder = newH;
@@ -203,6 +208,13 @@ function onStrategyChange() {
   }
   updateSimSettingsTip();
   updateSymConfigToggleBtn();
+  const injectBtn = document.getElementById('inject-chances-btn');
+  if (injectBtn) {
+    injectBtn.title = strat === 'MEGAWAYS'
+      ? 'Add reel set chances and tiles count chances to Generate tab result'
+      : 'Add reel set chances to Generate tab result';
+  }
+  syncMegawaysHeights();
 }
 
 const _simStrategyDescriptions = {
@@ -511,6 +523,18 @@ function onScreenSizeChange() {
     inp.title = 'Valid range: 1 – reels × rows = ' + maxContacts;
     validateIntervalField(inp);
   });
+  // Adapt existing line definitions to the new width
+  document.querySelectorAll('.rtp-line-input').forEach(inp => {
+    const parts = inp.value.trim() ? inp.value.split(',').map(s => s.trim()) : [];
+    if (parts.length === 0) return;
+    if (parts.length < w) {
+      while (parts.length < w) parts.push('0');
+    } else if (parts.length > w) {
+      parts.length = w;
+    }
+    inp.value = parts.join(', ');
+  });
+  syncMegawaysHeights();
 }
 
 function updatePaytablePlaceholders(w, m) {
@@ -635,6 +659,21 @@ function updatePaytablePlaceholders(w, m) {
 
     inp.placeholder = ph;
     inp.title = titleSuffix;
+
+    // Adapt filled value to the new entry count
+    if (inp.value.trim() && !inp.dataset.fixedPlaceholder) {
+      const parts = inp.value.split(',').map(s => s.trim()).filter(s => s !== '');
+      if (parts.length !== count) {
+        if (parts.length > count) {
+          parts.length = count;
+        } else {
+          // Extend by appending values from the new placeholder
+          const phParts = ph.split(',').map(s => s.trim());
+          while (parts.length < count) parts.push(phParts[parts.length] || '0');
+        }
+        inp.value = parts.join(', ');
+      }
+    }
   });
 }
 

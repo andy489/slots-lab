@@ -28,9 +28,9 @@ function renderRtpHistory(entries) {
   entries.forEach((entry, i) => {
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.title = 'Click to restore';
+    item.title = t('history.click_restore');
     item.innerHTML = `
-      <button class="history-item-del" title="Delete this entry">
+      <button class="history-item-del" title="${t('history.delete_entry')}">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
       </button>
       <span class="history-item-label">#${i + 1} &middot; ${entry.strategy}</span>
@@ -38,7 +38,7 @@ function renderRtpHistory(entries) {
     `;
     item.querySelector('.history-item-del').onclick = async (e) => {
       e.stopPropagation();
-      if (!await confirmDelete(`Delete entry #${i + 1}?`)) return;
+      if (!await confirmDelete(`${t('rtp.delete_entry')}${i + 1}?`)) return;
       const res = await fetch(`/api/history/simulate/${encodeURIComponent(entry.id)}`, { method: 'DELETE' });
       renderRtpHistory(await res.json());
     };
@@ -49,7 +49,7 @@ function renderRtpHistory(entries) {
       if (entry.config) {
         try { restoreRtpForm(JSON.parse(entry.config)); } catch(e) {}
       }
-      setStatus('rtp', true, 'Restored');
+      setStatus('rtp', true, t('rtp.restored'));
     };
     list.appendChild(item);
   });
@@ -63,7 +63,7 @@ async function onRtpHistorySizeChange() {
 }
 
 async function clearRtpHistory() {
-  if (!await confirmDelete('Delete all simulation history?')) return;
+  if (!await confirmDelete(t('rtp.delete_sim_history'))) return;
   await fetch('/api/history/simulate', { method: 'DELETE' });
   renderRtpHistory([]);
 }
@@ -76,33 +76,33 @@ function collectRtpRequest() {
   }
 
   if (!_latestReelSets || _latestReelSets.length === 0)
-    return { errors: ['No generated reels found. Run Generate first.'] };
+    return { errors: [t('rtp.no_reels')] };
 
   const chances = [];
   let chanceSum = 0;
   _latestReelSets.forEach((_, i) => {
     const el = document.getElementById('rtp-chance-' + i);
     const v = parseFloat(el?.value);
-    if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': chance must be >= 0'); return; }
+    if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': ' + t('rtp.chance_gte0')); return; }
     chances.push({ setIndex: i, chance: v });
     chanceSum += v;
   });
   if (Math.abs(chanceSum - 100) > 0.05)
-    errors.push('Reel set chances must sum to 100.0% (current: ' + chanceSum.toFixed(1) + '%)');
+    errors.push(t('rtp.chances_sum') + ' (current: ' + chanceSum.toFixed(1) + '%)');
 
   const screenWidth  = parseInt(document.getElementById('rtp-screen-width').value);
   const screenHeight = parseInt(document.getElementById('rtp-screen-height').value);
   const minMatch     = parseInt(document.getElementById('rtp-min-match').value);
-  if (isNaN(screenWidth)  || screenWidth  < 1) errors.push('Screen width must be >= 1');
-  if (isNaN(screenHeight) || screenHeight < 1) errors.push('Screen height must be >= 1');
-  if (isNaN(minMatch) || minMatch < 1) errors.push('Min Match must be >= 1');
+  if (isNaN(screenWidth)  || screenWidth  < 1) errors.push(t('rtp.width_gte1'));
+  if (isNaN(screenHeight) || screenHeight < 1) errors.push(t('rtp.height_gte1'));
+  if (isNaN(minMatch) || minMatch < 1) errors.push(t('rtp.min_match_gte1'));
   if (!isNaN(minMatch) && !isNaN(screenWidth) && minMatch > screenWidth)
-    errors.push('Min Match (' + minMatch + ') cannot exceed screen width (' + screenWidth + ')');
+    errors.push(t('rtp.min_match_exceeds'));
 
   const lineRows = document.querySelectorAll('.rtp-line-row');
   const _strategyForLineCheck = document.getElementById('rtp-strategy').value;
   const isWays = _strategyForLineCheck === 'WAYS' || _strategyForLineCheck === 'MEGAWAYS' || _strategyForLineCheck === 'SCATTERS' || _strategyForLineCheck === 'CLUSTERS';
-  if (!isWays && lineRows.length === 0) errors.push('At least one line definition is required');
+  if (!isWays && lineRows.length === 0) errors.push(t('rtp.at_least_one_line'));
   const lineDefinitions = [];
   const parsedLines = [];
 
@@ -114,13 +114,13 @@ function collectRtpRequest() {
       return;
     }
     if (!/^[\d ,]+$/.test(raw)) {
-      errors.push('Line ' + (li+1) + ': must contain only numbers separated by commas');
+      errors.push('Line ' + (li+1) + ': ' + t('rtp.line_must_be_numbers'));
       parsedLines.push(null);
       return;
     }
     const nums = raw.split(',').map(s => parseInt(s.trim(), 10));
     if (nums.some(isNaN)) {
-      errors.push('Line ' + (li+1) + ': must contain only numbers separated by commas');
+      errors.push('Line ' + (li+1) + ': ' + t('rtp.line_must_be_numbers'));
       parsedLines.push(null);
       return;
     }
@@ -128,21 +128,21 @@ function collectRtpRequest() {
   });
 
   if (!isWays && parsedLines.every(n => n === null) && lineRows.length > 0)
-    errors.push('At least one line definition must be filled in');
+    errors.push(t('rtp.line_must_be_filled'));
 
   parsedLines.forEach((nums, li) => {
     if (nums === null) return;
     if (!isNaN(screenWidth) && nums.length !== screenWidth)
-      errors.push('Line ' + (li+1) + ': must have exactly ' + screenWidth + ' positions');
+      errors.push('Line ' + (li+1) + ': ' + t('rtp.line_must_have_positions') + ' ' + screenWidth + ' ' + 'positions');
     if (!isNaN(screenHeight) && nums.some(n => n < 0 || n >= screenHeight))
-      errors.push('Line ' + (li+1) + ': positions must be 0–' + (screenHeight-1));
+      errors.push('Line ' + (li+1) + ': ' + t('rtp.line_positions_range') + (screenHeight-1));
   });
 
   const seenLines = new Set();
   parsedLines.forEach((nums, li) => {
     if (nums === null) return;
     const key = JSON.stringify(nums);
-    if (seenLines.has(key)) errors.push('Line ' + (li+1) + ': duplicate payline');
+    if (seenLines.has(key)) errors.push('Line ' + (li+1) + ': ' + t('rtp.line_duplicate'));
     else seenLines.add(key);
     lineDefinitions.push(nums);
   });
@@ -160,11 +160,11 @@ function collectRtpRequest() {
       ? seqRaw.split(',').map(s => Math.round(parseFloat(s.trim()) * 10) / 10)
       : [];
     if (type === 'NORMAL' && paytable.length === 0)
-      errors.push('Symbol ' + symId + ': paytable is required for NORMAL symbols');
+      errors.push('Symbol ' + symId + ': ' + t('rtp.paytable_required'));
     if (paytable.some(isNaN))
-      errors.push('Symbol ' + symId + ': paytable contains invalid numbers');
+      errors.push('Symbol ' + symId + ': ' + t('rtp.paytable_invalid'));
     if (paytable.some(v => !isNaN(v) && Math.round(v * 10) !== v * 10))
-      errors.push('Symbol ' + symId + ': paytable values must be multiples of 0.1');
+      errors.push('Symbol ' + symId + ': ' + t('rtp.paytable_multiples'));
     const setSel = row.querySelector('.rtp-interval-set-sel');
     const contactsIntervalSetName = setSel ? (setSel.value || null) : null;
     if (paytable.length > 0 && (type === 'NORMAL' || type === 'WILD')) {
@@ -183,36 +183,36 @@ function collectRtpRequest() {
         requiredDesc = required + ' (screenWidth − minMatch + 1 = ' + screenWidth + ' − ' + minMatch + ' + 1)';
       }
       if (!isNaN(screenWidth) && !isNaN(minMatch) && paytable.length !== required)
-        errors.push('Symbol ' + symId + ': paytable must have exactly ' + requiredDesc + ' value(s)');
+        errors.push('Symbol ' + symId + ': ' + t('rtp.paytable_count') + ' ' + requiredDesc + ' ' + t('rtp.value_per_reel'));
     }
     if (type === 'WILD' && wildAgg !== 'SEQUENCE' && wildAgg !== 'NONE' && (isNaN(wildMult) || wildMult <= 0))
-      errors.push('Symbol ' + symId + ': wild multiplier must be > 0');
+      errors.push('Symbol ' + symId + ': ' + t('rtp.wild_mult_gt0'));
     if (wildAgg === 'SEQUENCE') {
       if (wildSequence.some(isNaN))
-        errors.push('Symbol ' + symId + ': sequence contains invalid numbers');
+        errors.push('Symbol ' + symId + ': ' + t('rtp.seq_invalid'));
       if (wildSequence.length !== screenWidth)
-        errors.push('Symbol ' + symId + ': sequence must have exactly ' + screenWidth + ' value(s) (one per reel)');
+        errors.push('Symbol ' + symId + ': ' + t('rtp.seq_length') + ' ' + screenWidth + ' ' + t('rtp.value_per_reel'));
     }
     symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence, contactsIntervalSetName });
   });
 
-  if (symbols.length === 0) errors.push('At least one symbol must be configured');
+  if (symbols.length === 0) errors.push(t('rtp.at_least_one_symbol'));
 
   if (!symbols.some(s => s.type === 'NORMAL' && s.paytable.length > 0))
-    errors.push('At least one NORMAL symbol with a paytable is required');
+    errors.push(t('rtp.at_least_one_normal'));
 
   const strategy    = document.getElementById('rtp-strategy').value;
   const spins       = parseInt(document.getElementById('rtp-spins').value);
   const threadCount = parseInt(document.getElementById('rtp-threads').value);
   const betSize     = parseFloat(document.getElementById('rtp-bet-size').value);
 
-  if (isNaN(spins) || spins <= 0) errors.push('Spins must be selected');
+  if (isNaN(spins) || spins <= 0) errors.push(t('rtp.spins_required'));
   if (isNaN(threadCount) || threadCount < 1 || threadCount > 8)
-    errors.push('Thread count must be between 1 and 8');
+    errors.push(t('rtp.threads_range'));
   if (isNaN(betSize) || betSize < 0.1 || betSize > 200.0)
-    errors.push('Bet size must be between 0.10 and 200.00');
+    errors.push(t('rtp.bet_range'));
   else if (Math.round(betSize * 10) !== betSize * 10)
-    errors.push('Bet size must be a multiple of 0.1 (min bet)');
+    errors.push(t('rtp.bet_multiple'));
 
   let contactsIntervalSets = null;
   if (strategy === 'SCATTERS') {
@@ -229,7 +229,7 @@ function collectRtpRequest() {
   if (strategy === 'CLUSTERS') {
     adjacencyOffsets = collectAdjacencyOffsets();
     if (!adjacencyOffsets || adjacencyOffsets.length === 0)
-      errors.push('At least one adjacency offset is required for CLUSTERS strategy');
+      errors.push(t('rtp.adj_offset_required'));
   }
 
   let megawaysReelHeightChances = null;
@@ -240,13 +240,13 @@ function collectRtpRequest() {
         (setData || []).forEach((reelData, r) => {
           if (!reelData) return;
           if (reelData.length !== 6)
-            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' must have exactly 6 values (tile counts 2–7)');
+            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' ' + t('rtp.megaways_6_values'));
           else if (reelData.some(isNaN) || reelData.some(v => v < 0))
-            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' contains invalid values');
+            errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' ' + t('rtp.megaways_invalid'));
           else {
             const sum = reelData.reduce((a, b) => a + b, 0);
             if (Math.abs(sum - 100) > 0.1)
-              errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' must sum to 100 (current: ' + sum.toFixed(1) + ')');
+              errors.push('Reel Tiles Count Chances: set ' + s + ' reel ' + (r+1) + ' ' + t('rtp.megaways_sum100') + ' (current: ' + sum.toFixed(1) + ')');
           }
         });
       });
@@ -286,12 +286,12 @@ async function runRtp() {
   }
 
   btn.disabled = true;
-  setStatus('rtp', null, 'Running…');
+  setStatus('rtp', null, t('rtp.running'));
 
   const body = document.getElementById('rtp-result-body');
   body.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:1rem;color:var(--text3)">
-      <span style="font-size:0.82rem">Simulating ${payload.spins.toLocaleString()} spins on ${payload.threadCount} threads…</span>
+      <span style="font-size:0.82rem">${t('rtp.simulating')} ${payload.spins.toLocaleString()} ${t('rtp.spins_on')} ${payload.threadCount} ${t('rtp.threads_suffix')}</span>
       <div class="rtp-progress"><div class="rtp-progress-bar" id="rtp-pb" style="width:60%;animation:none;background:var(--accent);opacity:.6"></div></div>
     </div>`;
 
@@ -308,13 +308,13 @@ async function runRtp() {
     } else {
       const r = JSON.parse(d.result);
       renderRtpResult(body, r, payload);
-      setStatus('rtp', true, 'Done');
+      setStatus('rtp', true, t('rtp.done'));
       const label = `${r.rtpPercent.toFixed(2)}% · ${payload.strategy} · ${(r.totalSpins/1e6).toFixed(1)}M`;
       await pushRtpHistory(label, body.innerHTML, payload);
     }
   } catch(e) {
-    setStatus('rtp', false, 'Network error');
-    body.innerHTML = `<div class="rtp-placeholder"><span style="color:var(--error)">Network error</span></div>`;
+    setStatus('rtp', false, t('rtp.network_error'));
+    body.innerHTML = `<div class="rtp-placeholder"><span style="color:var(--error)">${t('rtp.network_error')}</span></div>`;
   } finally {
     btn.disabled = false;
   }
@@ -331,96 +331,113 @@ function renderRtpResult(container, r, payload) {
   const fmt2 = v => v.toFixed(2);
   const fmt4 = v => v.toFixed(4);
 
+  const _stratName = {
+    LTR: t('result.strategy_ltr'), RTL: t('result.strategy_rtl'),
+    BW: t('result.strategy_bw'), ADJ: t('result.strategy_adj'),
+    SL: t('result.strategy_sl'), WAYS: t('result.strategy_ways'),
+    MEGAWAYS: t('result.strategy_megaways'), SCATTERS: t('result.strategy_scatters'),
+    CLUSTERS: t('result.strategy_clusters')
+  };
+  const _stratTip = {
+    LTR: t('result.strategy_ltr_tip'), RTL: t('result.strategy_rtl_tip'),
+    BW: t('result.strategy_bw_tip'), ADJ: t('result.strategy_adj_tip'),
+    SL: t('result.strategy_sl_tip'), WAYS: t('result.strategy_ways_tip'),
+    MEGAWAYS: t('result.strategy_megaways_tip'), SCATTERS: t('result.strategy_scatters_tip'),
+    CLUSTERS: t('result.strategy_clusters_tip')
+  };
+  const _volLabel = {
+    'Low': t('result.volatility_low'), 'Medium': t('result.volatility_medium'),
+    'High': t('result.volatility_high'), 'Extreme': t('result.volatility_extreme')
+  };
+  const volLabelTr = _volLabel[r.volatilityLabel] || r.volatilityLabel;
+
+  const _volTip = t('result.vol_index_tip_prefix') +
+    `<div class="tip-row"><span>${t('result.volatility_low')}</span><span>&lt; 2.0</span></div>` +
+    `<div class="tip-row"><span>${t('result.volatility_medium')}</span><span>2.0 – 5.0</span></div>` +
+    `<div class="tip-row"><span>${t('result.volatility_high')}</span><span>5.0 – 10.0</span></div>` +
+    `<div class="tip-row"><span>${t('result.volatility_extreme')}</span><span>≥ 10.0</span></div>` +
+    t('result.vol_index_tip_suffix');
+
   container.innerHTML = `
     <div class="rtp-result-card">
-      <span class="rtp-result-label">Return to Player</span>
+      <span class="rtp-result-label">${t('result.return_to_player')}</span>
       <span class="rtp-big-number">${rtp}%</span>
-      <span class="rtp-meta">Strategy: ${payload.strategy} &nbsp;·&nbsp; ${spins} spins &nbsp;·&nbsp; ${payload.threadCount} threads &nbsp;·&nbsp; ${elapsed}</span>
-      <span class="rtp-note">Statistics model the stake multiplier as a discrete random variable — each spin yields a multiplier; all metrics below describe its distribution.</span>
+      <span class="rtp-meta">${t('result.strategy')}: ${payload.strategy} &nbsp;·&nbsp; ${spins} ${t('result.spins')} &nbsp;·&nbsp; ${payload.threadCount} ${t('result.threads')} &nbsp;·&nbsp; ${elapsed}</span>
+      <span class="rtp-note">${t('result.stats_note')}</span>
     </div>
     <div class="rtp-stats-grid">
 
       <div class="rtp-stat-group">
-        <span class="rtp-stat-group-title">Simulation</span>
+        <span class="rtp-stat-group-title">${t('result.simulation')}</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Spins simulated</span>
+            <span class="rtp-stat-label">${t('result.spins_simulated')}</span>
             <span class="rtp-stat-value">${spins}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Elapsed time</span>
+            <span class="rtp-stat-label">${t('result.elapsed_time')}</span>
             <span class="rtp-stat-value">${elapsed}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Bet size</span>
+            <span class="rtp-stat-label">${t('result.bet_size')}</span>
             <span class="rtp-stat-value">${fmt2(r.betSize)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Hit rate</span>
+            <span class="rtp-stat-label">${t('result.hit_rate')}</span>
             <span class="rtp-stat-value">${fmt2(r.hitRatePct)}%</span>
           </div>
         </div>
       </div>
 
       <div class="rtp-stat-group">
-        <span class="rtp-stat-group-title">Distribution</span>
+        <span class="rtp-stat-group-title">${t('result.distribution')}</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Avg win<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">Average payout per winning spin only. Zero-win spins are excluded.<div class="tip-rule">totalWin ÷ hitCount × betSize</div></span></span></span>
+            <span class="rtp-stat-label">${t('result.avg_win')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">${t('result.avg_win_tip')}</span></span></span>
             <span class="rtp-stat-value">${fmt4(r.avgWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Median<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">Median payout of winning spins only. Zero-win spins are excluded.<div class="tip-rule">Knuth reservoir sampling · 100k sample</div></span></span></span>
+            <span class="rtp-stat-label">${t('result.median')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:200px">${t('result.median_tip')}</span></span></span>
             <span class="rtp-stat-value">${fmt1(r.medianWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Max win<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Highest stake multiplier recorded in this simulation — the largest single-spin paytable value hit.</span></span></span>
+            <span class="rtp-stat-label">${t('result.max_win')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">${t('result.max_win_tip')}</span></span></span>
             <span class="rtp-stat-value">${fmt1(r.maxWin)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Std deviation<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">Measures how spread out payouts are around the average. A high value means wins vary widely in size; a low value means they cluster near the mean.<div class="tip-rule">√(E[win²] − E[win]²) × betSize</div></span></span></span>
+            <span class="rtp-stat-label">${t('result.std_dev')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">${t('result.std_dev_tip')}</span></span></span>
             <span class="rtp-stat-value">${fmt4(r.stdDev)}</span>
           </div>
         </div>
       </div>
 
       <div class="rtp-stat-group">
-        <span class="rtp-stat-group-title">Volatility</span>
+        <span class="rtp-stat-group-title">${t('result.volatility_group')}</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility index<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">Risk level indicator — how wildly payouts swing relative to the average. Higher = rare but bigger wins, longer dry spells.<div class="tip-rule"><div style="opacity:0.55;margin-bottom:0.25rem;font-size:0.67rem">stdDev ÷ avgWinPerSpin</div><div class="tip-row"><span>Low</span><span>&lt; 2.0</span></div><div class="tip-row"><span>Medium</span><span>2.0 – 5.0</span></div><div class="tip-row"><span>High</span><span>5.0 – 10.0</span></div><div class="tip-row"><span>Extreme</span><span>≥ 10.0</span></div></div></span></span></span>
+            <span class="rtp-stat-label">${t('result.volatility_index')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:220px">${_volTip}</span></span></span>
             <span class="rtp-stat-value">${fmt2(r.volatilityIndex)}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Volatility</span>
-            <span class="rtp-stat-value">${r.volatilityLabel}</span>
+            <span class="rtp-stat-label">${t('result.volatility')}</span>
+            <span class="rtp-stat-value">${volLabelTr}</span>
           </div>
         </div>
       </div>
 
       <div class="rtp-stat-group">
-        <span class="rtp-stat-group-title">Configuration</span>
+        <span class="rtp-stat-group-title">${t('result.configuration')}</span>
         <div class="rtp-stat-row">
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Payout strategy<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${{
-              LTR:         'Left to Right — all symbols pay on adjacent reels starting from the leftmost reel.',
-              RTL:         'Right to Left — all symbols pay on adjacent reels starting from the rightmost reel.',
-              BW:          'Both Ways — all symbols pay on adjacent reels starting from either the leftmost or the rightmost reel. Both directions are evaluated and the total of both is awarded.',
-              ADJ:         'Adjacent — symbols pay on consecutive adjacent reels within the same payline definition. Unlike LTR the winning streak can start from any reel; the best-paying window per payline is awarded.',
-              SL: 'Super Lines — identical to LTR but matching symbols on the same payline win even when they are not adjacent. Gaps between matching symbols are ignored.',
-              WAYS:        'All Ways — symbols pay on any row combination across consecutive reels. No paylines needed.',
-              MEGAWAYS:    'Megaways™ — like All Ways but each reel draws a random visible height (2–7 rows) per spin from a configurable probability distribution. Mask symbol (id=0) fills unused row positions.',
-              SCATTERS:    'Scatters Pay — symbols pay based on total tile count anywhere on the screen. No paylines needed.',
-              CLUSTERS:    'Clusters Pay — symbols pay based on the size of connected clusters. Two tiles connect if adjacent according to configured offsets.'
-            }[payload.strategy] || payload.strategy}<div class="tip-rule">Symbols must land on a defined payline (line definition) to count as a win.</div></span></span></span>
-            <span class="rtp-stat-value">${{'LTR':'Left to Right','RTL':'Right to Left','BW':'Both Ways','ADJ':'Adjacent','SL':'Super Lines','WAYS':'All Ways','MEGAWAYS':'Megaways™','SCATTERS':'Scatters Pay','CLUSTERS':'Clusters Pay'}[payload.strategy] || payload.strategy}</span>
+            <span class="rtp-stat-label">${t('result.payout_strategy')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:230px">${(_stratTip[payload.strategy] || payload.strategy)}<div class="tip-rule">${t('result.strategy_payline_note')}</div></span></span></span>
+            <span class="rtp-stat-value">${_stratName[payload.strategy] || payload.strategy}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Screen size<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Width × Height of the visible symbol grid. Width = number of reels; Height = number of visible rows per reel.<div class="tip-rule">e.g. 5×3 = 5 reels, 3 rows each</div></span></span></span>
+            <span class="rtp-stat-label">${t('result.screen_size')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">${t('result.screen_size_tip')}</span></span></span>
             <span class="rtp-stat-value">${payload.screenWidth}×${payload.screenHeight}</span>
           </div>
           <div class="rtp-stat-card">
-            <span class="rtp-stat-label">Min Match<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">Minimum number of consecutive identical symbols on a payline required to count as a win.<div class="tip-rule">e.g. Min Match 3 on a 5-reel game → paytable has 3 entries: x3, x4, x5</div></span></span></span>
+            <span class="rtp-stat-label">${t('rtp.min_match')}<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:210px">${t('result.min_match_tip')}</span></span></span>
             <span class="rtp-stat-value">${payload.minMatch}</span>
           </div>
         </div>
@@ -446,7 +463,7 @@ function renderRtpResult(container, r, payload) {
         }).join('');
         const uid  = 'cb' + Date.now();
         const tid  = uid + 't';
-        const cols = ['Symbol','Length','Hits','Hit Rate','Multiplier','RTP Contrib'];
+        const cols = [t('result.col_symbol'),t('result.col_length'),t('result.col_hits'),t('result.col_hit_rate'),t('result.col_multiplier'),t('result.col_rtp_contrib')];
         const ths  = cols.map((label, i) =>
           `<th><button class="combo-th-btn" onclick="_comboSort('${tid}',${i})">${label} <span class="combo-sort-arrow"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3 4h18l-7 9v7l-4-2v-5z"/></svg></span></button></th>`
         ).join('');
@@ -461,7 +478,7 @@ function renderRtpResult(container, r, payload) {
             if(sb) sb.style.display=open?'flex':'none';
           })(this)">
             <span class="combo-chevron">&#9658;</span>
-            Combination Breakdown <span style="opacity:0.5;font-weight:400;text-transform:none;letter-spacing:0">(${combos.length} combinations)</span>
+            ${t('result.combo_breakdown')} <span style="opacity:0.5;font-weight:400;text-transform:none;letter-spacing:0">(${combos.length} ${t('result.combinations')})</span>
           </button>
           <div class="combo-sort-bar" id="${uid}sb"></div>
           <div class="combo-table-wrap" id="${uid}">
@@ -488,14 +505,14 @@ function _initComboSections(container) {
     tbl._betSize    = parseFloat(section.dataset.comboBet);
     tbl._sortKeys   = [{col: 0, asc: true}, {col: 1, asc: true}];
     tbl._barEl      = document.getElementById(tid.replace(/t$/, '') + 'sb');
-    tbl._cols       = ['Symbol','Length','Hits','Hit Rate','Avg Payout','RTP Contrib'];
+    tbl._cols       = [t('result.col_symbol'),t('result.col_length'),t('result.col_hits'),t('result.col_hit_rate'),t('result.col_multiplier'),t('result.col_rtp_contrib')];
     _comboRender(tbl);
   });
 }
 
 /* ── Combo table multi-sort ── */
 function _comboInfoBtn() {
-  return `<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:280px;text-transform:none;letter-spacing:0;font-weight:400">Multi-column sort for the combination breakdown table.<div class="tip-rule"><strong>Add criterion</strong> — click any column header. It is appended as the lowest priority.</div><div class="tip-rule"><strong>Toggle direction</strong> — click ▲ or ▼ on a pill to flip between ascending and descending.</div><div class="tip-rule"><strong>Remove one</strong> — click × on a pill to drop that column from the sort.</div><div class="tip-rule"><strong>Clear all</strong> — click the Clear button to remove all criteria. Rows stay in their last sorted order.</div><div class="tip-rule">Priority goes left → right. The leftmost pill is the primary sort; ties are broken by the next pill, and so on.</div></span></span>`;
+  return `<span class="stat-tip-wrap"><i class="stat-info">i</i><span class="stat-tip-box tip-right" style="width:280px;text-transform:none;letter-spacing:0;font-weight:400">${t('result.sort_tip_html')}</span></span>`;
 }
 
 function _comboSort(tid, colIdx) {
@@ -549,16 +566,16 @@ function _comboRender(tbl) {
   const bar = tbl._barEl;
   if (bar) {
     if (keys.length === 0) {
-      bar.innerHTML = '<span class="combo-sort-bar-label">Sort by:</span>' + _comboInfoBtn() + '<span style="font-size:0.65rem;color:var(--text3);font-style:italic">click a column header</span>';
+      bar.innerHTML = `<span class="combo-sort-bar-label">${t('result.sort_by')}</span>` + _comboInfoBtn() + `<span style="font-size:0.65rem;color:var(--text3);font-style:italic">${t('result.sort_click_header')}</span>`;
     } else {
       const pills = keys.map((k, i) =>
         `<span class="combo-sort-pill">
           <span style="opacity:0.6;font-size:0.55rem;margin-right:0.1rem">${i+1}.</span>${cols[k.col]}
-          <span class="combo-sort-pill-dir" onclick="_comboToggleDir('${tid}',${k.col})" title="Toggle direction">${k.asc ? '▲' : '▼'}</span>
-          <span class="combo-sort-pill-rm" onclick="_comboRemove('${tid}',${k.col})" title="Remove">×</span>
+          <span class="combo-sort-pill-dir" onclick="_comboToggleDir('${tid}',${k.col})" title="${t('result.sort_toggle_dir')}">${k.asc ? '▲' : '▼'}</span>
+          <span class="combo-sort-pill-rm" onclick="_comboRemove('${tid}',${k.col})" title="${t('result.sort_remove')}">×</span>
         </span>`
       ).join('');
-      bar.innerHTML = `<span class="combo-sort-bar-label">Sort by:</span>${_comboInfoBtn()}${pills}<button class="combo-sort-clear" onclick="_comboClear('${tid}')">Clear</button>`;
+      bar.innerHTML = `<span class="combo-sort-bar-label">${t('result.sort_by')}</span>${_comboInfoBtn()}${pills}<button class="combo-sort-clear" onclick="_comboClear('${tid}')">${t('result.sort_clear')}</button>`;
     }
   }
 

@@ -40,7 +40,8 @@ function updateLineCount() {
 function updateLineDefsToggleBtn() {
   const btn = document.getElementById('linedefs-toggle-btn');
   if (!btn) return;
-  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  // rtp-screen-width is derived from reels — excluded so button state reflects only user-fillable fields
+  const screenInputs = ['rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
   const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
     || Array.from(document.querySelectorAll('.rtp-line-input')).some(inp => inp.value.trim() !== '');
   btn.innerHTML = hasValues
@@ -52,32 +53,24 @@ function updateLineDefsToggleBtn() {
 
 function toggleLineDefs() {
   const lineInputs = document.querySelectorAll('.rtp-line-input');
-  const screenIds = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
-  const screenInputs = screenIds.map(id => document.getElementById(id));
-  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
+  const fillableIds = ['rtp-screen-height', 'rtp-min-match'];
+  const fillableInputs = fillableIds.map(id => document.getElementById(id));
+  const hasValues = fillableInputs.some(inp => inp && inp.value.trim() !== '')
     || Array.from(lineInputs).some(inp => inp.value.trim() !== '');
   if (hasValues) {
-    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
+    fillableInputs.forEach(inp => { if (inp) inp.value = ''; });
     lineInputs.forEach(inp => { inp.value = ''; });
     updateLineDefsToggleBtn();
   } else {
-    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
-    const DEFAULT_LINES = [
-      '0, 0, 0, 0, 0',
-      '1, 1, 1, 1, 1',
-      '2, 2, 2, 2, 2',
-      '0, 1, 0, 1, 0',
-      '1, 0, 1, 0, 1',
-      '2, 1, 2, 1, 2',
-      '1, 2, 1, 2, 1',
-      '0, 1, 1, 1, 0',
-      '2, 1, 1, 1, 2',
-      '0, 2, 0, 2, 0',
-    ];
+    fillableInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
+    const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+    const h = parseInt(document.getElementById('rtp-screen-height').value || document.getElementById('rtp-screen-height').placeholder) || 3;
+    const defaultLines = generateDefaultLines(w, h);
     const container = document.getElementById('rtp-lines-list');
     container.innerHTML = '';
     _lineCounter = 0;
-    DEFAULT_LINES.forEach(val => {
+    defaultLines.forEach(val => {
       addLineDef('');
       const inputs = container.querySelectorAll('.rtp-line-input');
       const inp = inputs[inputs.length - 1];
@@ -117,15 +110,16 @@ function toggleScatterDefs() {
 }
 
 function toggleClusterDefs() {
-  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
+  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
+  const fillableInputs = ['rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
   const intervalInputs = document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to');
-  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
+  const hasValues = fillableInputs.some(inp => inp && inp.value.trim() !== '')
     || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
   if (hasValues) {
-    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
+    fillableInputs.forEach(inp => { if (inp) inp.value = ''; });
     intervalInputs.forEach(inp => { inp.value = ''; inp.style.color = ''; inp.style.borderColor = ''; });
   } else {
-    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
+    fillableInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
     intervalInputs.forEach(inp => { if (inp.placeholder) inp.value = inp.placeholder; });
   }
   updateScreenDimsToggleBtn();
@@ -157,7 +151,8 @@ function updateScreenDimsToggleBtn() {
   const btn = document.getElementById('screendims-toggle-btn');
   if (!btn) return;
   const strat = document.getElementById('rtp-strategy')?.value;
-  const ids = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
+  // rtp-screen-width is derived from loaded reels — excluded from button state
+  const ids = ['rtp-screen-height', 'rtp-min-match'];
   let hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
   if (strat === 'CLUSTERS') {
     hasValues = hasValues || Array.from(document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
@@ -178,9 +173,10 @@ function toggleScreenDims() {
     toggleClusterDefs();
     return;
   }
-  const ids = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'];
-  const hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
-  ids.forEach(id => {
+  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
+  const fillableIds = ['rtp-screen-height', 'rtp-min-match'];
+  const hasValues = fillableIds.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
+  fillableIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     if (hasValues) {

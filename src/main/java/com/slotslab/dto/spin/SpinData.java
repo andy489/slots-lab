@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.List;
 
-@JsonPropertyOrder("_className")
+@JsonPropertyOrder({"reelSetIndex", "reelsStopPositions", "screen", "reelHeights", "screenSize", "payoutData", "winAmount", "_className"})
 public record SpinData(
         int reelSetIndex,
         List<Integer> reelsStopPositions,

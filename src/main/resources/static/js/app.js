@@ -615,7 +615,21 @@ function copyFromGenerate() {
     showToast('No generated reels available — run Generate first', true);
     return;
   }
-  const json = JSON.stringify(_latestReelSets, null, 2)
+  const isMegaways = document.getElementById('rtp-strategy')?.value === 'MEGAWAYS';
+  let sets = _latestReelSets;
+  if (isMegaways) {
+    const heightChances = collectMegawaysHeightChances();
+    sets = _latestReelSets.map((rs, s) => {
+      const reelChances = heightChances && heightChances[s]
+        ? heightChances[s].map(v => v !== null ? v : null)
+        : null;
+      if (reelChances && reelChances.some(v => v !== null)) {
+        return { setName: rs.setName, reelSet: rs.reelSet, reelTileChances: reelChances };
+      }
+      return rs;
+    });
+  }
+  const json = JSON.stringify(sets, null, 2)
     .replace(/\[\s*([\d,\s]+?)\s*\]/g, m => '[' + m.slice(1, -1).trim().replace(/\s+/g, ' ') + ']');
   convInput.setValue(json);
   showToast('Copied from Generate tab');

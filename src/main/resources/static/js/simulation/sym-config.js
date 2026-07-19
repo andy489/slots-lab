@@ -12,12 +12,12 @@ function addSymbolRow(symbolId) {
   row.innerHTML = `
     <span class="rtp-sym-id">${id}</span>
     <select onchange="onSymbolTypeChange(this)">
-      <option value="NORMAL">Normal</option>
-      <option value="WILD">Wild</option>
-      <option value="SCATTER">Scatter</option>
+      <option value="NORMAL">${t('rtp.sym_normal')}</option>
+      <option value="WILD">${t('rtp.sym_wild')}</option>
+      <option value="SCATTER">${t('rtp.sym_scatter')}</option>
     </select>
     <div class="rtp-paytable-cell">
-      <select class="rtp-interval-set-sel" style="display:none;font-size:0.78rem" title="Interval set for this symbol" onchange="const ww=parseInt(document.getElementById('rtp-screen-width').value)||5,mm=parseInt(document.getElementById('rtp-min-match').value)||3;updatePaytablePlaceholders(ww,mm)"></select>
+      <select class="rtp-interval-set-sel" style="display:none;font-size:0.78rem" title="${t('rtp.interval_set_title')}" onchange="const ww=parseInt(document.getElementById('rtp-screen-width').value)||5,mm=parseInt(document.getElementById('rtp-min-match').value)||3;updatePaytablePlaceholders(ww,mm)"></select>
       <input type="text" class="array-input rtp-paytable-input" placeholder="0.5, 2.0, 5.0" value=""/>
     </div>
     <button class="icon-btn danger" onclick="removeSymbolRow('rtp-sym-${rid}')">
@@ -25,20 +25,20 @@ function addSymbolRow(symbolId) {
     </button>
     <div class="rtp-wild-fields">
       <div class="rtp-wild-top-row">
-        <label>Agg</label>
-        <select class="rtp-wild-agg" title="Multiplier aggregation" onchange="onWildAggChange(this)">
-          <option value="NONE">None</option>
-          <option value="ADD">Additive</option>
-          <option value="MULTIPLY">Multiplicative</option>
-          <option value="SEQUENCE">Sequence</option>
+        <label>${t('rtp.sym_agg')}</label>
+        <select class="rtp-wild-agg" title="${t('rtp.sym_agg_title')}" onchange="onWildAggChange(this)">
+          <option value="NONE">${t('rtp.sym_agg_none')}</option>
+          <option value="ADD">${t('rtp.sym_agg_add')}</option>
+          <option value="MULTIPLY">${t('rtp.sym_agg_mult')}</option>
+          <option value="SEQUENCE">${t('rtp.sym_agg_seq')}</option>
         </select>
         <div class="rtp-wild-mult-group">
-          <label>Wild ×</label>
-          <input type="number" class="rtp-wild-mult" value="1" min="0.01" step="0.01" title="Wild multiplier"/>
+          <label>${t('rtp.sym_wild_x')}</label>
+          <input type="number" class="rtp-wild-mult" value="1" min="0.01" step="0.01" title="${t('rtp.sym_wild_mult_title')}"/>
         </div>
       </div>
       <div class="rtp-seq-row">
-        <label class="rtp-seq-label">Seq</label>
+        <label class="rtp-seq-label">${t('rtp.sym_seq')}</label>
         <input type="text" class="rtp-wild-seq array-input" placeholder="1.0, 2.0, 3.0" title="Multiplier per wild count (max entries = screen width)"/>
       </div>
     </div>
