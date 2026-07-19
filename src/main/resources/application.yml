@@ -26,3 +26,6 @@ management:
 keep-alive:
   interval-seconds: 840
   initial-delay-seconds: 15
+
+history:
+  session-ttl-days: 7
