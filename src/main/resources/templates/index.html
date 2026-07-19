@@ -568,7 +568,7 @@
         </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_history_size">History size</span>
-          <span class="info-val" data-i18n-html="info.val_history_size">Maximum number of past generation results retained on disk. Allowed values: 1, 3, 5, 10, 20. When the limit is reduced, the oldest entries beyond the new limit are deleted immediately. Each entry is stored as a JSON file under <code>./history/</code>.</span>
+          <span class="info-val" data-i18n-html="info.val_history_size">Maximum number of past generation results kept per session. Allowed values: 1, 3, 5, 10, 20. When the limit is reduced, the oldest entries beyond the new limit are deleted immediately.<br/><br/><strong>Session isolation:</strong> each browser receives a unique session cookie (<code>slotlab-session</code>) on first visit. History is stored under <code>./history/generate/&lt;sessionId&gt;/</code> — completely separate for every user.<br/><br/><strong>Expiry:</strong> session directories not modified for 7 days are automatically purged by a daily background job.</span>
         </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_reel_set">Reel Set</span>
@@ -621,7 +621,7 @@
         </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_history_panel">History panel</span>
-          <span class="info-val" data-i18n-html="info.val_history_panel">Displays past generation results in reverse chronological order. Clicking an entry restores its output to the Result pane. The <em>Clear history</em> button deletes all history files from disk.</span>
+          <span class="info-val" data-i18n-html="info.val_history_panel">Displays past generation results for your session in reverse chronological order. Clicking an entry restores its output to the Result pane. The <em>Clear history</em> button deletes all your history files from disk. History is private — each user's entries are stored in an isolated directory identified by their session cookie.</span>
         </div>
       </div>
 
