@@ -40,6 +40,7 @@ A professional web application for slot machine reel strip generation, RTP (Retu
 - [Frontend — CSS Reference](#frontend--css-reference)
 - [REST API](#rest-api)
 - [Configuration](#configuration)
+- [Session & History](#session--history)
 - [Deployment](#deployment)
 
 ---
@@ -64,7 +65,7 @@ Slots Lab is a single-page Spring Boot application that covers the full mathemat
 - **Scatter / Cluster evaluation** — interval-based paytables, named interval sets assignable per symbol, configurable adjacency offsets
 - **Parallel simulation** — up to 8 threads; results are merged with statistically correct aggregation
 - **Reservoir-sampling median** — accurate median win computation across tens of millions of spins without storing all values
-- **History** — JSON-persisted history for both generation and simulation results (configurable max size)
+- **History** — JSON-persisted history for both generation and simulation results (configurable max size, per-session isolated, auto-purged after 7 days of inactivity)
 - **Internationalization** — EN / RU / ZH with full tooltip HTML translation
 - **Dark / Light theme** — CSS custom-property based, persisted in `localStorage`
 - **Keep-alive** — self-pinging daemon thread prevents Render free-tier sleep
@@ -78,7 +79,7 @@ Slots Lab is a single-page Spring Boot application that covers the full mathemat
 | Runtime | Java 21, Spring Boot 3.5.3 |
 | Web | Spring MVC, Thymeleaf |
 | Build | Maven 3.9, multi-stage Docker |
-| RNG | `Xoshiro256PlusPlus` via `RandomGenerator` |
+| RNG | `SplittableRandom` (java.base, always available on JRE images) |
 | Config | `spring-dotenv` (`.env` file support) |
 | Frontend | Vanilla JS (ES6+), CSS custom properties |
 | Editor | CodeMirror 5 (JSON editor) |
@@ -209,7 +210,7 @@ Reel strip generation algorithms.
 | Class | Role |
 |---|---|
 | `IRNG` | Interface: `getRandInRange(l, r)`, `getDouble(l, r)`, `getWeightedRand(outcomes, chances)` |
-| `RNG` | Implementation using `Xoshiro256PlusPlus` — a high-quality 64-bit generator. `getWeightedRand` builds a cumulative `TreeMap` and does a single `higherEntry` lookup for O(log n) weighted selection. |
+| `RNG` | Implementation using `SplittableRandom` (always available in `java.base` — works on JRE slim images). `getWeightedRand` builds a cumulative `TreeMap` and does a single `higherEntry` lookup for O(log n) weighted selection. |
 
 ---
 
@@ -347,13 +348,14 @@ Data transfer objects for spin-test output.
 
 ### `com.slotslab.history`
 
-In-process history persistence using the local filesystem.
+In-process history persistence using the local filesystem with per-session isolation.
 
 | Class | Role |
 |---|---|
 | `HistoryEntry` | Record — `id` (timestamp string), `strategy`, `time` (display string), `result` (raw HTML), `config` (JSON config snapshot) |
-| `HistoryService` | Persists entries as individual JSON files under `history/generate/` and `history/simulate/`. Supports list (sorted newest-first), save, resize (trim oldest beyond max), delete one, clear all. Max size clamped to 1–20. |
-| `HistoryController` | REST endpoints at `/api/history/{kind}` — `GET` list, `POST` save, `PUT /resize?size=N` trim, `DELETE /{id}` delete one, `DELETE` clear all |
+| `HistoryService` | Persists entries as individual JSON files under `history/generate/<sessionId>/` and `history/simulate/<sessionId>/`. Supports list (sorted newest-first), save, resize (trim oldest beyond max), delete one, clear all. Max size clamped to 1–20. |
+| `HistoryController` | REST endpoints at `/api/history/{kind}` — `GET` list, `POST` save, `PUT /resize?size=N` trim, `DELETE /{id}` delete one, `DELETE` clear all. All endpoints read the session cookie to scope the operation to the caller's history. |
+| `HistoryCleanupService` | `@Scheduled` daily task (03:17) — walks all session subdirectories under `history/generate/` and `history/simulate/` and deletes any whose `lastModifiedTime` is older than `history.session-ttl-days` (default 7). |
 
 ---
 
@@ -369,7 +371,8 @@ In-process history persistence using the local filesystem.
 
 | Class | Role |
 |---|---|
-| `UiController` | `GET /` — serves the Thymeleaf `index` template; `GET /keep-alive` — returns `200 ok` for the keep-alive ping |
+| `UiController` | `GET /` — serves the Thymeleaf `index` template (calls `SessionUtil.ensureSession` to set the session cookie on first visit); `GET /keep-alive` — returns `200 ok` for the keep-alive ping |
+| `SessionUtil` | Static helper for cookie-based session isolation. `ensureSession()` — sets the `slotlab-session` UUID cookie (HttpOnly, path `/`, 1-year max-age) on first visit if not already present. `readSession()` — reads the cookie value from any request; falls back to `"anonymous"`. All history operations are scoped to the resolved session ID. |
 
 ---
 
@@ -549,6 +552,9 @@ management:
 keep-alive:
   interval-seconds: 840    # 14 minutes
   initial-delay-seconds: 15
+
+history:
+  session-ttl-days: 7      # session directories older than this are auto-purged
 ```
 
 ### Environment variables (`.env`)
@@ -560,6 +566,59 @@ keep-alive:
 | `JAVA_TOOL_OPTIONS` | JVM flags — use `-Xmx400m` on Render free tier (512 MB RAM) |
 
 Copy `.env.example` to `.env` for local use.
+
+---
+
+## Session & History
+
+### How sessions work
+
+On the first `GET /` request the server sets a cookie named `slotlab-session` containing a random UUID:
+
+```
+Set-Cookie: slotlab-session=<uuid>; Path=/; HttpOnly; Max-Age=31536000
+```
+
+Every subsequent request from the same browser sends this cookie automatically. All history reads and writes are scoped to the resolved session ID — concurrent users never see each other's data.
+
+| Scenario | Result |
+|---|---|
+| Same browser, multiple visits | Same UUID → same history |
+| Two different browsers on the same device | Different UUIDs → separate history |
+| Cookie cleared | New UUID on next visit → fresh empty history |
+| Incognito / private window | New UUID per session → separate history |
+
+### Storage layout
+
+```
+history/
+├── generate/
+│   ├── <sessionId-A>/
+│   │   ├── 2026-07-18T10-23-45.json
+│   │   └── 2026-07-19T08-01-12.json
+│   └── <sessionId-B>/
+│       └── ...
+└── simulate/
+    ├── <sessionId-A>/
+    │   └── ...
+    └── <sessionId-B>/
+        └── ...
+```
+
+Each entry is one JSON file named by timestamp. The session subdirectory is created on the first save.
+
+### Automatic expiry
+
+`HistoryCleanupService` runs a `@Scheduled` task daily at 03:17. It checks the `lastModifiedTime` of every session directory. Any directory that has not been written to in more than `history.session-ttl-days` days (default 7) is deleted recursively — both `generate` and `simulate` subdirectories.
+
+The TTL is configured in `application.yml`:
+
+```yaml
+history:
+  session-ttl-days: 7
+```
+
+> **Note:** On Render's free tier the filesystem is ephemeral — it is wiped on every redeploy regardless of TTL. The cleanup job matters mainly for long-running or self-hosted deployments.
 
 ---
 

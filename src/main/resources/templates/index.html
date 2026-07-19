@@ -624,6 +624,10 @@
           <span class="info-val" data-i18n-html="info.val_add_restriction">Adds a restriction entry to the reel set. Adding more restrictions than there are reels is blocked — additional restrictions would be unreachable due to cyclic mapping.</span>
         </div>
         <div class="info-row">
+          <span class="info-key" data-i18n="info.key_session">Session &amp; isolation</span>
+          <span class="info-val" data-i18n-html="info.val_session">On your first visit the server sets a cookie named <code>slotlab-session</code> containing a random UUID. All history entries (generate and simulate) are stored under a directory named after that UUID — completely isolated from every other user.<br/><br/><strong>Same session across visits:</strong> as long as you don't clear your browser cookies the same UUID is reused, so your history persists between sessions.<br/><strong>Different browsers:</strong> each browser has its own cookie store, so Chrome and Safari on the same device get separate histories.<br/><strong>Expiry:</strong> session directories that have not been written to for 7 days are automatically deleted by a daily background job. Clearing your cookies abandons your history permanently.</span>
+        </div>
+        <div class="info-row">
           <span class="info-key" data-i18n="info.key_history_panel">History panel</span>
           <span class="info-val" data-i18n-html="info.val_history_panel">Displays past generation results for your session in reverse chronological order. Clicking an entry restores its output to the Result pane. The <em>Clear history</em> button deletes all your history files from disk. History is private — each user's entries are stored in an isolated directory identified by their session cookie.</span>
         </div>
