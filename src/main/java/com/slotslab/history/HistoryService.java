@@ -11,17 +11,15 @@ import java.util.List;
 @Service
 public class HistoryService {
 
-    private static final Path GENERATE_DIR = Paths.get("history", "generate");
-    private static final Path SIMULATE_DIR = Paths.get("history", "simulate");
+    private static final Path BASE_DIR = Paths.get("history");
     private final ObjectMapper mapper = new ObjectMapper();
 
     public HistoryService() throws IOException {
-        Files.createDirectories(GENERATE_DIR);
-        Files.createDirectories(SIMULATE_DIR);
+        Files.createDirectories(BASE_DIR);
     }
 
-    public List<HistoryEntry> list(String kind) throws IOException {
-        Path dir = dir(kind);
+    public List<HistoryEntry> list(String kind, String sessionId) throws IOException {
+        Path dir = dir(kind, sessionId);
         if (!Files.exists(dir)) return List.of();
         try (var stream = Files.list(dir)) {
             return stream
@@ -36,28 +34,29 @@ public class HistoryService {
         }
     }
 
-    public HistoryEntry save(String kind, HistoryEntry entry) throws IOException {
-        Path file = dir(kind).resolve(entry.id() + ".json");
+    public HistoryEntry save(String kind, String sessionId, HistoryEntry entry) throws IOException {
+        Path dir = dir(kind, sessionId);
+        Files.createDirectories(dir);
+        Path file = dir.resolve(entry.id() + ".json");
         mapper.writeValue(file.toFile(), entry);
         return entry;
     }
 
-    public void resize(String kind, int max) throws IOException {
-        List<HistoryEntry> entries = list(kind);
+    public void resize(String kind, String sessionId, int max) throws IOException {
+        List<HistoryEntry> entries = list(kind, sessionId);
         if (entries.size() > max) {
-            List<HistoryEntry> toDelete = entries.subList(max, entries.size());
-            for (HistoryEntry e : toDelete) {
-                Files.deleteIfExists(dir(kind).resolve(e.id() + ".json"));
+            for (HistoryEntry e : entries.subList(max, entries.size())) {
+                Files.deleteIfExists(dir(kind, sessionId).resolve(e.id() + ".json"));
             }
         }
     }
 
-    public void deleteOne(String kind, String id) throws IOException {
-        Files.deleteIfExists(dir(kind).resolve(id + ".json"));
+    public void deleteOne(String kind, String sessionId, String id) throws IOException {
+        Files.deleteIfExists(dir(kind, sessionId).resolve(id + ".json"));
     }
 
-    public void clearAll(String kind) throws IOException {
-        Path dir = dir(kind);
+    public void clearAll(String kind, String sessionId) throws IOException {
+        Path dir = dir(kind, sessionId);
         if (!Files.exists(dir)) return;
         try (var stream = Files.list(dir)) {
             stream.filter(p -> p.toString().endsWith(".json"))
@@ -65,7 +64,9 @@ public class HistoryService {
         }
     }
 
-    private Path dir(String kind) {
-        return "simulate".equals(kind) ? SIMULATE_DIR : GENERATE_DIR;
+    private Path dir(String kind, String sessionId) {
+        String safeKind = "simulate".equals(kind) ? "simulate" : "generate";
+        String safeSession = sessionId.replaceAll("[^a-zA-Z0-9\\-]", "_");
+        return BASE_DIR.resolve(safeKind).resolve(safeSession);
     }
 }
