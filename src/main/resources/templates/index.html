@@ -547,17 +547,17 @@
 <div class="modal-overlay" id="info-modal" onclick="if(event.target===this)closeInfo()">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="info-modal-title">Help</span>
-      <button class="modal-close" onclick="closeInfo()" title="Close">&#x2715;</button>
+      <span class="modal-title" id="info-modal-title" data-i18n="info.title_default">Help</span>
+      <button class="modal-close" onclick="closeInfo()" data-i18n-attr="title" data-i18n="modal.close" title="Close">&#x2715;</button>
     </div>
     <div class="modal-body">
 
       <!-- GENERATE TAB -->
       <div class="info-section" data-tab="generate">
-        <div class="info-section-title">Generate — Configuration Fields</div>
+        <div class="info-section-title" data-i18n="info.gen_fields">Generate — Configuration Fields</div>
         <div class="info-row">
-          <span class="info-key">Strategy</span>
-          <span class="info-val">
+          <span class="info-key" data-i18n="info.key_strategy">Strategy</span>
+          <span class="info-val" data-i18n-html="info.val_strategy">
             Determines the algorithm used to place tiles on each reel strip.<br/><br/>
             <code>SHUFFLE</code> — Stochastic placement algorithm. Behaviour depends on whether restrictions are defined:<br/>
             &nbsp;&nbsp;<strong>With restrictions:</strong> For each position on the reel, a stack height is sampled from the weighted distribution defined by <code>stackSizes</code> / <code>stackChances</code>. A symbol is then chosen at random from the remaining tile pool and placed as a consecutive run of that height. Before committing the placement, the algorithm checks that the chosen symbol does not violate the <code>minDistance</code> constraint — i.e. the same symbol must not have appeared within the last N positions. If the constraint is violated, a different symbol is tried. If no valid symbol can be placed after exhausting all candidates, the attempt is abandoned and the entire reel is regenerated from scratch (up to 8 retries). If all retries fail, the reel is emitted as <code>[]</code>.<br/>
@@ -566,70 +566,70 @@
           </span>
         </div>
         <div class="info-row">
-          <span class="info-key">History size</span>
-          <span class="info-val">Maximum number of past generation results retained on disk. Allowed values: 1, 3, 5, 10, 20. When the limit is reduced, the oldest entries beyond the new limit are deleted immediately. Each entry is stored as a JSON file under <code>./history/</code>.</span>
+          <span class="info-key" data-i18n="info.key_history_size">History size</span>
+          <span class="info-val" data-i18n-html="info.val_history_size">Maximum number of past generation results retained on disk. Allowed values: 1, 3, 5, 10, 20. When the limit is reduced, the oldest entries beyond the new limit are deleted immediately. Each entry is stored as a JSON file under <code>./history/</code>.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Reel Set</span>
-          <span class="info-val">A named logical group of reel strips sharing one restriction configuration. The output JSON array contains one object per reel set with a <code>setName</code> and a <code>reelSet</code> array. Multiple reel sets can be configured to generate different volatility profiles or game modes in a single run.</span>
+          <span class="info-key" data-i18n="info.key_reel_set">Reel Set</span>
+          <span class="info-val" data-i18n-html="info.val_reel_set">A named logical group of reel strips sharing one restriction configuration. The output JSON array contains one object per reel set with a <code>setName</code> and a <code>reelSet</code> array. Multiple reel sets can be configured to generate different volatility profiles or game modes in a single run.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Reels (Tiles Count) — R1, R2…</span>
-          <span class="info-val">Each row represents one reel strip. Enter a comma-separated list of non-negative integers where the Nth value is the count of symbol N on that reel. For example, <code>8, 34, 44, 18</code> defines a reel containing 8 copies of symbol 1, 34 of symbol 2, 44 of symbol 3, and 18 of symbol 4. The sum of all values is the total reel length.</span>
+          <span class="info-key" data-i18n="info.key_reels">Reels (Tiles Count) — R1, R2…</span>
+          <span class="info-val" data-i18n-html="info.val_reels">Each row represents one reel strip. Enter a comma-separated list of non-negative integers where the Nth value is the count of symbol N on that reel. For example, <code>8, 34, 44, 18</code> defines a reel containing 8 copies of symbol 1, 34 of symbol 2, 44 of symbol 3, and 18 of symbol 4. The sum of all values is the total reel length.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Restrictions</span>
-          <span class="info-val">Define the stacking behaviour for reels within a reel set. Restrictions are applied cyclically by reel index: restriction 1 governs R1, restriction 2 governs R2, restriction 1 governs R3 again, and so on. The badge on each restriction header shows exactly which reels it governs. A reel set with no restrictions produces flat (sequential) output regardless of the selected strategy.</span>
+          <span class="info-key" data-i18n="info.key_restrictions">Restrictions</span>
+          <span class="info-val" data-i18n-html="info.val_restrictions">Define the stacking behaviour for reels within a reel set. Restrictions are applied cyclically by reel index: restriction 1 governs R1, restriction 2 governs R2, restriction 1 governs R3 again, and so on. The badge on each restriction header shows exactly which reels it governs. A reel set with no restrictions produces flat (sequential) output regardless of the selected strategy.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">stackSizes</span>
-          <span class="info-val">Comma-separated list of allowed stack heights. A stack is a consecutive run of the same symbol. For example, <code>1, 2, 3</code> allows individual tiles, pairs, and triples. All values must be positive integers.</span>
+          <span class="info-key" data-i18n="info.key_stack_sizes">stackSizes</span>
+          <span class="info-val" data-i18n-html="info.val_stack_sizes">Comma-separated list of allowed stack heights. A stack is a consecutive run of the same symbol. For example, <code>1, 2, 3</code> allows individual tiles, pairs, and triples. All values must be positive integers.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">stackChances</span>
-          <span class="info-val">Relative weights controlling how often each stack height in <code>stackSizes</code> is selected. The values do not need to sum to any particular number — only their ratios matter. For example, with <code>stackSizes: 1, 2, 3</code> and <code>stackChances: 60, 30, 10</code>, a height of 1 is chosen approximately 60% of the time. Must have the same length as <code>stackSizes</code>.</span>
+          <span class="info-key" data-i18n="info.key_stack_chances">stackChances</span>
+          <span class="info-val" data-i18n-html="info.val_stack_chances">Relative weights controlling how often each stack height in <code>stackSizes</code> is selected. The values do not need to sum to any particular number — only their ratios matter. For example, with <code>stackSizes: 1, 2, 3</code> and <code>stackChances: 60, 30, 10</code>, a height of 1 is chosen approximately 60% of the time. Must have the same length as <code>stackSizes</code>.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">minDistance</span>
-          <span class="info-val">Minimum number of intervening symbols required between two stacks of the same symbol. A value of <code>1</code> means no two stacks of the same symbol may be adjacent. A value of <code>3</code> requires at least 3 different symbols between them. If this constraint cannot be satisfied after 8 placement attempts, the reel is emitted as <code>[]</code>.</span>
+          <span class="info-key" data-i18n="info.key_min_distance">minDistance</span>
+          <span class="info-val" data-i18n-html="info.val_min_distance">Minimum number of intervening symbols required between two stacks of the same symbol. A value of <code>1</code> means no two stacks of the same symbol may be adjacent. A value of <code>3</code> requires at least 3 different symbols between them. If this constraint cannot be satisfied after 8 placement attempts, the reel is emitted as <code>[]</code>.</span>
         </div>
       </div>
 
       <!-- GENERATE TAB BUTTONS -->
       <div class="info-section" data-tab="generate">
-        <div class="info-section-title">Generate — Controls</div>
+        <div class="info-section-title" data-i18n="info.gen_controls">Generate — Controls</div>
         <div class="info-row">
-          <span class="info-key">▶ Run</span>
-          <span class="info-val">Validates the current configuration, submits it to the backend via <code>POST /api/generate</code>, and writes the resulting JSON reel array to the Result pane. The result is also saved to the history.</span>
+          <span class="info-key" data-i18n="info.key_run_gen">▶ Run</span>
+          <span class="info-val" data-i18n-html="info.val_run_gen">Validates the current configuration, submits it to the backend via <code>POST /api/generate</code>, and writes the resulting JSON reel array to the Result pane. The result is also saved to the history.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Import (↓ button)</span>
-          <span class="info-val">Opens a dialog to paste the output of a <code>COUNT</code> conversion. The imported data populates the reel sets with the given tile counts. All existing reel sets are replaced. No restrictions are added — configure them manually before running.</span>
+          <span class="info-key" data-i18n="info.key_import">Import (↓ button)</span>
+          <span class="info-val" data-i18n-html="info.val_import">Opens a dialog to paste the output of a <code>COUNT</code> conversion. The imported data populates the reel sets with the given tile counts. All existing reel sets are replaced. No restrictions are added — configure them manually before running.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">+ Add reel set</span>
-          <span class="info-val">Appends a new reel set card pre-filled with default tile counts and one default restriction.</span>
+          <span class="info-key" data-i18n="info.key_add_reel_set">+ Add reel set</span>
+          <span class="info-val" data-i18n-html="info.val_add_reel_set">Appends a new reel set card pre-filled with default tile counts and one default restriction.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">+ Add reel</span>
-          <span class="info-val">Appends a new reel row to the reel set. The cyclic restriction mapping recalculates automatically and all restriction badges update to reflect the new reel count.</span>
+          <span class="info-key" data-i18n="info.key_add_reel">+ Add reel</span>
+          <span class="info-val" data-i18n-html="info.val_add_reel">Appends a new reel row to the reel set. The cyclic restriction mapping recalculates automatically and all restriction badges update to reflect the new reel count.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">+ Add restriction</span>
-          <span class="info-val">Adds a restriction entry to the reel set. Adding more restrictions than there are reels is blocked — additional restrictions would be unreachable due to cyclic mapping.</span>
+          <span class="info-key" data-i18n="info.key_add_restriction">+ Add restriction</span>
+          <span class="info-val" data-i18n-html="info.val_add_restriction">Adds a restriction entry to the reel set. Adding more restrictions than there are reels is blocked — additional restrictions would be unreachable due to cyclic mapping.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">History panel</span>
-          <span class="info-val">Displays past generation results in reverse chronological order. Clicking an entry restores its output to the Result pane. The <em>Clear history</em> button deletes all history files from disk.</span>
+          <span class="info-key" data-i18n="info.key_history_panel">History panel</span>
+          <span class="info-val" data-i18n-html="info.val_history_panel">Displays past generation results in reverse chronological order. Clicking an entry restores its output to the Result pane. The <em>Clear history</em> button deletes all history files from disk.</span>
         </div>
       </div>
 
       <!-- CONVERT TAB -->
       <div class="info-section" data-tab="convert">
-        <div class="info-section-title">Convert — Fields &amp; Controls</div>
+        <div class="info-section-title" data-i18n="info.conv_fields">Convert — Fields &amp; Controls</div>
         <div class="info-row">
-          <span class="info-key">Format</span>
-          <span class="info-val">
+          <span class="info-key" data-i18n="info.key_format">Format</span>
+          <span class="info-val" data-i18n-html="info.val_format">
             Output format for the conversion. The input is auto-detected regardless of which format is selected.<br/>
             <code>COUNT</code> — Reconstructs the per-symbol tile counts from the reel strips (inverse of generation). The output is a JSON array of objects with <code>setName</code> and <code>reelSetTileCounts</code> fields. This output can be pasted directly into the Generate tab via the Import button.<br/>
             <code>JSON_ARRAY</code> — Reformats the reel data as a JSON array of <code>{ setName, reelSet }</code> objects, one entry per reel set. Each <code>reelSet</code> is an array of reel strips represented as integer arrays.<br/>
@@ -637,24 +637,24 @@
           </span>
         </div>
         <div class="info-row">
-          <span class="info-key">gameId</span>
-          <span class="info-val">Visible only when Format is <code>CSV</code>. A numeric game identifier that is prepended to the 3-digit zero-padded symbol index to form the <code>gameIdTile</code> column value. For example, <code>gameId = 123</code> and symbol <code>1</code> produce <code>123001</code>; symbol <code>42</code> produces <code>123042</code>.</span>
+          <span class="info-key" data-i18n="info.key_game_id">gameId</span>
+          <span class="info-val" data-i18n-html="info.val_game_id">Visible only when Format is <code>CSV</code>. A numeric game identifier that is prepended to the 3-digit zero-padded symbol index to form the <code>gameIdTile</code> column value. For example, <code>gameId = 123</code> and symbol <code>1</code> produce <code>123001</code>; symbol <code>42</code> produces <code>123042</code>.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Input pane</span>
-          <span class="info-val">
+          <span class="info-key" data-i18n="info.key_input_pane">Input pane</span>
+          <span class="info-val" data-i18n-html="info.val_input_pane">
             The input format is auto-detected on Run. Two formats are accepted:<br/>
             <strong>JSON array</strong> — <code>[{"setName":"…","reelSet":[[…],…]}]</code>. This is the direct output of the Generate tab or a prior <code>JSON_ARRAY</code> conversion.<br/>
             <strong>CSV</strong> — The output of a prior <code>CSV</code> conversion. Each row has the form <code>"setName","reelIndex","position","gameIdTile"</code>. The symbol index is recovered from the last 3 digits of the <code>gameIdTile</code> value.
           </span>
         </div>
         <div class="info-row">
-          <span class="info-key">▶ Run</span>
-          <span class="info-val">Detects the input format, parses and validates the data, submits it to the backend via <code>POST /api/convert</code>, and writes the converted result to the Output pane.</span>
+          <span class="info-key" data-i18n="info.key_run_conv">▶ Run</span>
+          <span class="info-val" data-i18n-html="info.val_run_conv">Detects the input format, parses and validates the data, submits it to the backend via <code>POST /api/convert</code>, and writes the converted result to the Output pane.</span>
         </div>
         <div class="info-row">
-          <span class="info-key">Copy (Output pane)</span>
-          <span class="info-val">Copies the full converted output to the clipboard.</span>
+          <span class="info-key" data-i18n="info.key_copy_output">Copy (Output pane)</span>
+          <span class="info-val" data-i18n-html="info.val_copy_output">Copies the full converted output to the clipboard.</span>
         </div>
       </div>
 

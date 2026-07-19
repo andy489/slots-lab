@@ -61,8 +61,8 @@ function copyResult(id, btn) {
 
 /* ── Info modal ── */
 function openInfo() {
-  const titles = { generate: 'Generate tab — reference', convert: 'Convert tab — reference' };
-  document.getElementById('info-modal-title').textContent = titles[_activeTab] || 'Help';
+  const titles = { generate: t('info.title_generate'), convert: t('info.title_convert') };
+  document.getElementById('info-modal-title').textContent = titles[_activeTab] || t('info.title_default');
   document.querySelectorAll('#info-modal .info-section[data-tab]').forEach(s => {
     s.style.display = s.dataset.tab === _activeTab ? '' : 'none';
   });
