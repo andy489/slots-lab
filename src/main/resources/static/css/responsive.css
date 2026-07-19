@@ -1,0 +1,172 @@
+/* ── Mobile / narrow-screen overrides ── */
+@media (max-width: 768px) {
+
+  /* Allow page to scroll vertically on mobile instead of clipping to 100vh */
+  html, body {
+    height: auto;
+    overflow: auto;
+    overflow-x: hidden;
+  }
+
+  /* ── Header: shorter, tighter padding ── */
+  header {
+    height: 56px;
+    padding: 0 1rem;
+    gap: 0.65rem;
+  }
+  .header-title { font-size: 1.05rem; }
+  .header-sub   { display: none; }
+
+  /* ── Tab bar: scrollable horizontally ── */
+  .tabbar {
+    padding: 0 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    padding: 0 1rem;
+    font-size: 0.72rem;
+    letter-spacing: .06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── Main area: allow natural height so content scrolls ── */
+  .main { overflow: visible; min-height: 0; }
+
+  /* ── Tab panels: stack vertically, auto height ── */
+  .tab-panel { display: none; flex-direction: column; }
+  .tab-panel.active {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    height: auto;
+  }
+
+  /* ── Generate layout: single column, no resize handle ── */
+  .gen-layout {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+  .rtp-resize-handle { display: none; }
+
+  /* ── RTP layout: single column, no resize handle ── */
+  .rtp-layout {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  /* ── Spin Test layout: single column ── */
+  .spin-test-layout {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  /* ── Form column & output column: natural height ── */
+  .form-col,
+  .output-col,
+  .rtp-config-col,
+  .rtp-result-col,
+  .spin-test-nav,
+  .spin-test-output-col {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Last pane in each split has no extra bottom border */
+  .output-col,
+  .rtp-result-col,
+  .spin-test-output-col {
+    border-bottom: none;
+  }
+
+  /* ── Form scroll: natural height instead of flex-overflow ── */
+  .form-scroll {
+    overflow: visible;
+    height: auto;
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  /* ── Output body / result bodies: natural height ── */
+  .output-body,
+  .rtp-result-body,
+  .spin-test-results-body {
+    overflow: visible;
+    height: auto;
+  }
+
+  /* ── RTP symbol row: allow wrapping ── */
+  .rtp-sym-header,
+  .rtp-sym-row {
+    grid-template-columns: 32px 90px 1fr 28px;
+    gap: 0.25rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.68rem;
+  }
+
+  /* ── Wild multiplier fields: remove the fixed left padding ── */
+  .rtp-wild-fields {
+    padding-left: 0;
+  }
+
+  /* ── Modals: full-width on small screens ── */
+  .modal {
+    width: 96vw;
+    max-height: 90vh;
+  }
+
+  /* ── Info key column: shorter min-width ── */
+  .info-key { min-width: 100px; }
+
+  /* ── Field grid: single column on very narrow screens ── */
+  .field-grid { grid-template-columns: 1fr; }
+
+  /* ── Convert tab: stack panes vertically ── */
+  .conv-layout { overflow: visible; padding: 0.75rem 1rem 1rem; }
+  .conv-split {
+    grid-template-columns: 1fr;
+    overflow: visible;
+    min-height: 0;
+  }
+  .pane-body { min-height: 220px; }
+
+  /* ── CodeMirror editors: fixed height so they're scrollable ── */
+  .CodeMirror { height: 220px !important; }
+
+  /* ── rtp-chances: single column ── */
+  #rtp-chances-list { grid-template-columns: 1fr; }
+
+  /* ── Buttons: minimum tap target ── */
+  .run-btn { height: 36px; padding: 0 1.25rem; font-size: 0.78rem; }
+  .icon-btn { width: 32px; height: 32px; }
+  .theme-btn { width: 36px; height: 36px; }
+  .info-btn  { width: 36px; height: 36px; }
+
+  /* ── Spin screen cells: slightly smaller ── */
+  .spin-screen-col { min-width: 30px; }
+  .spin-screen-cell { width: 30px; height: 26px; font-size: 0.72rem; }
+}
+
+/* ── Extra-narrow (phones ≤ 480px) ── */
+@media (max-width: 480px) {
+  .header-title { font-size: 0.95rem; }
+  .logo { width: 36px; height: 36px; }
+
+  .rtp-sym-header,
+  .rtp-sym-row {
+    grid-template-columns: 28px 80px 1fr 26px;
+    gap: 0.2rem;
+    padding: 0.3rem 0.4rem;
+  }
+  .info-key { min-width: 80px; }
+
+  .rtp-big-number { font-size: 2.6rem; }
+}
