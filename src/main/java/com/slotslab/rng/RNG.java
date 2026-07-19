@@ -1,13 +1,14 @@
 package com.slotslab.rng;
 
 import java.util.List;
+import java.util.SplittableRandom;
 import java.util.random.RandomGenerator;
 
 public class RNG implements IRNG {
     private final RandomGenerator rg;
 
     public RNG() {
-        this.rg = RandomGenerator.of("Xoshiro256PlusPlus");
+        this.rg = new SplittableRandom();
     }
 
     RNG(RandomGenerator rg) {
