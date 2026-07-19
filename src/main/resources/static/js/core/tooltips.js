@@ -16,7 +16,11 @@
       tip.style.top = Math.max(8, Math.min(vh - tipH - 8, centeredTop)) + 'px';
     } else {
       tip.style.left = Math.max(8, Math.min(vw - tipW - 8, br.left + br.width / 2 - tipW / 2)) + 'px';
-      tip.style.top = Math.max(8, br.top - tipH - GAP) + 'px';
+      if (br.top - tipH - GAP >= 8) {
+        tip.style.top = (br.top - tipH - GAP) + 'px';
+      } else {
+        tip.style.top = (br.bottom + GAP) + 'px';
+      }
     }
   }
 
