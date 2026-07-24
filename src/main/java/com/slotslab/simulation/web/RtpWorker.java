@@ -35,7 +35,7 @@ public class RtpWorker implements Callable<SpinStats> {
 
     private final long spins;
     private final int[][][] reels;
-    private final int[] reelLengths;
+    private final int[][] reelLengths;
     private final double[] cumulativeChances;
     private final int screenWidth;
     private final int screenHeight;
@@ -50,7 +50,7 @@ public class RtpWorker implements Callable<SpinStats> {
 
     public RtpWorker(long spins,
                      int[][][] reels,
-                     int[] reelLengths,
+                     int[][] reelLengths,
                      double[] cumulativeChances,
                      int screenWidth,
                      int screenHeight,
@@ -109,7 +109,7 @@ public class RtpWorker implements Callable<SpinStats> {
                     reelHeights[r] = pickMegawaysHeight(rng.nextDouble(), setIdx, r);
                 }
                 for (int r = 0; r < screenWidth; r++) {
-                    int len = reelLengths[r];
+                    int len = reelLengths[setIdx][r];
                     int start = len == 0 ? 0 : rng.nextInt(len);
                     int visH = reelHeights[r];
                     int[] col = screen[r];
@@ -130,7 +130,7 @@ public class RtpWorker implements Callable<SpinStats> {
             }
 
             for (int r = 0; r < screenWidth; r++) {
-                int len = reelLengths[r];
+                int len = reelLengths[setIdx][r];
                 int start = len == 0 ? 0 : rng.nextInt(len);
                 int[] col = screen[r];
                 for (int w = 0; w < screenHeight; w++) {

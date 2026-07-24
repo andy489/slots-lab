@@ -680,10 +680,38 @@ function updatePaytablePlaceholders(w, m) {
 function generateDefaultLines(width, height) {
   const lines = [];
   const mid = Math.floor(height / 2);
+  const top = 0;
+  const bot = height - 1;
+
+  // Straight rows
   lines.push(Array(width).fill(mid).join(', '));
   if (height >= 3) {
-    lines.push(Array(width).fill(0).join(', '));
-    lines.push(Array(width).fill(height - 1).join(', '));
+    lines.push(Array(width).fill(top).join(', '));
+    lines.push(Array(width).fill(bot).join(', '));
+  }
+  if (height < 3) return lines;
+
+  // Zigzag patterns: only valid when every row index fits within [0, height-1]
+  const patterns = [
+    // V-shape and inverted-V
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? top : mid),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : top),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? bot : mid),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : bot),
+    // Concave / convex: edges high, centre low (and vice versa)
+    (() => { const a = Array(width).fill(mid); a[0] = top; a[width-1] = top; return a; })(),
+    (() => { const a = Array(width).fill(mid); a[0] = bot; a[width-1] = bot; return a; })(),
+    // Full diagonal-ish wave
+    Array.from({length: width}, (_, i) => (i % 2 === 0 ? top : bot)),
+  ];
+
+  const seen = new Set(lines);
+  for (const p of patterns) {
+    if (p.every(v => v >= 0 && v < height)) {
+      const s = p.join(', ');
+      if (!seen.has(s)) { seen.add(s); lines.push(s); }
+    }
+    if (lines.length >= 10) break;
   }
   return lines;
 }

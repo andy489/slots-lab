@@ -13,6 +13,7 @@ function switchTab(name, btn) {
     else if (name === 'convert') { convInput.refresh(); convOutput.refresh(); }
     else if (name === 'rtp') tryLoadReelsFromEditor();
     else if (name === 'spin-test') { tryLoadReelsFromEditor(); updateSpinTestPlaceholders(); }
+    else if (name === 'io') { /* no CodeMirror editors to refresh */ }
   }, 0);
 }
 
@@ -61,7 +62,7 @@ function copyResult(id, btn) {
 
 /* ── Info modal ── */
 function openInfo() {
-  const titles = { generate: t('info.title_generate'), convert: t('info.title_convert') };
+  const titles = { generate: t('info.title_generate'), convert: t('info.title_convert'), io: t('info.title_io') };
   document.getElementById('info-modal-title').textContent = titles[_activeTab] || t('info.title_default');
   document.querySelectorAll('#info-modal .info-section[data-tab]').forEach(s => {
     s.style.display = s.dataset.tab === _activeTab ? '' : 'none';

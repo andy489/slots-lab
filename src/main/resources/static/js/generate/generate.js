@@ -317,13 +317,18 @@ function validateConfig() {
         errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_chances_empty')));
       } else if (chances.some(isNaN) || chances.some(n => n < 0)) {
         errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_chances_gte0')));
+      } else {
+        const chanceSum = chances.reduce((a, b) => a + b, 0);
+        if (Math.abs(chanceSum - 100) > 0.05) {
+          errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_chances_sum100') + ' (current: ' + chanceSum.toFixed(1) + ')'));
+        }
       }
 
       if (stacks.length > 0 && chances.length > 0 && stacks.length !== chances.length) {
         errors.push(markError(chancesEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.stack_equal_length')));
       }
 
-      const dist = parseInt(distEl.value);
+      const dist = parseInt(distEl.value.trim() || distEl.placeholder || '1');
       if (isNaN(dist) || dist < 0) {
         errors.push(markError(distEl, t('gen.reel_set_label') + si + ' ' + t('gen.restriction_label') + (ri+1) + ': ' + t('gen.min_dist_gte0')));
       }

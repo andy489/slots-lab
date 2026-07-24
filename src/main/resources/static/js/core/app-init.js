@@ -40,15 +40,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeInfo(
 
 /* Init default payline placeholder rows without filling screen inputs */
 (function initDefaultPaylines() {
-  const DEFAULT_LINES = [
-    '0, 0, 0, 0, 0', '1, 1, 1, 1, 1', '2, 2, 2, 2, 2',
-    '0, 1, 0, 1, 0', '1, 0, 1, 0, 1', '2, 1, 2, 1, 2',
-    '1, 2, 1, 2, 1', '0, 1, 1, 1, 0', '2, 1, 1, 1, 2', '0, 2, 0, 2, 0',
-  ];
   const container = document.getElementById('rtp-lines-list');
   container.innerHTML = '';
   _lineCounter = 0;
-  DEFAULT_LINES.forEach(ph => {
+  generateDefaultLines(5, 3).forEach(ph => {
     addLineDef('');
     const rows = container.querySelectorAll('.rtp-line-input');
     rows[rows.length - 1].placeholder = ph;

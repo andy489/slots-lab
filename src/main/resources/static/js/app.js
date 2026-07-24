@@ -425,13 +425,18 @@ function validateConfig() {
         errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackChances cannot be empty'));
       } else if (chances.some(isNaN) || chances.some(n => n < 0)) {
         errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackChances must be >= 0'));
+      } else {
+        const chanceSum = chances.reduce((a, b) => a + b, 0);
+        if (Math.abs(chanceSum - 100) > 0.05) {
+          errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackChances must sum to 100 (current: ' + chanceSum.toFixed(1) + ')'));
+        }
       }
 
       if (stacks.length > 0 && chances.length > 0 && stacks.length !== chances.length) {
         errors.push(markError(chancesEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': stackSizes and stackChances must have equal length'));
       }
 
-      const dist = parseInt(distEl.value);
+      const dist = parseInt(distEl.value.trim() || distEl.placeholder || '1');
       if (isNaN(dist) || dist < 0) {
         errors.push(markError(distEl, 'Reel Set #' + si + ' Restriction #' + (ri+1) + ': minDistance must be >= 0'));
       }
@@ -1863,15 +1868,36 @@ function updatePaytablePlaceholders(w, m) {
   });
 }
 
-// Generate default paylines for a new screen size
 function generateDefaultLines(width, height) {
   const lines = [];
   const mid = Math.floor(height / 2);
-  // Middle row
+  const top = 0;
+  const bot = height - 1;
+
   lines.push(Array(width).fill(mid).join(', '));
   if (height >= 3) {
-    lines.push(Array(width).fill(0).join(', '));
-    lines.push(Array(width).fill(height - 1).join(', '));
+    lines.push(Array(width).fill(top).join(', '));
+    lines.push(Array(width).fill(bot).join(', '));
+  }
+  if (height < 3) return lines;
+
+  const patterns = [
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? top : mid),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : top),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? bot : mid),
+    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : bot),
+    (() => { const a = Array(width).fill(mid); a[0] = top; a[width-1] = top; return a; })(),
+    (() => { const a = Array(width).fill(mid); a[0] = bot; a[width-1] = bot; return a; })(),
+    Array.from({length: width}, (_, i) => (i % 2 === 0 ? top : bot)),
+  ];
+
+  const seen = new Set(lines);
+  for (const p of patterns) {
+    if (p.every(v => v >= 0 && v < height)) {
+      const s = p.join(', ');
+      if (!seen.has(s)) { seen.add(s); lines.push(s); }
+    }
+    if (lines.length >= 10) break;
   }
   return lines;
 }
@@ -2931,6 +2957,8 @@ function compactJson(obj) {
 
   makeResizable('gen-resize-handle',  '.gen-layout',       '--gen-col-width',  500, 'gen_col_width',  280, 900);
   makeResizable('spin-resize-handle', '.spin-test-layout', '--spin-col-width', 300, 'spin_col_width', 200, 700);
+  makeResizable('conv-resize-handle', '.conv-split',       '--conv-col-width', 500, 'conv_col_width', 200, 900);
+  makeResizable('io-resize-handle',   '.io-layout',        '--io-col-width',   580, 'io_col_width',   220, 1100);
 
   // ── RTP panel resize ────────────────────────────────────────────────────────
   (function () {

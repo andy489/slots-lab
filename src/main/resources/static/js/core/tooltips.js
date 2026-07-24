@@ -97,6 +97,8 @@
 
   makeResizable('gen-resize-handle',  '.gen-layout',       '--gen-col-width',  500, 'gen_col_width',  280, 900);
   makeResizable('spin-resize-handle', '.spin-test-layout', '--spin-col-width', 300, 'spin_col_width', 200, 700);
+  makeResizable('conv-resize-handle', '.conv-split',       '--conv-col-width', 500, 'conv_col_width', 200, 900);
+  makeResizable('io-resize-handle',   '.io-layout',        '--io-col-width',   580, 'io_col_width',   220, 1100);
 
   // ── RTP panel resize ────────────────────────────────────────────────────────
   (function () {

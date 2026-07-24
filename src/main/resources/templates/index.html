@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="/css/rtp-results.css"/>
   <link rel="stylesheet" href="/css/spin-test.css"/>
   <link rel="stylesheet" href="/css/convert.css"/>
+  <link rel="stylesheet" href="/css/import-export.css"/>
   <link rel="stylesheet" href="/css/modal.css"/>
   <link rel="stylesheet" href="/css/toast.css"/>
   <link rel="stylesheet" href="/css/responsive.css"/>
@@ -83,6 +84,10 @@
   <button class="tab-btn" onclick="switchTab('convert', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     <span data-i18n="tab.convert">Convert</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('io', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span>I/O</span>
   </button>
 </div>
 
@@ -513,6 +518,7 @@
           <div class="pane-header"><span class="pane-title" data-i18n="conv.input">Input — array of {setName, reelSet}</span></div>
           <div class="pane-body"><textarea id="conv-input"></textarea></div>
         </div>
+        <div class="rtp-resize-handle" id="conv-resize-handle"></div>
         <div class="pane">
           <div class="pane-header">
             <span class="pane-title" data-i18n="conv.result">Result</span>
@@ -523,6 +529,67 @@
           <div class="pane-body"><textarea id="conv-output" readonly></textarea></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ IMPORT / EXPORT TAB ══ -->
+  <div id="tab-io" class="tab-panel">
+    <div class="io-layout">
+
+      <!-- Left: Import -->
+      <div class="io-panel" id="io-panel-import">
+        <div class="io-panel-header">
+          <span class="io-panel-title">Import</span>
+          <button class="copy-btn" id="io-import-copy" onclick="copyResult('io-import-preview', this)" title="Copy" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="io-panel-body">
+          <div class="io-drop-zone" id="io-drop-zone"
+               onclick="triggerImport()"
+               ondragover="event.preventDefault(); this.classList.add('drag-over')"
+               ondragleave="this.classList.remove('drag-over')"
+               ondrop="this.classList.remove('drag-over'); handleImportDrop(event)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+            </svg>
+            <div>Click or drag a <strong>.json</strong> file here</div>
+          </div>
+          <input type="file" id="io-file-input" class="io-file-input"
+                 accept=".json,application/json" onchange="handleImportFile(event)"/>
+          <span class="io-empty-hint" id="io-import-hint">No file imported yet.</span>
+          <textarea id="io-import-preview" class="io-preview" style="display:none"></textarea>
+        </div>
+      </div>
+
+      <!-- Resize divider -->
+      <div class="rtp-resize-handle" id="io-resize-handle"></div>
+
+      <!-- Right: Export -->
+      <div class="io-panel" id="io-panel-export">
+        <div class="io-panel-header">
+          <span class="io-panel-title">Export</span>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <button class="copy-btn" id="io-export-copy" onclick="copyResult('io-export-preview', this)" title="Copy" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+            <button class="secondary-btn" onclick="previewExport()">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+            <button class="run-btn" onclick="runExport()">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download
+            </button>
+          </div>
+        </div>
+        <div class="io-panel-body">
+          <span class="io-empty-hint" id="io-export-hint">Click Preview or Download to export all current config to JSON.</span>
+          <textarea id="io-export-preview" class="io-preview io-preview--export" style="display:none"></textarea>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -541,6 +608,7 @@
 <script src="/js/simulation/strategy.js"></script>
 <script src="/js/simulation/rtp-sim.js"></script>
 <script src="/js/simulation/spin-test.js"></script>
+<script src="/js/import-export/io.js"></script>
 <script src="/js/core/tooltips.js"></script>
 <script src="/js/core/app-init.js"></script>
 
@@ -588,7 +656,7 @@
         </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_stack_chances">stackChances</span>
-          <span class="info-val" data-i18n-html="info.val_stack_chances">Relative weights controlling how often each stack height in <code>stackSizes</code> is selected. The values do not need to sum to any particular number — only their ratios matter. For example, with <code>stackSizes: 1, 2, 3</code> and <code>stackChances: 60, 30, 10</code>, a height of 1 is chosen approximately 60% of the time. Must have the same length as <code>stackSizes</code>.</span>
+          <span class="info-val" data-i18n-html="info.val_stack_chances">Percentage weights controlling how often each stack height in <code>stackSizes</code> is selected. Values must be &gt;= 0 and sum to exactly 100. For example, with <code>stackSizes: 1, 2, 3</code> and <code>stackChances: 60, 30, 10</code>, a height of 1 is chosen 60% of the time. Must have the same length as <code>stackSizes</code>.</span>
         </div>
         <div class="info-row">
           <span class="info-key" data-i18n="info.key_min_distance">minDistance</span>
@@ -667,11 +735,54 @@
         </div>
       </div>
 
+      <!-- I/O TAB -->
+      <div class="info-section" data-tab="io">
+        <div class="info-section-title" data-i18n="info.io_overview">Import / Export — Overview</div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_purpose">What this tab does</span>
+          <span class="info-val" data-i18n-html="info.val_io_purpose">The I/O tab lets you save and restore the entire state of the tool as a single <code>.json</code> file. One export captures all three panels at once: Generate configuration, Simulation (RTP) configuration, and Spin Test configuration — together with the most recent Generate result. Importing the file brings every panel back to exactly the state it was in when you exported.</span>
+        </div>
+      </div>
+
+      <div class="info-section" data-tab="io">
+        <div class="info-section-title" data-i18n="info.io_export">Export</div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_preview">Preview</span>
+          <span class="info-val" data-i18n-html="info.val_io_preview">Builds the export payload from all current form state and displays it in the Export pane so you can inspect or copy it before writing a file. Does not trigger a download. Running Preview again overwrites the previous preview.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_download">Download</span>
+          <span class="info-val" data-i18n-html="info.val_io_download">If a preview is already shown, downloads exactly that text as a <code>.json</code> file (nothing is re-computed). If no preview exists, builds the payload first and then downloads it. The filename is <code>slot-lab-export-YYYY-MM-DDTHH-MM-SS.json</code>.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_export_format">Export format</span>
+          <span class="info-val" data-i18n-html="info.val_io_export_format">The exported JSON has three top-level sections:<br/><br/><code>generate</code> — <code>config</code> holds the reel-set configuration (tile counts, restrictions, strategy, history size); <code>result</code> holds the last generated reel strip array.<br/><br/><code>simulation</code> — <code>config</code> holds the full RTP simulation configuration: strategy, screen dimensions, symbol table with paytables and wild settings, line definitions, reel-set chances, interval sets.<br/><br/><code>spinTest</code> — <code>config</code> holds the spin-test settings: reel-set index, stop positions, and a fixed screen if one was entered.<br/><br/>Sections that are empty or invalid at export time are omitted.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_formatting">Formatting rules</span>
+          <span class="info-val" data-i18n-html="info.val_io_formatting">The exported JSON is pretty-printed with a set of compaction rules applied so it stays readable without being excessively long:<br/>• Numeric arrays (reel strips, tile counts, stop lists) are collapsed onto a single line each.<br/>• Paytable interval objects <code>{"3": 2.0, "4": 5.0, …}</code> are collapsed to one line.<br/>• Each reel strip inside <code>reelSet</code> is placed on its own line.<br/>• Each reel inside <code>tilesCounts</code> is placed on its own line.<br/>• Line definitions are grouped four per line.<br/>• Restriction objects are collapsed to one line.</span>
+        </div>
+      </div>
+
+      <div class="info-section" data-tab="io">
+        <div class="info-section-title" data-i18n="info.io_import">Import</div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_import_how">How to import</span>
+          <span class="info-val" data-i18n-html="info.val_io_import_how">Click the drop zone or drag a <code>.json</code> file onto it. The file must be a valid JSON file — any file previously exported from this tool will work. After a successful import the Import pane shows a formatted preview of the loaded data.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_import_what">What gets restored</span>
+          <span class="info-val" data-i18n-html="info.val_io_import_what"><strong>Generate config</strong> — reel sets, tile counts, restrictions, strategy and history size are written back to the Generate tab form.<br/><br/><strong>Generate result</strong> — the saved reel strip JSON is placed in the Generate Result pane and the reel-set data becomes available to the Simulation and Spin Test tabs immediately (same effect as clicking Run).<br/><br/><strong>Simulation config</strong> — all RTP fields are restored: strategy, screen dimensions, min-match, thread count, bet size, spin count, symbol rows (type, paytable, wild settings), line definitions, reel-set chances, and Megaways height chances if present.<br/><br/><strong>Spin Test config</strong> — reel-set index, stop positions, and fixed screen are written back to the Spin Test inputs.<br/><br/>Only sections present in the file are restored; missing sections leave the corresponding tab unchanged.</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" data-i18n="info.key_io_import_raw">Importing a raw generate result</span>
+          <span class="info-val" data-i18n-html="info.val_io_import_raw">You can import the raw output of the Generate tab (<code>[{"setName":"…","reelSet":[[…],…]}]</code>) directly — not just full slot-lab export files. The reel data will be loaded into the Generate result pane and will populate the reel-set chances and symbol rows in the Simulation tab, exactly as if you had generated it in this session.</span>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
-
-<!-- Import from COUNT modal -->
 <div class="modal-overlay" id="import-counts-modal" onclick="if(event.target===this)closeImportCounts()">
   <div class="modal" style="max-width:560px;width:90%">
     <div class="modal-header">

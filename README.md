@@ -235,7 +235,7 @@ Application service layer.
 |---|---|
 | `GeneratorService` | Validates config via `ConfigValidator`, then dispatches to `FlatGenerator` or `ShuffleGenerator` based on `strategy` |
 | `ConverterService` | Dispatches `ConvertRequest` to the appropriate converter; constructs a minimal `ReelSetsCollectionData` for CSV conversion to supply `gameId` |
-| `ConfigValidator` | Validates `ReelSetsCollectionData` before generation — checks `mapName`, `gameId`, strategy presence, non-empty reel sets, non-negative tile counts, restriction count ≤ reel count, equal-length `stackSizes`/`stackChances`, positive stack sizes, non-negative distance |
+| `ConfigValidator` | Validates `ReelSetsCollectionData` before generation — checks `mapName`, `gameId`, strategy presence, non-empty reel sets, non-negative tile counts, restriction count ≤ reel count, equal-length `stackSizes`/`stackChances`, positive stack sizes, non-negative chances that sum to 100, non-negative distance |
 
 ---
 

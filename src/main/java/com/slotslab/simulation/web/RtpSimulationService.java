@@ -43,7 +43,7 @@ public class RtpSimulationService {
         int screenHeight = req.screenHeight();
 
         int[][][] reels = new int[setCount][screenWidth][];
-        int[] reelLengths = new int[screenWidth];
+        int[][] reelLengths = new int[setCount][screenWidth];
         for (int s = 0; s < setCount; s++) {
             List<List<Integer>> rs = req.reelSets().get(s).reelSet();
             for (int r = 0; r < screenWidth; r++) {
@@ -51,7 +51,7 @@ public class RtpSimulationService {
                 int[] arr = new int[reel.size()];
                 for (int p = 0; p < reel.size(); p++) arr[p] = reel.get(p);
                 reels[s][r] = arr;
-                if (s == 0) reelLengths[r] = arr.length;
+                reelLengths[s][r] = arr.length;
             }
         }
 

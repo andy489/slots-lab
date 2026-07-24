@@ -23,6 +23,7 @@ function storeGeneratedReels(reelSetsJson) {
 function restoreRtpForm(payload) {
   if (!payload) return;
   const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  // 1. Set strategy + screen dims first so onStrategyChange / onScreenSizeChange render the right UI
   set('rtp-strategy', payload.strategy);
   set('rtp-screen-width', payload.screenWidth);
   set('rtp-screen-height', payload.screenHeight);
@@ -34,6 +35,7 @@ function restoreRtpForm(payload) {
     const opt = Array.from(spinsEl.options).find(o => parseInt(o.value) === payload.spins);
     if (opt) spinsEl.value = opt.value;
   }
+  // 2. Reel sets (must be set before syncRtpChances)
   if (payload.reelSets) {
     _latestReelSets = payload.reelSets;
     syncRtpChances();
@@ -56,10 +58,12 @@ function restoreRtpForm(payload) {
       });
     });
   }
+  // 3. Line definitions
   document.getElementById('rtp-lines-list').innerHTML = '';
   _lineCounter = 0;
   (payload.lineDefinitions || []).forEach(line => addLineDef(line.join(', ')));
   updateLineCount();
+  // 4. Interval sets
   document.getElementById('interval-sets-container').innerHTML = '';
   document.getElementById('clusters-interval-sets-container').innerHTML = '';
   const isClustersRestore = payload.strategy === 'CLUSTERS';
@@ -74,6 +78,15 @@ function restoreRtpForm(payload) {
       payload.adjacencyOffsets.forEach(o => addAdjacencyOffset(o.x, o.y));
     }
   }
+  // 5. Fire layout updates so UI sections are in the right state before symbols are written
+  onScreenSizeChange();
+  onStrategyChange();
+  // Re-apply dims after handlers (onStrategyChange clears fields that match its defaults)
+  set('rtp-screen-width', payload.screenWidth);
+  set('rtp-screen-height', payload.screenHeight);
+  set('rtp-min-match', payload.minMatch);
+  // 6. Symbols last — populated after onStrategyChange so wild-field visibility is set but values
+  //    are written by us, not reset by the strategy handler
   document.getElementById('rtp-symbol-rows').innerHTML = '';
   _symRowCounter = 0;
   (payload.symbols || []).forEach(sym => {
@@ -98,8 +111,6 @@ function restoreRtpForm(payload) {
       }
     }
   });
-  onScreenSizeChange();
-  onStrategyChange();
 }
 
 function syncRtpChances() {
