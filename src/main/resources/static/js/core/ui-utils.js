@@ -8,6 +8,8 @@ function switchTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
+  btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  _updateTabbarEdges();
   setTimeout(() => {
     if (name === 'generate') genOutput.refresh();
     else if (name === 'convert') { convInput.refresh(); convOutput.refresh(); }
@@ -16,6 +18,23 @@ function switchTab(name, btn) {
     else if (name === 'io') { /* no CodeMirror editors to refresh */ }
   }, 0);
 }
+
+/* ── Tabbar scroll-edge fade indicators ── */
+function _updateTabbarEdges() {
+  const bar  = document.getElementById('tabbar');
+  const wrap = document.getElementById('tabbar-wrap');
+  if (!bar || !wrap) return;
+  wrap.classList.toggle('can-scroll-left',  bar.scrollLeft > 4);
+  wrap.classList.toggle('can-scroll-right', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 4);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const bar = document.getElementById('tabbar');
+  if (!bar) return;
+  bar.addEventListener('scroll', _updateTabbarEdges, { passive: true });
+  new ResizeObserver(_updateTabbarEdges).observe(bar);
+  requestAnimationFrame(_updateTabbarEdges);
+});
+window.addEventListener('load', () => requestAnimationFrame(_updateTabbarEdges));
 
 function tryLoadReelsFromEditor() {
   if (_latestReelSets && _latestReelSets.length > 0) return;

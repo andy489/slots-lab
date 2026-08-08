@@ -1,12 +1,16 @@
 package com.slotslab.history;
 
 import com.slotslab.ui.SessionUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "History", description = "Per-session generation and simulation history. Requires the slotlab-session cookie (set automatically on GET /).")
 @RestController
 @RequestMapping("/api/history")
 public class HistoryController {
@@ -17,8 +21,11 @@ public class HistoryController {
         this.service = service;
     }
 
+    @Operation(summary = "List history entries", description = "Returns all entries for the session, newest first. kind = generate | simulate")
     @GetMapping("/{kind}")
-    public ResponseEntity<List<HistoryEntry>> list(@PathVariable String kind, HttpServletRequest req) {
+    public ResponseEntity<List<HistoryEntry>> list(
+            @Parameter(description = "generate or simulate") @PathVariable String kind,
+            HttpServletRequest req) {
         try {
             return ResponseEntity.ok(service.list(kind, SessionUtil.readSession(req)));
         } catch (Exception e) {
@@ -26,8 +33,12 @@ public class HistoryController {
         }
     }
 
+    @Operation(summary = "Save a history entry")
     @PostMapping("/{kind}")
-    public ResponseEntity<HistoryEntry> save(@PathVariable String kind, @RequestBody HistoryEntry entry, HttpServletRequest req) {
+    public ResponseEntity<HistoryEntry> save(
+            @Parameter(description = "generate or simulate") @PathVariable String kind,
+            @RequestBody HistoryEntry entry,
+            HttpServletRequest req) {
         try {
             return ResponseEntity.ok(service.save(kind, SessionUtil.readSession(req), entry));
         } catch (Exception e) {
@@ -35,8 +46,12 @@ public class HistoryController {
         }
     }
 
+    @Operation(summary = "Trim history to max N entries", description = "Deletes oldest entries beyond the given size (clamped to 1–20).")
     @PutMapping("/{kind}/resize")
-    public ResponseEntity<List<HistoryEntry>> resize(@PathVariable String kind, @RequestParam int size, HttpServletRequest req) {
+    public ResponseEntity<List<HistoryEntry>> resize(
+            @Parameter(description = "generate or simulate") @PathVariable String kind,
+            @RequestParam int size,
+            HttpServletRequest req) {
         try {
             String sid = SessionUtil.readSession(req);
             service.resize(kind, sid, Math.max(1, Math.min(20, size)));
@@ -46,8 +61,12 @@ public class HistoryController {
         }
     }
 
+    @Operation(summary = "Delete one history entry")
     @DeleteMapping("/{kind}/{id}")
-    public ResponseEntity<List<HistoryEntry>> deleteOne(@PathVariable String kind, @PathVariable String id, HttpServletRequest req) {
+    public ResponseEntity<List<HistoryEntry>> deleteOne(
+            @Parameter(description = "generate or simulate") @PathVariable String kind,
+            @Parameter(description = "Entry timestamp ID") @PathVariable String id,
+            HttpServletRequest req) {
         try {
             String sid = SessionUtil.readSession(req);
             service.deleteOne(kind, sid, id);
@@ -57,8 +76,11 @@ public class HistoryController {
         }
     }
 
+    @Operation(summary = "Clear all history entries")
     @DeleteMapping("/{kind}")
-    public ResponseEntity<Void> clearAll(@PathVariable String kind, HttpServletRequest req) {
+    public ResponseEntity<Void> clearAll(
+            @Parameter(description = "generate or simulate") @PathVariable String kind,
+            HttpServletRequest req) {
         try {
             service.clearAll(kind, SessionUtil.readSession(req));
             return ResponseEntity.ok().build();
@@ -67,3 +89,4 @@ public class HistoryController {
         }
     }
 }
+

@@ -1,3 +1,24 @@
+/* ── Medium screens: compact tab bar so all tabs fit ── */
+@media (max-width: 960px) {
+  .tabbar-spacer { display: none; }
+  .tabbar-sep    { display: none; }
+  .tabbar { padding: 0 0.5rem; }
+  .tab-btn {
+    padding: 0 0.9rem;
+    font-size: 0.72rem;
+    letter-spacing: .06em;
+  }
+}
+
+/* ── Very narrow: icon-only tabs to prevent overflow clipping ── */
+@media (max-width: 600px) {
+  .tab-btn span { display: none; }
+  .tab-btn {
+    padding: 0 0.65rem;
+    gap: 0;
+  }
+}
+
 /* ── Mobile / narrow-screen overrides ── */
 @media (max-width: 768px) {
 
@@ -17,20 +38,14 @@
   .header-title { font-size: 1.05rem; }
   .header-sub   { display: none; }
 
-  /* ── Tab bar: scrollable horizontally ── */
+  /* ── Tab bar: tighter padding on small screens ── */
   .tabbar {
     padding: 0 0.5rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
   }
-  .tabbar::-webkit-scrollbar { display: none; }
   .tab-btn {
     padding: 0 1rem;
     font-size: 0.72rem;
     letter-spacing: .06em;
-    white-space: nowrap;
-    flex-shrink: 0;
   }
 
   /* ── Main area: allow natural height so content scrolls ── */

@@ -9,6 +9,8 @@ spring:
   devtools:
     restart:
       enabled: true
+      additional-paths: src/main/resources
+      exclude: static/**
     livereload:
       enabled: true
 
@@ -29,3 +31,27 @@ keep-alive:
 
 history:
   session-ttl-days: 7
+
+agent:
+  max-attempts: 3
+  skills-path: skills/
+  human-in-the-loop:
+    enabled: true
+
+tabs:
+  generate:  true
+  rtp:       true
+  spin-test: true
+  convert:   true
+  io:        true
+  ai:        false
+
+springdoc:
+  swagger-ui:
+    path: /api-docs
+    tags-sorter: alpha
+    operations-sorter: alpha
+    enabled: true
+  api-docs:
+    path: /api-docs/json
+    enabled: true

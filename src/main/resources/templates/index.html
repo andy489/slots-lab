@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="/css/spin-test.css"/>
   <link rel="stylesheet" href="/css/convert.css"/>
   <link rel="stylesheet" href="/css/import-export.css"/>
+  <link rel="stylesheet" href="/css/ai-agent.css"/>
   <link rel="stylesheet" href="/css/modal.css"/>
   <link rel="stylesheet" href="/css/toast.css"/>
   <link rel="stylesheet" href="/css/responsive.css"/>
@@ -57,16 +58,20 @@
   </button>
 </header>
 
-<div class="tabbar">
+<div class="tabbar-wrap" id="tabbar-wrap">
+<div class="tabbar" id="tabbar">
   <button class="info-btn" id="info-tab-btn" onclick="openInfo()" data-i18n="tab.about_title" data-i18n-attr="title" title="About this tab">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
   </button>
   <div class="tabbar-sep"></div>
-  <button class="tab-btn active" onclick="switchTab('generate', this)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h0"/><path d="M17.8 6.2L19 5"/><path d="M3 21l9-9"/><path d="M12.2 6.2L11 5"/></svg>
+  <button class="tab-btn" th:classappend="${tabs.generate} ? 'active' : ''"
+          th:if="${tabs.generate}"
+          onclick="switchTab('generate', this)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="8" y1="2" x2="8" y2="22"/><line x1="16" y1="2" x2="16" y2="22"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/></svg>
     <span data-i18n="tab.generate">Generate</span>
   </button>
-  <button class="tab-btn" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
+  <button class="tab-btn" th:classappend="${!tabs.generate and tabs.rtp} ? 'active' : ''"
+          th:if="${tabs.rtp}" id="tab-btn-rtp" onclick="switchTab('rtp', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <rect x="0"  y="20" width="4" height="3"/>
       <rect x="5"  y="15" width="4" height="8"/>
@@ -77,24 +82,59 @@
     </svg>
     <span data-i18n="tab.simulation">SIMULATION</span>
   </button>
-  <button class="tab-btn" onclick="switchTab('spin-test', this)">
+  <button class="tab-btn" th:if="${tabs.spinTest}" onclick="switchTab('spin-test', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
     <span data-i18n="tab.spin_test">Spin Test</span>
   </button>
-  <button class="tab-btn" onclick="switchTab('convert', this)">
+  <button class="tab-btn" th:if="${tabs.convert}" onclick="switchTab('convert', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     <span data-i18n="tab.convert">Convert</span>
   </button>
-  <button class="tab-btn" onclick="switchTab('io', this)">
+  <button class="tab-btn" th:if="${tabs.io}" onclick="switchTab('io', this)">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     <span>I/O</span>
   </button>
+  <div class="tabbar-spacer"></div>
+  <div class="tabbar-sep"></div>
+  <button class="tab-btn tab-btn--ai" th:if="${tabs.ai}" onclick="switchTab('ai', this)">
+
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- input layer -->
+      <circle cx="3" cy="6"  r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="3" cy="12" r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="3" cy="18" r="1.8" fill="currentColor" stroke="none"/>
+      <!-- hidden layer -->
+      <circle cx="12" cy="4"  r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="10" r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="22" r="1.8" fill="currentColor" stroke="none"/>
+      <!-- output layer -->
+      <circle cx="21" cy="8"  r="1.8" fill="currentColor" stroke="none"/>
+      <circle cx="21" cy="16" r="1.8" fill="currentColor" stroke="none"/>
+      <!-- edges: input → hidden -->
+      <line x1="4.8"  y1="6"  x2="10.2" y2="4"/>
+      <line x1="4.8"  y1="6"  x2="10.2" y2="10"/>
+      <line x1="4.8"  y1="12" x2="10.2" y2="10"/>
+      <line x1="4.8"  y1="12" x2="10.2" y2="16"/>
+      <line x1="4.8"  y1="18" x2="10.2" y2="16"/>
+      <line x1="4.8"  y1="18" x2="10.2" y2="22"/>
+      <!-- edges: hidden → output -->
+      <line x1="13.8" y1="4"  x2="19.2" y2="8"/>
+      <line x1="13.8" y1="10" x2="19.2" y2="8"/>
+      <line x1="13.8" y1="10" x2="19.2" y2="16"/>
+      <line x1="13.8" y1="16" x2="19.2" y2="8"/>
+      <line x1="13.8" y1="16" x2="19.2" y2="16"/>
+      <line x1="13.8" y1="22" x2="19.2" y2="16"/>
+    </svg>
+    <span>AI</span>
+  </button>
+</div>
 </div>
 
 <div class="main">
 
   <!-- ══ GENERATE TAB ══ -->
-  <div id="tab-generate" class="tab-panel active">
+  <div th:if="${tabs.generate}" id="tab-generate" class="tab-panel" th:classappend="${tabs.generate} ? 'active' : ''">
     <div class="gen-layout">
 
       <!-- Left: config form -->
@@ -189,7 +229,7 @@
   </div>
 
   <!-- ══ RTP TAB ══ -->
-  <div id="tab-rtp" class="tab-panel">
+  <div th:if="${tabs.rtp}" id="tab-rtp" class="tab-panel" th:classappend="${!tabs.generate and tabs.rtp} ? 'active' : ''">
     <div class="rtp-layout">
 
       <!-- Left: configuration -->
@@ -400,7 +440,7 @@
   </div>
 
   <!-- ══ SPIN TEST TAB ══ -->
-  <div id="tab-spin-test" class="tab-panel">
+  <div th:if="${tabs.spinTest}" id="tab-spin-test" class="tab-panel">
     <div class="spin-test-layout">
 
       <!-- Left: controls -->
@@ -486,7 +526,7 @@
   </div>
 
   <!-- ══ CONVERT TAB ══ -->
-  <div id="tab-convert" class="tab-panel">
+  <div th:if="${tabs.convert}" id="tab-convert" class="tab-panel">
     <div class="conv-layout">
       <div class="conv-toolbar">
         <div class="field-group">
@@ -533,7 +573,7 @@
   </div>
 
   <!-- ══ IMPORT / EXPORT TAB ══ -->
-  <div id="tab-io" class="tab-panel">
+  <div th:if="${tabs.io}" id="tab-io" class="tab-panel">
     <div class="io-layout">
 
       <!-- Left: Import -->
@@ -593,6 +633,196 @@
     </div>
   </div>
 
+  <!-- ══ AI AGENT TAB ══ -->
+  <div th:if="${tabs.ai}" id="tab-ai" class="tab-panel">
+    <div class="ai-layout">
+
+      <!-- Left: config -->
+      <div class="ai-config-col">
+        <div class="form-col-header">
+          <span class="form-col-title">AI Agent</span>
+          <span style="flex:1"></span>
+          <button class="icon-btn" id="ai-preview-btn" onclick="previewAiRequest()" title="Preview request payload" style="margin-right:0.35rem">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="icon-btn danger" id="ai-stop-btn" onclick="cancelAiAgent()" title="Cancel running agent" style="display:none;margin-right:0.35rem">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </button>
+          <button class="run-btn" id="ai-run-btn" onclick="runAiAgent()">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run Agent
+          </button>
+        </div>
+        <div class="form-scroll" id="ai-form-scroll">
+
+          <!-- Strategy & Screen -->
+          <div class="section-card">
+            <div class="section-card-header"><span class="section-label">Game Configuration</span></div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field-item">
+                  <label for="ai-strategy">Strategy</label>
+                  <select id="ai-strategy" onchange="onAiStrategyChange()">
+                    <option value="LTR" selected>LTR (Left to Right)</option>
+                    <option value="RTL">RTL (Right to Left)</option>
+                    <option value="BW">BW (Both Ways)</option>
+                    <option value="SL">SL (Super Lines)</option>
+                    <option value="ADJ">ADJ (Adjacent)</option>
+                    <option value="WAYS">WAYS (All Ways)</option>
+                    <option value="MEGAWAYS">MEGAWAYS&#8482;</option>
+                    <option value="SCATTERS">SCATTERS</option>
+                    <option value="CLUSTERS">CLUSTERS</option>
+                  </select>
+                </div>
+                <div class="field-item">
+                  <label for="ai-min-match">Min Match</label>
+                  <input type="number" id="ai-min-match" value="3" min="2" max="6"/>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field-item">
+                  <label for="ai-screen-width">Width (reels)</label>
+                  <input type="number" id="ai-screen-width" value="5" min="3" max="9"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-screen-height">Height (rows)</label>
+                  <input type="number" id="ai-screen-height" value="4" min="1" max="7"/>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field-item">
+                  <label for="ai-syms-per-reel">Symbols per Reel</label>
+                  <input type="number" id="ai-syms-per-reel" value="256" min="16" max="512"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-syms-per-reel-delta">Syms per Reel Delta</label>
+                  <input type="number" id="ai-syms-per-reel-delta" value="16" min="0" max="256"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Line Definitions (line-based strategies only) -->
+          <div class="section-card" id="ai-line-defs-card" style="display:none">
+            <div class="section-card-header" style="flex-wrap:nowrap">
+              <span class="section-label">Line Definitions</span>
+              <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+                <button class="icon-btn" id="ai-linedefs-toggle-btn" onclick="aiToggleLineDefs()" title="Fill with default lines">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                </button>
+                <button class="icon-btn add" onclick="aiAddLineDef()" title="Add line">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="section-card-body">
+              <div class="rtp-lines-grid" id="ai-lines-list"></div>
+              <button class="add-btn" id="ai-add-payline-btn" onclick="aiAddLineDef()" style="margin-top:0.4rem">+ Add payline (0)</button>
+            </div>
+          </div>
+
+          <!-- Target RTP & Volatility -->
+          <div class="section-card">
+            <div class="section-card-header"><span class="section-label">Target Profile<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:340px;left:0;transform:none"><div class="tip-rule"><strong>Target RTP (%)</strong> — desired return-to-player percentage the agent will aim for.</div><div class="tip-rule"><strong>RTP Delta (%)</strong> — tolerance band around the target RTP. Result is valid when simulated RTP falls within ±delta.</div><div class="tip-rule"><strong>Target Hit Rate (%)</strong> — desired frequency of winning spins as a percentage of total spins.</div><div class="tip-rule"><strong>Hit Rate Delta (%)</strong> — tolerance band around the target hit rate.</div><div class="tip-rule"><strong>Target Volatility</strong> — qualitative class used for skill selection (σ = standard deviation per spin / bet):<div class="tip-row" style="margin-top:0.25rem"><span>Low</span><span>[0, 3)</span></div><div class="tip-row"><span>Casual</span><span>[3, 7)</span></div><div class="tip-row"><span>High</span><span>[7, 10)</span></div><div class="tip-row"><span>Very High</span><span>[10, 15)</span></div><div class="tip-row"><span>Extreme</span><span>[15, 25)</span></div><div class="tip-row"><span>Ultra Extreme</span><span>[25, ∞)</span></div></div></span></span></span></div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field-item">
+                  <label for="ai-target-rtp">Target RTP (%)</label>
+                  <input type="text" inputmode="decimal" id="ai-target-rtp" value="95.50" class="ai-float-input"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-rtp-delta">RTP Delta (%)</label>
+                  <input type="text" inputmode="decimal" id="ai-rtp-delta" value="0.15" class="ai-float-input"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-target-hit-rate">Target Hit Rate (%)</label>
+                  <input type="text" inputmode="decimal" id="ai-target-hit-rate" value="20.00" class="ai-float-input"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-hit-rate-delta">Hit Rate Delta (%)</label>
+                  <input type="text" inputmode="decimal" id="ai-hit-rate-delta" value="2.00" class="ai-float-input"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-target-volatility">Target Volatility</label>
+                  <select id="ai-target-volatility">
+                    <option value="LOW">Low</option>
+                    <option value="CASUAL" selected>Casual</option>
+                    <option value="HIGH">High</option>
+                    <option value="VERY_HIGH">Very High</option>
+                    <option value="EXTREME">Extreme</option>
+                    <option value="ULTRA_EXTREME">Ultra Extreme</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Execution Settings -->
+          <div class="section-card">
+            <div class="section-card-header"><span class="section-label">Execution Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:340px;left:0;transform:none"><div class="tip-rule"><strong>Max Attempts</strong> — how many times the graph loop retries if the generated reels fail validation or are rejected by the human-approval step. Each attempt re-runs the full generation pipeline from scratch. When exhausted, the agent returns the best result it found.</div><div class="tip-rule"><strong>Max Iterations</strong> — number of weight-tuning iterations per attempt. Each iteration simulates 500 000 spins and adjusts reel-set weights toward the target RTP and hit rate. More iterations = slower but more precise convergence.</div></span></span></span></div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field-item">
+                  <label for="ai-max-attempts">Max Attempts</label>
+                  <input type="number" id="ai-max-attempts" value="3" min="1" max="20"/>
+                </div>
+                <div class="field-item">
+                  <label for="ai-max-iterations">Max Iterations</label>
+                  <input type="number" id="ai-max-iterations" value="80" min="10" max="500"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Symbol Setup -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <span class="section-label">Symbols</span>
+              <div style="display:flex;align-items:center;gap:0.5rem">
+                <label for="ai-sym-count" style="font-size:0.72rem;color:var(--text2);white-space:nowrap">Count</label>
+                <input type="number" id="ai-sym-count" value="8" min="2" max="20"
+                       style="width:3.5rem" oninput="onAiSymCountChange(this.value)"/>
+                <button class="icon-btn" onclick="addAiSymbolRow()" title="Add symbol">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="section-card-body">
+              <div class="ai-sym-header-row">
+                <span>ID</span><span>Tier</span><span>Paytable Hint</span><span></span>
+              </div>
+              <div id="ai-sym-list"></div>
+            </div>
+          </div>
+
+          <!-- Wild Multiplier Config removed — agent derives this from symbol hints -->
+
+        </div>
+      </div>
+
+      <!-- Resize divider -->
+      <div class="rtp-resize-handle" id="ai-resize-handle"></div>
+
+      <!-- Right: agent output -->
+      <div class="ai-output-col">
+        <div class="form-col-header">
+          <span class="form-col-title">Agent Output</span>
+          <span style="flex:1"></span>
+          <button class="icon-btn" id="ai-copy-btn" onclick="copyAiOutput()" title="Copy output" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="ai-output-body" id="ai-output-body">
+          <span class="ai-output-empty">Run the agent to see its design proposal here.</span>
+        </div>
+        <div id="ai-output-cm-wrap" style="display:none;flex:1;overflow:hidden;position:relative">
+          <textarea id="ai-output-cm"></textarea>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <div id="toast"></div>
@@ -609,6 +839,7 @@
 <script src="/js/simulation/rtp-sim.js"></script>
 <script src="/js/simulation/spin-test.js"></script>
 <script src="/js/import-export/io.js"></script>
+<script src="/js/ai/ai-agent.js"></script>
 <script src="/js/core/tooltips.js"></script>
 <script src="/js/core/app-init.js"></script>
 

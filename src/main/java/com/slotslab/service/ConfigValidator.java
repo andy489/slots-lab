@@ -11,12 +11,6 @@ import java.util.List;
 public class ConfigValidator {
 
     public void validate(ReelSetsCollectionData config) {
-        if (config.mapName() == null || config.mapName().isBlank())
-            throw new IllegalArgumentException("mapName is required");
-
-        if (config.gameId() == null || config.gameId().isBlank())
-            throw new IllegalArgumentException("gameId is required");
-
         if (config.strategy() == null)
             throw new IllegalArgumentException("strategy is required (shuffle or flat)");
 

@@ -1,13 +1,37 @@
 /* ── Tab bar ── */
-.tabbar {
+.tabbar-wrap {
   flex-shrink: 0;
+  position: relative;
   background: var(--surface2);
   border-bottom: 1px solid var(--border);
-  padding: 0 1.5rem;
+}
+/* Fade edges hint that the bar is scrollable */
+.tabbar-wrap::before,
+.tabbar-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 1px;
+  width: 2.5rem;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.tabbar-wrap::before { left: 0;  background: linear-gradient(to right,  var(--surface2), transparent); }
+.tabbar-wrap::after  { right: 0; background: linear-gradient(to left, var(--surface2), transparent); }
+.tabbar-wrap.can-scroll-left::before  { opacity: 1; }
+.tabbar-wrap.can-scroll-right::after  { opacity: 1; }
+
+.tabbar {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0 1.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.tabbar::-webkit-scrollbar { display: none; }
 .tabbar-sep { width: 1px; height: 22px; background: var(--border-hi); margin: 0 0.25rem; flex-shrink: 0; }
 
 .tab-btn {
@@ -27,6 +51,14 @@
   margin-bottom: -1px;
   transition: color .15s;
   font-family: var(--font);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab-btn:hover { color: var(--text2); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tabbar-spacer { flex: 1; min-width: 0; }
+
+.tab-btn--ai { color: #a855f7; font-weight: 900; letter-spacing: .15em; }
+.tab-btn--ai:hover { color: #c084fc; }
+.tab-btn--ai.active { color: #a855f7; border-bottom-color: #a855f7; }

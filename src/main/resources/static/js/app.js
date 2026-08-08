@@ -333,19 +333,6 @@ convInput.setValue(prettyCompact([{ setName: 'ReelSet#0', reelSet: [r1, r2, r3] 
 setTimeout(() => { genOutput.refresh(); convInput.refresh(); convOutput.refresh(); }, 0);
 
 /* ── Tabs ── */
-function switchTab(name, btn) {
-  _activeTab = name;
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
-  setTimeout(() => {
-    if (name === 'generate') genOutput.refresh();
-    else if (name === 'convert') { convInput.refresh(); convOutput.refresh(); }
-    else if (name === 'rtp') tryLoadReelsFromEditor();
-    else if (name === 'spin-test') { tryLoadReelsFromEditor(); updateSpinTestPlaceholders(); }
-  }, 0);
-}
 
 // Attempt to populate _latestReelSets from whatever is currently in the Generate result editor
 function tryLoadReelsFromEditor() {
@@ -2959,6 +2946,7 @@ function compactJson(obj) {
   makeResizable('spin-resize-handle', '.spin-test-layout', '--spin-col-width', 300, 'spin_col_width', 200, 700);
   makeResizable('conv-resize-handle', '.conv-split',       '--conv-col-width', 500, 'conv_col_width', 200, 900);
   makeResizable('io-resize-handle',   '.io-layout',        '--io-col-width',   580, 'io_col_width',   220, 1100);
+  makeResizable('ai-resize-handle',   '.ai-layout',        '--ai-col-width',   520, 'ai_col_width',   260, 900);
 
   // ── RTP panel resize ────────────────────────────────────────────────────────
   (function () {

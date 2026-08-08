@@ -236,8 +236,6 @@ function toggleDefaultsClear(cardId) {
 
 /* ── Build config from form ── */
 function buildConfig() {
-  const mapName  = document.getElementById('f-mapname') ? document.getElementById('f-mapname').value.trim() || 'GAME' : 'GAME';
-  const gameId   = document.getElementById('f-gameid')  ? document.getElementById('f-gameid').value.trim()  || '0'    : '0';
   const strategy = document.getElementById('f-strategy').value;
 
   const reelSets = [];
@@ -263,7 +261,7 @@ function buildConfig() {
     reelSets.push({ tilesCounts, restrictions });
   });
 
-  return { mapName, gameId, strategy, output: 'stdout', resultFilePath: './result.txt', reelSets };
+  return { strategy, reelSets };
 }
 
 /* ── Validate ── */

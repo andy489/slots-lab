@@ -1,14 +1,12 @@
 package com.slotslab.convert;
 
 import com.slotslab.reel.ReelSetNamed;
-import com.slotslab.reel.ReelSetsCollectionData;
 
 import java.util.List;
 import java.util.StringJoiner;
 
 public class CsvConverter {
-    public static String convert(ReelSetsCollectionData collection, List<ReelSetNamed> reelSets) {
-        String gameId = collection.gameId();
+    public static String convert(String gameId, List<ReelSetNamed> reelSets) {
         var sb = new StringBuilder();
 
         for (ReelSetNamed rs : reelSets) {
