@@ -26,6 +26,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
     private final WinReelSetFactory winFactory;
     private final PaytableGenerator paytableGen;
     private final ReelSetWeightTuner weightTuner;
+    private final RestrictionBuilder restrictionBuilder;
     private final ObjectMapper mapper;
 
     public LtrReelGenerationTool(SymbolCountInitialiser countInit,
@@ -33,12 +34,14 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
                                   WinReelSetFactory winFactory,
                                   PaytableGenerator paytableGen,
                                   ReelSetWeightTuner weightTuner,
+                                  RestrictionBuilder restrictionBuilder,
                                   ObjectMapper mapper) {
         this.countInit  = countInit;
         this.noWinFactory = noWinFactory;
         this.winFactory   = winFactory;
         this.paytableGen  = paytableGen;
         this.weightTuner  = weightTuner;
+        this.restrictionBuilder = restrictionBuilder;
         this.mapper = mapper;
     }
 
@@ -100,15 +103,14 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
                 context != null ? context::isCancelled : () -> false);
 
         // --- Build ReelSetsCollectionData with SHUFFLE strategy ---
-        // No-win sets: restriction biased toward smaller stacks (lowers hit rate).
-        // Win sets: restriction biased toward larger stacks for the favored symbol (raises hit rate).
-        int totalSets = noWinSets.size() + winEntries.size();
-        List<Restriction> restrictions = new ArrayList<>(totalSets);
+        // Each reel set gets its own restriction from RestrictionBuilder (skill 06):
+        // no-win sets shift stack mass left for lower hit rate; win sets always bias right.
+        List<Restriction> restrictions = new ArrayList<>();
         for (int i = 0; i < noWinSets.size(); i++) {
-            restrictions.add(buildRestriction(request.targetHitRate(), minMatch, false));
+            restrictions.add(restrictionBuilder.build(screenHeight, request.targetHitRate(), false));
         }
-        for (WinReelSetFactory.WinReelEntry entry : winEntries) {
-            restrictions.add(buildRestriction(request.targetHitRate(), minMatch, true));
+        for (WinReelSetFactory.WinReelEntry ignored : winEntries) {
+            restrictions.add(restrictionBuilder.build(screenHeight, request.targetHitRate(), true));
         }
 
         List<ReelSet> reelSets = new ArrayList<>();
@@ -149,8 +151,6 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         double[] rawWeights = weighted.weights();
         List<Double> weightsList = new ArrayList<>();
         for (double w : rawWeights) weightsList.add(Math.round(w * 10000.0) / 10000.0);
-        response.put("weights", weightsList);
-
         response.put("weights", weightsList);
 
         List<Map<String, Object>> reelSetInfos = new ArrayList<>();
@@ -196,34 +196,6 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         } catch (Exception e) {
             throw new RuntimeException("Failed to serialise LTR generation result", e);
         }
-    }
-
-    private Restriction buildRestriction(double targetHitRate, int minMatch, boolean isWinSet) {
-        // Stack sizes [1,2,3,4,5], base chances [24,28,23,16,9].
-        // No-win sets: lower HR → more small stacks (harder to form wins).
-        // Win sets: always bias toward larger stacks to cluster the favored symbol.
-        double hr = Math.max(5.0, Math.min(50.0, targetHitRate));
-        double t = (hr - 5.0) / 45.0; // 0.0 (low HR) → 1.0 (high HR)
-
-        int c1, c2, c3, c4, c5;
-        if (isWinSet) {
-            // larger stacks favored regardless of HR
-            c1 = 10; c2 = 18; c3 = 25; c4 = 27; c5 = 20;
-        } else {
-            c1 = (int) Math.round(24 + (1 - t) * 10);
-            c2 = (int) Math.round(28 + (1 - t) * 4);
-            c3 = 23;
-            c4 = (int) Math.round(16 - (1 - t) * 6);
-            c5 = (int) Math.round(9  - (1 - t) * 8);
-            c4 = Math.max(2, c4);
-            c5 = Math.max(1, c5);
-        }
-
-        return new Restriction(
-            List.of(1, 2, 3, 4, 5),
-            List.of((double) c1, (double) c2, (double) c3, (double) c4, (double) c5),
-            minMatch
-        );
     }
 
     private List<SymbolDef> parseSymbols(List<Map<String, Object>> raw) {
