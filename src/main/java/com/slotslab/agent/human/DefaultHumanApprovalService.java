@@ -26,7 +26,11 @@ public class DefaultHumanApprovalService implements HumanApprovalService {
 
     @Override
     public void submitApproval(ApprovalResult result) {
-        // Wired from REST endpoint — see AgentController
+        // Cannot route a result without an execution id — this overload is unusable.
+        // Callers must use submitApprovalForExecution(executionId, result) instead.
+        throw new UnsupportedOperationException(
+                "submitApproval(ApprovalResult) cannot correlate a result to an execution; "
+                        + "use submitApprovalForExecution(executionId, result)");
     }
 
     public void submitApprovalForExecution(UUID executionId, ApprovalResult result) {

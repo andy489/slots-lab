@@ -1,6 +1,7 @@
 package com.slotslab.agent.skills.ltr;
 
 import java.util.List;
+import java.util.Map;
 
 public record WeightedReelSets(
         List<int[][]> reelSets,
@@ -17,6 +18,8 @@ public record WeightedReelSets(
             double stdDev,
             double volatilityIndex,
             String volatilityLabel,
-            long spins
+            long spins,
+            /** symbolId → matchCount → hit count */
+            Map<Integer, Map<Integer, Long>> hitDistribution
     ) {}
 }

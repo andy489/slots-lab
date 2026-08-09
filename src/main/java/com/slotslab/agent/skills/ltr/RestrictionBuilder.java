@@ -10,19 +10,28 @@ import java.util.List;
  * Skill 06 — builds a Restriction (stack sizes, chances, min distance) for a reel set.
  * Max stack size = screenHeight + 2. Chances sum to 100.
  * No-win sets: shift mass left for lower hit rate.
- * Win sets: always shift mass right (favour larger stacks).
+ * Win sets: shift right for high volatility/low HR, shift left (smaller stacks) for high HR.
  * Min distance is 1 by default; increase only as a last resort (see skill doc).
  */
 @Component
 public class RestrictionBuilder {
 
-    private static final double MAX_SHIFT  = 6.0;
-    private static final double WIN_SHIFT  = 8.0;
+    private static final double MAX_SHIFT     = 6.0;
+    private static final double WIN_SHIFT_MAX = 8.0;  // low hit rate → large stacks
+    private static final double WIN_SHIFT_MIN = -2.0; // high hit rate → smaller stacks
 
     public Restriction build(int screenHeight, double targetHitRate, boolean isWinSet) {
         int n = screenHeight + 2; // number of distinct stack sizes: 1 … n
         double[] base = baseVector(n);
-        double[] chances = isWinSet ? shiftRight(base, WIN_SHIFT) : shiftLeft(base, targetHitRate);
+        double[] chances;
+        if (isWinSet) {
+            // Higher hit rate → smaller stacks (shift left); lower → larger stacks (shift right).
+            double t = (Math.max(5.0, Math.min(50.0, targetHitRate)) - 5.0) / 45.0;
+            double winShift = WIN_SHIFT_MAX - t * (WIN_SHIFT_MAX - WIN_SHIFT_MIN);
+            chances = winShift >= 0 ? shiftRight(base, winShift) : shiftLeft(base, targetHitRate);
+        } else {
+            chances = shiftLeft(base, targetHitRate);
+        }
         normalise(chances);
         List<Integer> sizes = new ArrayList<>(n);
         for (int i = 1; i <= n; i++) sizes.add(i);

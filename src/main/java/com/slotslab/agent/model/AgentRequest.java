@@ -10,6 +10,7 @@ public record AgentRequest(
         double targetHitRate,
         double hitRateDelta,
         String targetVolatility,
+        double maxPayout,
         ReelSetsCollectionData reelConfig,
         Map<String, Object> parameters
 ) {}

@@ -52,8 +52,9 @@ public class AnalyzeRequestNode implements AgentNode {
     private ReelSetsCollectionData buildConfigFromParameters(Map<String, Object> params) {
         if (params == null) return null;
 
-        // strategy
-        String stratStr = (String) params.getOrDefault("strategy", "FLAT");
+        // Generator strategy (SHUFFLE/FLAT) — distinct from the payout strategy (LTR/RTL/…)
+        // resolved into KEY_STRATEGY. Falls back to FLAT, the only sensible uniform default.
+        String stratStr = (String) params.getOrDefault("generatorStrategy", "FLAT");
         Strategy strategy;
         try { strategy = Strategy.valueOf(stratStr.toUpperCase()); }
         catch (IllegalArgumentException e) { strategy = Strategy.FLAT; }

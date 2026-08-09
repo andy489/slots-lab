@@ -16,7 +16,7 @@ class SkillSelectorTest {
     }
 
     private AgentRequest requestFor(String volatility) {
-        return new AgentRequest(95.5, 0.15, 30.0, 5.0, volatility, null, null);
+        return new AgentRequest(95.5, 0.15, 30.0, 5.0, volatility, 0.0, null, null);
     }
 
     @Test

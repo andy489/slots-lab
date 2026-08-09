@@ -1,6 +1,7 @@
 package com.slotslab.agent.api.dto;
 
 import com.slotslab.agent.execution.AgentExecution;
+import com.slotslab.agent.execution.ExecutionTrace;
 import com.slotslab.agent.execution.NodeExecution;
 
 import java.time.Instant;
@@ -15,7 +16,11 @@ public record AgentExecutionResponse(
         Instant finishedAt,
         String result,
         String error,
-        List<NodeExecutionView> nodes
+        List<NodeExecutionView> nodes,
+        List<ExecutionTrace.IterationLog> iterations,
+        String statusMessage,
+        Map<String, Object> initialPlan,
+        Map<String, Object> initialState
 ) {
     public record NodeExecutionView(
             String nodeId,
@@ -45,7 +50,11 @@ public record AgentExecutionResponse(
                 ex.getFinishedAt(),
                 ex.getResult(),
                 ex.getError(),
-                nodes
+                nodes,
+                ex.getTrace().getIterations(),
+                ex.getTrace().getStatusMessage(),
+                ex.getTrace().getInitialPlan(),
+                ex.getTrace().getInitialState()
         );
     }
 }

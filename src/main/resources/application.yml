@@ -38,6 +38,10 @@ agent:
   human-in-the-loop:
     enabled: true
 
+logging:
+  level:
+    com.slotslab.agent: DEBUG
+
 tabs:
   generate:  true
   rtp:       true

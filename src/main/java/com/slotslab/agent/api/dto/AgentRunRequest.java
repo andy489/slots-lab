@@ -28,6 +28,9 @@ public record AgentRunRequest(
                  message = "targetVolatility must be one of: LOW, CASUAL, HIGH, VERY_HIGH, EXTREME, ULTRA_EXTREME")
         String targetVolatility,
 
+        @DecimalMin(value = "0.0", message = "maxPayout must be ≥ 0")
+        double maxPayout,
+
         ReelSetsCollectionData reelConfig,
 
         @NotNull(message = "parameters map is required")

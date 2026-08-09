@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @EnableAsync
 @Configuration
@@ -18,6 +19,9 @@ public class AgentAsyncConfig {
         executor.setMaxPoolSize(8);
         executor.setQueueCapacity(20);
         executor.setThreadNamePrefix("agent-");
+        // Abort (throw RejectedExecutionException) when the pool + queue are saturated,
+        // so the controller can surface an HTTP 503 instead of silently running on the caller thread.
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         executor.initialize();
         return executor;
     }

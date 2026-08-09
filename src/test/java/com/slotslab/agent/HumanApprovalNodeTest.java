@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class HumanApprovalNodeTest {
 
     private AgentContext makeContext(UUID executionId) {
-        AgentRequest req = new AgentRequest(95.5, 0.15, 30.0, 5.0, "medium",
+        AgentRequest req = new AgentRequest(95.5, 0.15, 30.0, 5.0, "medium", 0.0,
                 new ReelSetsCollectionData(null, List.of()), null);
         return new AgentContext(executionId, req, new ExecutionTrace())
                 .setReels(new GeneratedReels(req.reelConfig(), "[]"));

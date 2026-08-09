@@ -6,201 +6,107 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.CancellationException;
-import java.util.function.BooleanSupplier;
+import java.util.TreeMap;
 
+/**
+ * Provides two services:
+ *
+ *  1. seedWeights() — computes an initial probability distribution over all reel sets
+ *     based on targetRtp and per-symbol tier/rank. No simulation is run here.
+ *
+ *  2. simulate() — runs a fast LTR simulation and returns SimStats (rtp, hitRate, etc.).
+ *     Called externally by the single-loop orchestrator after each weight/structural change.
+ *
+ * The convergence loop that previously lived here has been removed. The LLM-driven
+ * iterate loop in LtrReelGenerationTool now owns convergence logic.
+ */
 @Component
 public class ReelSetWeightTuner {
 
     private static final Logger log = LoggerFactory.getLogger(ReelSetWeightTuner.class);
     private static final double MIN_WEIGHT    = 0.001;
-    private static final long   DEFAULT_SPINS = 500_000L;
-    private static final int    DEFAULT_ITER  = 80;
-    // Aggressive initial factor; slows down as we approach target
-    private static final double FAST_FACTOR   = 1.30;
-    private static final double SLOW_FACTOR   = 1.05;
-    private static final double FAST_THRESHOLD = 20.0; // use fast factor when rtp gap > this
+    public  static final long   DEFAULT_SPINS = 1_000_000L;
 
-    public WeightedReelSets tune(
-            List<int[][]> noWinSets,
-            List<int[][]> winSets,
-            Map<Integer, Map<Integer, Double>> paytable,
-            List<SymbolDef> symbols,
-            List<int[]> lines,
-            int minMatch, int screenWidth, int screenHeight,
-            double targetRtp, double rtpDelta,
-            double targetHitRate, double hitRateDelta,
-            int maxIterations) {
-        return tune(noWinSets, winSets, paytable, symbols, lines,
-                minMatch, screenWidth, screenHeight,
-                targetRtp, rtpDelta, targetHitRate, hitRateDelta,
-                maxIterations, () -> false);
-    }
+    // ── weight seeding ────────────────────────────────────────────────────────
 
-    public WeightedReelSets tune(
-            List<int[][]> noWinSets,
-            List<int[][]> winSets,
-            Map<Integer, Map<Integer, Double>> paytable,
-            List<SymbolDef> symbols,
-            List<int[]> lines,
-            int minMatch, int screenWidth, int screenHeight,
-            double targetRtp, double rtpDelta,
-            double targetHitRate, double hitRateDelta,
-            int maxIterations,
-            BooleanSupplier cancelCheck) {
-
-        List<int[][]> all = new ArrayList<>();
-        all.addAll(noWinSets);
-        all.addAll(winSets);
-
-        int n = all.size();
-        // Start heavily biased toward winning sets to get RTP moving
-        double[] weights = new double[n];
+    /**
+     * Seeds initial weights for the combined [noWinSets | winSets] array.
+     *
+     * No-win share = clamp(1 - targetRtp/100, 0.03, 0.55).
+     * Win share distributed by tier + inverse-rank within tier.
+     */
+    public double[] seedWeights(List<int[][]> noWinSets,
+                                 List<int[][]> winSets,
+                                 List<SymbolDef> symbols,
+                                 double targetRtp) {
         int noWinCount = noWinSets.size();
-        double winShare = 0.80;
-        double noWinShare = 0.20;
-        for (int i = 0; i < noWinCount; i++)       weights[i] = noWinShare / noWinCount;
-        for (int i = noWinCount; i < n; i++)        weights[i] = winShare / (n - noWinCount);
+        int winCount   = winSets.size();
+        int n          = noWinCount + winCount;
 
-        double bestRtpDist = Double.MAX_VALUE;
-        double[] bestWeights = weights.clone();
-        double bestRtp = 0, bestHr = 0;
-        boolean converged = false;
+        double noWinShare = Math.max(0.03, Math.min(0.55, 1.0 - targetRtp / 100.0));
+        double winShare   = 1.0 - noWinShare;
 
-        for (int iter = 0; iter < maxIterations; iter++) {
-            if (cancelCheck.getAsBoolean()) {
-                throw new CancellationException("Weight tuning cancelled by user");
-            }
-            double[] sim = simulate(all, weights, paytable, symbols, lines,
-                    minMatch, screenWidth, screenHeight, DEFAULT_SPINS);
-            double actualRtp = sim[0];
-            double actualHr  = sim[1];
-
-            log.debug("iter={} RTP={} HR={}", iter, actualRtp, actualHr);
-
-            double rtpDist = Math.abs(actualRtp - targetRtp) + Math.abs(actualHr - targetHitRate);
-            if (rtpDist < bestRtpDist) {
-                bestRtpDist = rtpDist;
-                bestWeights = weights.clone();
-                bestRtp = actualRtp;
-                bestHr  = actualHr;
-            }
-
-            boolean rtpOk = Math.abs(actualRtp - targetRtp) <= rtpDelta;
-            boolean hrOk  = Math.abs(actualHr  - targetHitRate) <= hitRateDelta;
-            if (rtpOk && hrOk) {
-                converged = true;
-                log.info("Weight tuner converged at iteration {} — RTP={} HR={}", iter, actualRtp, actualHr);
-                break;
-            }
-
-            double rtpGap = Math.abs(actualRtp - targetRtp);
-            double factor = rtpGap > FAST_THRESHOLD ? FAST_FACTOR : SLOW_FACTOR;
-
-            // RTP control
-            if (actualRtp < targetRtp - rtpDelta) {
-                shiftWeight(weights, n, noWinCount, true, factor);
-            } else if (actualRtp > targetRtp + rtpDelta) {
-                shiftWeight(weights, n, noWinCount, false, factor);
-            }
-
-            // Hit-rate control
-            if (actualHr < targetHitRate - hitRateDelta) {
-                scaleNoWin(weights, noWinCount, 1.0 / SLOW_FACTOR);
-            } else if (actualHr > targetHitRate + hitRateDelta) {
-                scaleNoWin(weights, noWinCount, SLOW_FACTOR);
-            }
-
-            normalise(weights);
+        double[] weights = new double[n];
+        for (int i = 0; i < noWinCount; i++) {
+            weights[i] = noWinShare / noWinCount;
         }
 
-        if (!converged) {
-            log.warn("Weight tuner did not converge — returning best weights (RTP={}, HR={})", bestRtp, bestHr);
+        List<Integer> juniorIds = new ArrayList<>();
+        List<Integer> seniorIds = new ArrayList<>();
+        for (SymbolDef sym : symbols) {
+            if (sym.isJunior()) juniorIds.add(sym.symbolId());
+            else if (sym.isSenior()) seniorIds.add(sym.symbolId());
         }
-        double[] finalSim = simulateFull(all, bestWeights, paytable, symbols, lines,
-                minMatch, screenWidth, screenHeight, DEFAULT_SPINS);
-        WeightedReelSets.SimStats stats = new WeightedReelSets.SimStats(
-                round2(finalSim[0]), round2(finalSim[1]),
-                round2(finalSim[2]), round2(finalSim[3]),
-                round2(finalSim[4]), volatilityLabel(finalSim[4]),
-                DEFAULT_SPINS);
-        return new WeightedReelSets(all, bestWeights, bestRtp, bestHr, converged, stats);
-    }
+        Collections.sort(juniorIds);
+        Collections.sort(seniorIds);
 
-    // ── weight helpers ────────────────────────────────────────────────────────
-
-    private void shiftWeight(double[] w, int total, int noWinCount, boolean increaseWin, double factor) {
-        double winDelta = 0;
-        for (int i = noWinCount; i < total; i++) {
-            double newW = increaseWin ? w[i] * factor : w[i] / factor;
-            winDelta += newW - w[i];
-            w[i] = newW;
+        List<SymbolDef> winSymbols = buildWinSymbolList(symbols, winCount);
+        double totalTierWeight = 0;
+        double[] tierWeights = new double[winCount];
+        for (int i = 0; i < winCount; i++) {
+            SymbolDef sym = winSymbols.get(i);
+            if (sym == null) { tierWeights[i] = 1.0; totalTierWeight += 1.0; continue; }
+            double base = sym.isSenior() ? 0.4 : 1.0;
+            List<Integer> ids = sym.isSenior() ? seniorIds : juniorIds;
+            tierWeights[i] = base * inverseRankScale(ids.indexOf(sym.symbolId()), ids.size());
+            totalTierWeight += tierWeights[i];
         }
-        double perNoWin = -winDelta / noWinCount;
-        for (int i = 0; i < noWinCount; i++) w[i] = Math.max(MIN_WEIGHT, w[i] + perNoWin);
+        for (int i = 0; i < winCount; i++) {
+            weights[noWinCount + i] = winShare * (tierWeights[i] / totalTierWeight);
+        }
+
+        normalise(weights);
+        log.debug("seedWeights: noWinCount={} winCount={} noWinShare={}", noWinCount, winCount, noWinShare);
+        return weights;
     }
 
-    private void scaleNoWin(double[] w, int noWinCount, double factor) {
-        for (int i = 0; i < noWinCount; i++) w[i] = Math.max(MIN_WEIGHT, w[i] * factor);
-    }
+    // ── simulation ────────────────────────────────────────────────────────────
 
-    private void normalise(double[] w) {
-        double sum = Arrays.stream(w).sum();
-        for (int i = 0; i < w.length; i++) w[i] = Math.max(MIN_WEIGHT, w[i] / sum);
-        sum = Arrays.stream(w).sum();
-        for (int i = 0; i < w.length; i++) w[i] /= sum;
-    }
-
-    // ── LTR simulator (fast — rtp + hitRate only) ─────────────────────────────
-
-    private double[] simulate(List<int[][]> reelSets, double[] weights,
-                               Map<Integer, Map<Integer, Double>> paytable,
-                               List<SymbolDef> symbols, List<int[]> lines,
-                               int minMatch, int screenWidth, int screenHeight,
-                               long spins) {
-        double[] full = simulateFull(reelSets, weights, paytable, symbols, lines,
-                minMatch, screenWidth, screenHeight, spins);
-        return new double[]{full[0], full[1]};
-    }
-
-    // ── LTR simulator (full stats: rtp, hitRate, maxWin, stdDev, volatilityIndex) ──
-
-    private double[] simulateFull(List<int[][]> reelSets, double[] weights,
-                               Map<Integer, Map<Integer, Double>> paytable,
-                               List<SymbolDef> symbols, List<int[]> lines,
-                               int minMatch, int screenWidth, int screenHeight,
-                               long spins) {
-        Random rng = new Random(42);
-        double totalWin = 0;
-        double sumSqWin  = 0;
-        double maxWin    = 0;
+    /**
+     * Runs a full LTR simulation and returns stats.
+     */
+    public SimStats simulate(List<int[][]> reelSets, double[] weights,
+                              Map<Integer, Map<Integer, Double>> paytable,
+                              List<SymbolDef> symbols, List<int[]> lines,
+                              int minMatch, int screenWidth, int screenHeight,
+                              long spins, long seed) {
+        Random rng = new Random(seed);
+        double totalWin = 0, sumSqWin = 0, maxWin = 0;
         long hits = 0;
         int n = reelSets.size();
-        int numSymbols = symbols.size();
 
-        int[][] totals = new int[n][screenWidth];
-        for (int si = 0; si < n; si++) {
-            int[][] rs = reelSets.get(si);
-            for (int r = 0; r < screenWidth; r++) {
-                int t = 0;
-                for (int c : rs[r]) t += c;
-                totals[si][r] = t;
-            }
-        }
+        Map<Integer, Map<Integer, Long>> hitDist = new TreeMap<>();
 
-        double[] cumW = new double[n];
-        cumW[0] = weights[0];
-        for (int i = 1; i < n; i++) cumW[i] = cumW[i - 1] + weights[i];
-
+        int[][] totals = buildTotals(reelSets, n, screenWidth);
+        double[] cumW  = buildCumW(weights, n);
         int[][] screen = new int[screenWidth][screenHeight];
 
         for (long spin = 0; spin < spins; spin++) {
-            double p = rng.nextDouble();
-            int si = 0;
-            while (si < n - 1 && p > cumW[si]) si++;
+            int si = pickReelSet(rng, cumW, n);
             int[][] rs = reelSets.get(si);
 
             for (int r = 0; r < screenWidth; r++) {
@@ -209,12 +115,10 @@ public class ReelSetWeightTuner {
                     if (total == 0) { screen[r][row] = 0; continue; }
                     int pick = rng.nextInt(total);
                     int acc = 0;
-                    int symIdx = 0;
                     for (int s = 0; s < rs[r].length; s++) {
                         acc += rs[r][s];
-                        if (pick < acc) { symIdx = s; break; }
+                        if (pick < acc) { screen[r][row] = s; break; }
                     }
-                    screen[r][row] = symIdx;
                 }
             }
 
@@ -233,7 +137,11 @@ public class ReelSetWeightTuner {
                     Map<Integer, Double> symPay = paytable.get(symId);
                     if (symPay != null) {
                         Double mult = symPay.get(count);
-                        if (mult != null) spinWin += mult;
+                        if (mult != null) {
+                            spinWin += mult;
+                            hitDist.computeIfAbsent(symId, k -> new TreeMap<>())
+                                   .merge(count, 1L, Long::sum);
+                        }
                     }
                 }
             }
@@ -243,16 +151,79 @@ public class ReelSetWeightTuner {
             sumSqWin += spinWin * spinWin;
         }
 
-        double rtp  = (totalWin / spins) * 100.0;
-        double hr   = (hits / (double) spins) * 100.0;
-        double mean = totalWin / spins;
-        double variance = (sumSqWin / spins) - (mean * mean);
-        double stdDev = Math.sqrt(Math.max(0, variance));
+        double rtp    = (totalWin / spins) * 100.0;
+        double hr     = (hits / (double) spins) * 100.0;
+        double mean   = totalWin / spins;
+        double var    = (sumSqWin / spins) - (mean * mean);
+        double stdDev = Math.sqrt(Math.max(0, var));
         double volIdx = stdDev / Math.max(mean, 1e-9);
-        return new double[]{rtp, hr, maxWin, stdDev, volIdx};
+        return new SimStats(rtp, hr, maxWin, stdDev, volIdx, volatilityLabel(volIdx), spins, hitDist);
     }
 
-    private static double round2(double v) { return Math.round(v * 100.0) / 100.0; }
+    public record SimStats(double rtp, double hitRate, double maxWin,
+                            double stdDev, double volatilityIndex, String volatilityLabel,
+                            long spins, Map<Integer, Map<Integer, Long>> hitDistribution) {}
+
+    // ── normalise ─────────────────────────────────────────────────────────────
+
+    public void normalise(double[] w) {
+        double sum = Arrays.stream(w).sum();
+        for (int i = 0; i < w.length; i++) w[i] /= sum;
+        boolean anyFloored = false;
+        for (int i = 0; i < w.length; i++) {
+            if (w[i] < MIN_WEIGHT) { w[i] = MIN_WEIGHT; anyFloored = true; }
+        }
+        if (anyFloored) {
+            sum = Arrays.stream(w).sum();
+            for (int i = 0; i < w.length; i++) w[i] /= sum;
+        }
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private List<SymbolDef> buildWinSymbolList(List<SymbolDef> symbols, int winCount) {
+        List<SymbolDef> list = new ArrayList<>();
+        for (int i = 0; i < winCount; i++) list.add(null);
+        int wi = 0;
+        for (SymbolDef sym : symbols) {
+            if (sym.isSpecial()) continue;
+            if (wi < winCount) list.set(wi++, sym);
+        }
+        return list;
+    }
+
+    private int[][] buildTotals(List<int[][]> reelSets, int n, int screenWidth) {
+        int[][] totals = new int[n][screenWidth];
+        for (int si = 0; si < n; si++) {
+            int[][] rs = reelSets.get(si);
+            for (int r = 0; r < screenWidth; r++) {
+                int t = 0;
+                for (int c : rs[r]) t += c;
+                totals[si][r] = t;
+            }
+        }
+        return totals;
+    }
+
+    private double[] buildCumW(double[] weights, int n) {
+        double[] cum = new double[n];
+        cum[0] = weights[0];
+        for (int i = 1; i < n; i++) cum[i] = cum[i - 1] + weights[i];
+        return cum;
+    }
+
+    private int pickReelSet(Random rng, double[] cumW, int n) {
+        double p = rng.nextDouble();
+        int si = 0;
+        while (si < n - 1 && p > cumW[si]) si++;
+        return si;
+    }
+
+    private static double inverseRankScale(int rankIdx, int tierSize) {
+        if (tierSize <= 1) return 1.0;
+        double lo = 0.70, hi = 1.30;
+        return hi - (hi - lo) * rankIdx / (tierSize - 1);
+    }
 
     private static String volatilityLabel(double vi) {
         if (vi <  3)  return "Low";

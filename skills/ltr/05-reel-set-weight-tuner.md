@@ -1,52 +1,47 @@
-# ReelSetWeightTuner
+# Skill 05 — Reel Set Weight Seeder
 
-## Purpose
-Assign probability weights to all reel sets (no-win + winning) and iteratively adjust
-them until the simulated RTP and hit rate both land within their target tolerances.
+## What it does
+Seeds the initial probability distribution over all reel sets (no-win + per-symbol win sets).
+The weights are a `double[]` array whose values sum to 1.0.
 
-## Inputs
-| Field         | Type                             | Description                                      |
-|---------------|----------------------------------|--------------------------------------------------|
-| noWinReelSets | List<int[][]>                    | No-win reel sets from SpiralNoWinReelSetFactory  |
-| winReelSets   | List<int[][]>                    | Winning reel sets from WinReelSetFactory         |
-| paytable      | Map<Integer,Map<Integer,Double>> | Output of PaytableGenerator                      |
-| targetRtp     | double                           | e.g. 95.50                                       |
-| rtpDelta      | double                           | e.g. 0.15                                        |
-| targetHitRate | double                           | e.g. 20.00                                       |
-| hitRateDelta  | double                           | e.g. 2.00                                        |
-| lines         | List<int[]>                      | Pay lines (for LTR evaluation)                   |
-| minMatch      | int                              | Minimum match length                             |
-| screenWidth   | int                              | Number of reels                                  |
-| screenHeight  | int                              | Number of rows                                   |
-| maxIterations | int                              | Safety cap (default 50)                          |
-| spinsPerEval  | long                             | Spins per simulated evaluation (default 500_000) |
+This skill no longer runs a convergence loop. Weights are seeded once per build and then
+refined each iteration by the LLM using the iterate prompt.
 
-## Outputs
-`WeightedReelSets` — all reel sets with a normalised double weight each, summing to 1.0.
+## Seeding formula
+```
+noWinShare = clamp(1 - targetRtp/100, 0.03, 0.55)
+winShare   = 1 - noWinShare
+```
 
-## Algorithm
-### Initial weights
-- Each no-win reel set starts with weight = 1.0 / totalReelSets.
-- Each winning reel set starts with weight = 1.0 / totalReelSets.
-- Normalize so all weights sum to 1.0.
+- Example: targetRtp=95.5 → noWinShare=0.045, winShare=0.955
+- Example: targetRtp=70   → noWinShare=0.30,  winShare=0.70
 
-### Feedback loop (repeat up to maxIterations)
-1. **Simulate** `spinsPerEval` spins using the current weights to sample a reel set,
-   then randomly pick stops and evaluate LTR wins using the paytable and lines.
-2. Compute `actualRtp` and `actualHitRate` from simulation.
-3. **RTP control**:
-   - If `actualRtp < targetRtp − rtpDelta`: increase total weight of all winning reel
-     sets by factor 1.05; decrease no-win weight by the same total amount.
-   - If `actualRtp > targetRtp + rtpDelta`: decrease winning reel sets weight by 1.05.
-4. **Hit-rate control**:
-   - If `actualHitRate < targetHitRate − hitRateDelta`: decrease no-win reel set weight
-     proportionally (redistribute to winning sets).
-   - If `actualHitRate > targetHitRate + hitRateDelta`: increase no-win reel set weight.
-5. Re-normalize weights after each adjustment.
-6. Stop when both RTP and hit rate are within tolerance, or maxIterations reached.
+Within win sets, weights are distributed by tier and inverse rank:
+- Junior symbols: higher initial weight than senior.
+- Within each tier: lower symbolId → higher initial weight (more tiles → more frequent wins).
 
-## Constraints
-- No individual reel set weight may fall below 0.001 (prevents zeroing out a set entirely).
-- Final weights are normalized to sum to exactly 1.0.
-- If convergence is not reached within maxIterations, return the best weights found
-  (closest to both targets) and log a warning.
+## Simulation
+Provides a `simulate()` method used by the iterate loop. Each call runs N spins (default
+1 000 000) and returns: `rtp`, `hitRate`, `maxWin`, `stdDev`, `volatilityIndex`,
+`volatilityLabel`, `hitDistribution`.
+
+## What the LLM can patch
+The LLM iterate call may patch weights directly in its response:
+```json
+{
+  "weights": [0.02, 0.02, 0.01, 0.18, 0.22, 0.19, 0.17, 0.19]
+}
+```
+Rules for a valid weights patch:
+- Length must match the current `weights` array (noWinCount + winCount).
+- All values must be > 0.
+- Values will be normalised to sum = 1.0 automatically.
+
+## Diagnosis: if RTP converges but hit rate does not
+→ No-win weights are too low. Increase no-win entries in the weights array.
+→ Or increase `gapPhases` (adds more no-win reel sets to the pool).
+
+## Diagnosis: if neither RTP nor hit rate improves after multiple iterations
+→ The seeded starting point may be too far from the target.
+→ Try: increase `symsPerReel` (finer granularity).
+→ Try: change `targetVolatility` (affects paytable and win-vec decay).

@@ -1,41 +1,24 @@
-# SpiralNoWinReelSetFactory
+# Skill 02 — Spiral No-Win Reel Set Factory
 
-## Purpose
-Build `screenHeight` no-win reel sets from the base count vector using the spiral
-zero-placement method. Each reel set guarantees that no pay line can produce a
-winning combination of length greater than or equal to minMatch.
+## What it does
+Produces `gapPhases` no-win reel sets (default = `minMatch`). In each no-win set, at least
+one reel in every possible winning run has zero tiles for that symbol — so no LTR win of
+length ≥ `minMatch` can occur.
 
-## Inputs
-| Field        | Type  | Description                                              |
-|--------------|-------|----------------------------------------------------------|
-| baseCounts   | int[] | Base count per symbol (output of SymbolCountInitialiser) |
-| screenWidth  | int   | Number of reels (columns)                                |
-| screenHeight | int   | Number of visible rows                                   |
-| minMatch     | int   | Minimum consecutive matching reels for a win             |
+## Tunable parameters
+| Parameter     | Range | Effect |
+|---------------|-------|--------|
+| `screenWidth` | 3–10  | More reels = wider win check window. |
+| `gapPhases`   | 1–5   | Number of no-win reel sets produced. More phases = bigger no-win pool = more weight tuning flexibility. Default = minMatch. |
+| `minMatch`    | 2–5   | Shorter minMatch = easier to block wins = sparser no-win sets. |
 
-## Outputs
-`List<int[][]>` — exactly `screenHeight` reel sets.
-Each reel set is `int[screenWidth][numSymbols]` — counts per symbol per reel.
+## What you cannot tune here
+This skill consumes `baseCounts` from skill 01. Its output quality depends entirely on skill 01 inputs.
 
-## Algorithm
-### Zero-spacing rule
-- On each reel within a reel set, every symbol that participates in potential winning
-  lines has its count set to 0 at intervals spaced `minMatch − 1` reels apart.
-- This ensures that no uninterrupted run of `minMatch` reels can all have that symbol
-  with a non-zero count.
+## Diagnosis: if hit rate is too high
+→ Increase `gapPhases` to add more no-win sets to the pool (LLM can patch this directly).
+→ Or increase no-win weights in the `weights` patch.
 
-### Phase shift
-- No-win reel set #k (k = 0 … screenHeight−1) places the first zero for reel 1 at
-  position offset `k` in the reel sequence.
-- Subsequent reels in the same reel set continue the spacing from that offset.
-
-### Construction steps
-1. Start with a full copy of `baseCounts` for every reel.
-2. For phase k, zero out symbol positions according to the spacing rule starting at
-   column k mod screenWidth.
-3. Return the `screenHeight` resulting reel-count matrices.
-
-## Constraints
-- A zero for symbol S on reel R means that symbol S will never appear on reel R in
-  this reel set, preventing any line win involving S passing through R.
-- Non-zero counts are preserved unchanged from `baseCounts`.
+## Diagnosis: if hit rate is too low
+→ Decrease no-win weights in the `weights` patch.
+→ Or decrease `gapPhases` to reduce the no-win pool.

@@ -1,45 +1,34 @@
-# WinReelSetFactory
+# Skill 03 — Win Reel Set Factory
 
-## Purpose
-For each payout symbol, produce one winning reel set by injecting a decreasing
-win-count vector into the symbol's column across reels, derived from one of the
-no-win reel sets.
+## What it does
+Produces one dedicated winning reel set per non-special symbol (junior + senior). Each win reel set boosts the target symbol's tile counts left-to-right across reels, making LTR wins more likely when that reel set is chosen.
 
-## Inputs
-| Field         | Type            | Description                                                                           |
-|---------------|-----------------|---------------------------------------------------------------------------------------|
-| noWinReelSets | List<int[][]>   | Output of SpiralNoWinReelSetFactory                                                   |
-| symbols       | List<SymbolDef> | Symbol list (id, tier, hint)                                                          |
-| baseCounts    | int[]           | Base counts (for residual fill values)                                                |
-| screenWidth   | int             | Number of reels                                                                       |
-| volatility    | String          | LOW / CASUAL / HIGH / VERY_HIGH / EXTREME / ULTRA_EXTREME — controls win vector slope |
-| residualFill  | int             | Count to substitute for other zeroes not part of the win (default 8)                  |
+## Tunable parameters
+| Parameter          | Range    | Effect |
+|--------------------|----------|--------|
+| `targetVolatility` | see below | Default decay factor source. Higher volatility = steeper decay = more 3-of-a-kind, fewer 5-of-a-kind. |
+| `winVecDecay`      | 0.40–0.95 | Direct override of the decay factor. Takes precedence over volatility. LLM can patch this to fine-tune win length distribution without changing the full volatility. |
 
-## Outputs
-`List<int[][]>` — one winning reel set per non-special symbol (junior + senior tiers).
-Wilds and scatters do not get dedicated winning reel sets.
+## Decay factor by volatility
+| volatility     | decayFactor | Effect |
+|----------------|:-----------:|--------|
+| LOW            | 0.94        | Counts drop slowly — 5-of-a-kind more likely |
+| CASUAL         | 0.88        | Mild decay |
+| HIGH           | 0.78        | Noticeable drop-off after reel 3 |
+| VERY_HIGH      | 0.68        | Strong left-bias |
+| EXTREME        | 0.55        | Very steep — rare 5-of-a-kind |
+| ULTRA_EXTREME  | 0.45        | Almost always 3-of-a-kind |
 
-## Algorithm
-### Win vector
-For symbol with index i across screenWidth reels, generate vector W of length screenWidth:
-- W[0] = winPeak (highest count, on reel 1 — the trigger reel for LTR)
-- W[r] = W[r−1] * decayFactor, rounded to nearest int, minimum 1
-- decayFactor per volatility:
-  - LOW          → 0.94
-  - CASUAL       → 0.88
-  - HIGH         → 0.78
-  - VERY_HIGH    → 0.68
-  - EXTREME      → 0.55
-  - ULTRA_EXTREME→ 0.45
-- winPeak for `senior` symbols = baseCounts[i] * 1.5 (rounded)
-- winPeak for `junior` symbols = baseCounts[i] * 1.2 (rounded)
+## Win peak (how many tiles on reel 1)
+- senior symbol: `baseCounts[i] × 1.5`
+- junior symbol: `baseCounts[i] × 1.2`
 
-### Injection
-1. Select the no-win reel set at index `i mod noWinReelSets.size()`.
-2. For each reel r: set `reelSet[r][symbolIndex] = W[r]`.
-3. For every other symbol S ≠ the payout symbol: if `reelSet[r][S] == 0`, replace
-   it with `residualFill` to avoid dead reels for other symbols.
+## Within-tier rank rule
+Higher symbolId within its tier → lower win peak (fewer tiles on reel 1 in win set → lower frequency win reel chosen by tuner).
 
-## Constraints
-- The win vector always decreases left-to-right (LTR decay), matching LTR payout logic.
-- residualFill must be > 0 and < min(baseCounts) so residual symbols do not dominate.
+## Diagnosis: if 5-of-a-kind hits are too rare
+→ Increase `targetVolatility` is wrong. Instead lower `targetVolatility` to increase decay factor.
+→ Or increase `symsPerReel` to raise the base counts from which win peaks are derived.
+
+## Diagnosis: if wins occur only for some symbols
+→ Ensure all non-special symbols are present in the symbols list with distinct IDs.

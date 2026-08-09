@@ -1,40 +1,36 @@
-# SymbolCountInitialiser
+# Skill 01 — Symbol Count Initialiser
 
-## Purpose
-Compute the base symbol count vector for each reel given the symbol list, target volatility,
-and symbols-per-reel value. Senior (high-value) symbols receive fewer counts than junior
-(low-value) symbols; the gap magnitude scales with volatility.
+## What it does
+Assigns tile counts to each symbol on every reel.
+More tiles = higher hit frequency. Fewer tiles = rarer but more exciting hits.
 
-## Inputs
-| Field            | Type            | Description                                               |
-|------------------|-----------------|-----------------------------------------------------------|
-| symbols          | List<SymbolDef> | Ordered list of symbols (id, tier, hint)                  |
-| volatility       | String          | LOW / CASUAL / HIGH / VERY_HIGH / EXTREME / ULTRA_EXTREME |
-| symsPerReel      | int             | Target total count per reel (e.g. 256)                    |
-| symsPerReelDelta | int             | Allowed ±deviation from symsPerReel (e.g. 16)             |
+## Tunable parameters
+| Parameter      | Range     | Effect |
+|----------------|-----------|--------|
+| `symsPerReel`  | 64–512    | Total tiles per reel. Increase to get smoother probability distributions. |
+| `targetVolatility` | see below | Controls how many fewer tiles senior symbols get vs junior. |
 
-## Outputs
-`int[]` — base count for each symbol in the same order as `symbols`.
-Sum of counts ≈ `symsPerReel` (within delta).
+## Volatility → senior tile ratio
+| volatility     | seniorFactor | Effect |
+|----------------|:------------:|--------|
+| LOW            | 0.65         | seniors are 65% as common as juniors — small gap |
+| CASUAL         | 0.50         | seniors are 50% as common — moderate gap |
+| HIGH           | 0.35         | seniors noticeably rarer |
+| VERY_HIGH      | 0.22         | seniors much rarer |
+| EXTREME        | 0.13         | seniors very rare |
+| ULTRA_EXTREME  | 0.07         | seniors near-jackpot rare |
 
-## Algorithm
-1. Assign a weight to each tier:
-   - `junior`    → 1.0
-   - `senior`    → volatilityFactor (see table below)
-   - `wild`      → 0.20 (fixed low, always available)
-   - `scatter`   → 0.15 (fixed very low)
-   - `multiwild` → 0.12 (fixed lowest)
-2. Volatility factor for `senior` tier:
-   - LOW          → 0.80
-   - CASUAL       → 0.65
-   - HIGH         → 0.45
-   - VERY_HIGH    → 0.30
-   - EXTREME      → 0.18
-   - ULTRA_EXTREME→ 0.10
-3. Raw count for symbol i = `floor(symsPerReel * weight_i / sumOfWeights)`.
-4. Distribute remainder (symsPerReel − sum) to junior symbols one each until balanced.
-5. Clamp every count to minimum 1.
+## Within-tier rank rule (by symbolId)
+- Within junior tier: **lower symbolId → more tiles** (higher hit rate).
+- Within senior tier: **lower symbolId → more tiles** (higher hit rate).
+- Scale range ±30% around tier base (0.70× to 1.30×), linear by rank.
 
-## Constraints
-- Every symbol must receive at least 1 count.
-- Wilds and scatters are not affected by volatility parameter.
+## Special symbol fixed weights
+- wild: 0.20 | scatter: 0.15 | multiwild: 0.12 (never changed by volatility)
+
+## Diagnosis: if junior hit rate ≤ senior hit rate
+→ Lower `targetVolatility` (increases seniorFactor) OR reduce `symsPerReel` and rely on wider weight ratios.
+→ Do NOT change `lines` or `minMatch` to fix tier ordering.
+
+## Diagnosis: if all symbols have identical hit rates
+→ Symbols list may all have the same tier. Ensure junior and senior tiers are both present with different symbolIds.

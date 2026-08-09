@@ -25,6 +25,8 @@ public class AgentRequestValidator {
         if (req.hitRateDelta() >= req.targetHitRate()) {
             errors.add("hitRateDelta must be < targetHitRate");
         }
+        if (req.maxPayout() < 0)
+            errors.add("maxPayout must be ≥ 0 (0 = uncapped)");
         String volatility = req.targetVolatility();
         if (volatility == null || volatility.isBlank()) {
             errors.add("targetVolatility is required");
@@ -47,8 +49,7 @@ public class AgentRequestValidator {
         int minMatch     = asInt(params.get("minMatch"),     -1);
         int symsPerReel      = asInt(params.get("symsPerReel"),      -1);
         int symsPerReelDelta = asInt(params.get("symsPerReelDelta"),   0);
-        int maxAttempts      = asInt(params.get("maxAttempts"),         3);
-        int maxIterations    = asInt(params.get("maxIterations"),       80);
+        int maxIterations    = asInt(params.get("maxIterations"),       5);
 
         if (screenWidth < 1 || screenWidth > 20)
             errors.add("parameters.screenWidth must be 1–20");
@@ -62,10 +63,8 @@ public class AgentRequestValidator {
             errors.add("parameters.symsPerReelDelta must be ≥ 0 and < symsPerReel");
         if (screenWidth > 0 && minMatch > screenWidth)
             errors.add("parameters.minMatch (" + minMatch + ") cannot exceed screenWidth (" + screenWidth + ")");
-        if (maxAttempts < 1 || maxAttempts > 20)
-            errors.add("parameters.maxAttempts must be 1–20");
-        if (maxIterations < 10 || maxIterations > 500)
-            errors.add("parameters.maxIterations must be 10–500");
+        if (maxIterations < 1 || maxIterations > 50)
+            errors.add("parameters.maxIterations must be 1–50");
 
         Object symsObj = params.get("symbols");
         if (!(symsObj instanceof List<?> symsList) || symsList.size() < 2) {

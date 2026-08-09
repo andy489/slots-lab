@@ -655,6 +655,26 @@
         </div>
         <div class="form-scroll" id="ai-form-scroll">
 
+          <!-- Agent Mode Toggle -->
+          <div class="section-card" style="padding:0.55rem 0.9rem">
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+              <span style="font-size:0.72rem;font-weight:600;color:var(--text2);white-space:nowrap">Agent Mode</span>
+              <div id="ai-mode-toggle" style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;font-size:0.72rem">
+                <button id="ai-mode-llm-btn"
+                        onclick="setAiMode('llm')"
+                        style="padding:0.3rem 0.8rem;border:none;cursor:pointer;font-size:0.72rem;font-weight:600;transition:background 0.15s,color 0.15s">
+                  ✦ LLM Agent
+                </button>
+                <button id="ai-mode-classic-btn"
+                        onclick="setAiMode('classic')"
+                        style="padding:0.3rem 0.8rem;border:none;cursor:pointer;font-size:0.72rem;font-weight:600;transition:background 0.15s,color 0.15s">
+                  ⚙ Classic
+                </button>
+              </div>
+              <span id="ai-mode-desc" style="font-size:0.68rem;color:var(--text2);opacity:0.75"></span>
+            </div>
+          </div>
+
           <!-- Strategy & Screen -->
           <div class="section-card">
             <div class="section-card-header"><span class="section-label">Game Configuration</span></div>
@@ -753,22 +773,26 @@
                     <option value="ULTRA_EXTREME">Ultra Extreme</option>
                   </select>
                 </div>
+                <div class="field-item">
+                  <label for="ai-max-payout">Max Payout (×bet, 0=uncapped)</label>
+                  <input type="text" inputmode="decimal" id="ai-max-payout" value="0" class="ai-float-input"/>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Execution Settings -->
           <div class="section-card">
-            <div class="section-card-header"><span class="section-label">Execution Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:340px;left:0;transform:none"><div class="tip-rule"><strong>Max Attempts</strong> — how many times the graph loop retries if the generated reels fail validation or are rejected by the human-approval step. Each attempt re-runs the full generation pipeline from scratch. When exhausted, the agent returns the best result it found.</div><div class="tip-rule"><strong>Max Iterations</strong> — number of weight-tuning iterations per attempt. Each iteration simulates 500 000 spins and adjusts reel-set weights toward the target RTP and hit rate. More iterations = slower but more precise convergence.</div></span></span></span></div>
+            <div class="section-card-header"><span class="section-label">Execution Settings<span class="stat-tip-wrap" style="margin-left:0.3rem"><i class="stat-info">i</i><span class="stat-tip-box tip-below" style="width:380px;left:0;transform:none"><div class="tip-rule"><strong>Max Iterations</strong> — how many LLM-driven simulation rounds to run. Each iteration simulates <em>Spins per Iteration</em> spins, then asks the LLM to patch weights, paytable, or structural params. Default: 5.</div><div class="tip-rule"><strong>Spins per Iteration</strong> — number of simulated spins per iteration. More spins = more accurate RTP/HR measurement but slower. Default: 1 000 000.</div></span></span></span></div>
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field-item">
-                  <label for="ai-max-attempts">Max Attempts</label>
-                  <input type="number" id="ai-max-attempts" value="3" min="1" max="20"/>
+                  <label for="ai-max-iterations">Max Iterations</label>
+                  <input type="number" id="ai-max-iterations" value="3" min="1" max="50"/>
                 </div>
                 <div class="field-item">
-                  <label for="ai-max-iterations">Max Iterations</label>
-                  <input type="number" id="ai-max-iterations" value="80" min="10" max="500"/>
+                  <label for="ai-spins-per-iter">Spins per Iteration</label>
+                  <input type="number" id="ai-spins-per-iter" value="1000000" min="100000" max="10000000" step="100000"/>
                 </div>
               </div>
             </div>
@@ -808,10 +832,12 @@
         <div class="form-col-header">
           <span class="form-col-title">Agent Output</span>
           <span style="flex:1"></span>
+          <button class="icon-btn" onclick="_aiShowIterInfo()" title="Column guide" style="display:none;margin-right:4px" id="ai-info-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>
           <button class="icon-btn" id="ai-copy-btn" onclick="copyAiOutput()" title="Copy output" style="display:none">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
         </div>
+        <div id="ai-iter-log" style="display:none;overflow-y:auto;max-height:260px;border-bottom:1px solid var(--border);padding-bottom:0.4rem;margin-bottom:0.4rem"></div>
         <div class="ai-output-body" id="ai-output-body">
           <span class="ai-output-empty">Run the agent to see its design proposal here.</span>
         </div>

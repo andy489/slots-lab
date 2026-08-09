@@ -4,6 +4,7 @@ import com.slotslab.agent.api.dto.AgentExecutionResponse;
 import com.slotslab.agent.api.dto.AgentRunRequest;
 import com.slotslab.agent.execution.AgentExecution;
 import com.slotslab.agent.execution.ExecutionRepository;
+import com.slotslab.agent.llm.LlmService;
 import com.slotslab.agent.model.AgentRequest;
 import com.slotslab.agent.orchestrator.AgentOrchestrator;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,8 +13,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.RejectedExecutionException;
 
 @Tag(name = "AI Agent", description = "Skill-based agent for automated reel generation")
 @RestController
@@ -45,11 +49,17 @@ public class AgentController {
         request.targetHitRate(),
         request.hitRateDelta(),
         request.targetVolatility(),
+        request.maxPayout(),
         request.reelConfig(),
         request.parameters()
     );
-    AgentExecution execution = orchestrator.submit(agentRequest);
-    return ResponseEntity.accepted().body(AgentExecutionResponse.from(execution));
+    try {
+      AgentExecution execution = orchestrator.submit(agentRequest);
+      return ResponseEntity.accepted().body(AgentExecutionResponse.from(execution));
+    } catch (RejectedExecutionException e) {
+      return ResponseEntity.status(503)
+          .body("Agent execution queue is full — try again shortly");
+    }
   }
 
   @Operation(summary = "Poll execution status", description = "Returns the current state of an execution.")
@@ -65,5 +75,20 @@ public class AgentController {
   public ResponseEntity<Void> cancel(@PathVariable UUID executionId) {
     orchestrator.cancel(executionId);
     return ResponseEntity.ok().build();
+  }
+
+  @Operation(summary = "Get LLM debug file", description = "Returns the prompt+response JSON for a specific iteration.")
+  @GetMapping("/executions/{executionId}/debug/{iteration}")
+  public ResponseEntity<String> getDebug(@PathVariable UUID executionId,
+                                         @PathVariable int iteration) {
+    Path file = LlmService.getDebugFilePath(executionId, iteration);
+    if (!Files.exists(file)) return ResponseEntity.notFound().build();
+    try {
+      return ResponseEntity.ok()
+          .header("Content-Type", "application/json")
+          .body(Files.readString(file));
+    } catch (Exception e) {
+      return ResponseEntity.internalServerError().build();
+    }
   }
 }

@@ -1,5 +1,71 @@
 /* ── AI Agent Tab ── */
 
+// Escape a string for safe interpolation into innerHTML.
+function _aiEsc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── Agent mode toggle ─────────────────────────────────────────────────────────
+
+const AI_MODES = {
+  llm: {
+    maxIterations: 3,
+    spinsPerIter:  1000000,
+    rtpDelta:      0.20,
+    hitRateDelta:  2.50,
+    maxPayout:     0,
+    desc: 'GPT-4o-mini drives each iteration — patches weights, paytable, or strips until target is met'
+  },
+  classic: {
+    maxIterations: 10,
+    spinsPerIter:  500000,
+    rtpDelta:      0.15,
+    hitRateDelta:  2.00,
+    maxPayout:     0,
+    desc: 'Hardcoded heuristics — brute-force weight seeding, no LLM calls'
+  }
+};
+
+let _aiCurrentMode = 'llm';
+
+function setAiMode(mode) {
+  if (!AI_MODES[mode]) return;
+  _aiCurrentMode = mode;
+  const cfg = AI_MODES[mode];
+
+  const otherCfg = AI_MODES[mode === 'llm' ? 'classic' : 'llm'];
+
+  const miEl  = document.getElementById('ai-max-iterations');
+  const spEl  = document.getElementById('ai-spins-per-iter');
+  const rdEl  = document.getElementById('ai-rtp-delta');
+  const hdEl  = document.getElementById('ai-hit-rate-delta');
+
+  if (miEl  && (parseInt(miEl.value)   === otherCfg.maxIterations  || miEl.dataset.modeDefault  === 'true')) { miEl.value  = cfg.maxIterations;  miEl.dataset.modeDefault  = 'true'; }
+  if (spEl  && (parseInt(spEl.value)   === otherCfg.spinsPerIter   || spEl.dataset.modeDefault  === 'true')) { spEl.value  = cfg.spinsPerIter;   spEl.dataset.modeDefault  = 'true'; }
+  if (rdEl  && (parseFloat(rdEl.value.replace(',','.'))  === otherCfg.rtpDelta     || rdEl.dataset.modeDefault  === 'true')) { rdEl.value  = cfg.rtpDelta.toFixed(2);  rdEl.dataset.modeDefault  = 'true'; }
+  if (hdEl  && (parseFloat(hdEl.value.replace(',','.'))  === otherCfg.hitRateDelta || hdEl.dataset.modeDefault  === 'true')) { hdEl.value  = cfg.hitRateDelta.toFixed(2); hdEl.dataset.modeDefault = 'true'; }
+
+  const llmBtn = document.getElementById('ai-mode-llm-btn');
+  const clsBtn = document.getElementById('ai-mode-classic-btn');
+  if (llmBtn && clsBtn) {
+    const activeStyle  = 'background:var(--accent,#6c63ff);color:#fff';
+    const inactiveStyle = 'background:transparent;color:var(--text2)';
+    llmBtn.style.cssText += ';' + (mode === 'llm'     ? activeStyle : inactiveStyle);
+    clsBtn.style.cssText += ';' + (mode === 'classic' ? activeStyle : inactiveStyle);
+  }
+
+  const descEl = document.getElementById('ai-mode-desc');
+  if (descEl) descEl.textContent = cfg.desc;
+}
+
+document.addEventListener('DOMContentLoaded', () => setAiMode('llm'));
+
 const AI_LINE_STRATEGIES = new Set(['LTR', 'RTL', 'BW', 'SL', 'ADJ']);
 
 let _aiLineCounter = 0;
@@ -256,16 +322,18 @@ function collectAiRequest() {
     targetHitRate:    parseFloat(parseFloat(document.getElementById('ai-target-hit-rate').value.replace(',','.')).toFixed(2)) || 20.00,
     hitRateDelta:     parseFloat(parseFloat(document.getElementById('ai-hit-rate-delta').value.replace(',','.')).toFixed(2)) || 2.00,
     targetVolatility: document.getElementById('ai-target-volatility').value,
+    maxPayout:        parseFloat(document.getElementById('ai-max-payout').value.replace(',','.')) || 0,
     reelConfig:       null,
     parameters: {
       strategy:         document.getElementById('ai-strategy').value,
+      useLlm:           _aiCurrentMode === 'llm',
       screenWidth:      parseInt(document.getElementById('ai-screen-width').value) || 5,
       screenHeight:     parseInt(document.getElementById('ai-screen-height').value) || 3,
       minMatch:         parseInt(document.getElementById('ai-min-match').value) || 3,
       symsPerReel:      parseInt(document.getElementById('ai-syms-per-reel').value) || 256,
       symsPerReelDelta: parseInt(document.getElementById('ai-syms-per-reel-delta').value) || 16,
-      maxAttempts:      parseInt(document.getElementById('ai-max-attempts').value) || 3,
-      maxIterations:    parseInt(document.getElementById('ai-max-iterations').value) || 80,
+      maxIterations:    parseInt(document.getElementById('ai-max-iterations').value) || 3,
+      spinsPerIter:     parseInt(document.getElementById('ai-spins-per-iter').value) || 1000000,
       symbols,
       lines: (function() {
         const strat = document.getElementById('ai-strategy').value;
@@ -290,21 +358,22 @@ function validateAiRequest() {
   const mmEl     = document.getElementById('ai-min-match');
   const sprEl    = document.getElementById('ai-syms-per-reel');
   const sprDEl   = document.getElementById('ai-syms-per-reel-delta');
-  const maEl     = document.getElementById('ai-max-attempts');
   const miEl     = document.getElementById('ai-max-iterations');
+  const spEl     = document.getElementById('ai-spins-per-iter');
   const rtpEl    = document.getElementById('ai-target-rtp');
   const rtpDEl   = document.getElementById('ai-rtp-delta');
   const hrEl     = document.getElementById('ai-target-hit-rate');
   const hrDEl    = document.getElementById('ai-hit-rate-delta');
   const volEl    = document.getElementById('ai-target-volatility');
+  const mpEl     = document.getElementById('ai-max-payout');
 
-  const w   = parseInt(widthEl.value);
-  const h   = parseInt(heightEl.value);
-  const mm  = parseInt(mmEl.value);
-  const spr = parseInt(sprEl.value);
+  const w    = parseInt(widthEl.value);
+  const h    = parseInt(heightEl.value);
+  const mm   = parseInt(mmEl.value);
+  const spr  = parseInt(sprEl.value);
   const sprD = parseInt(sprDEl.value);
-  const ma  = parseInt(maEl.value);
-  const mi  = parseInt(miEl.value);
+  const mi   = parseInt(miEl.value);
+  const sp   = parseInt(spEl.value);
 
   if (!widthEl.value.trim() || isNaN(w) || w < 1 || w > 20)
     errors.push(markError(widthEl, 'Width must be between 1 and 20'));
@@ -318,15 +387,16 @@ function validateAiRequest() {
     errors.push(markError(mmEl, 'Min Match must be between 1 and 20'));
   if (!isNaN(w) && !isNaN(mm) && mm > w)
     errors.push(markError(mmEl, 'Min Match cannot exceed Width (' + w + ')'));
-  if (!maEl.value.trim() || isNaN(ma) || ma < 1 || ma > 20)
-    errors.push(markError(maEl, 'Max Attempts must be between 1 and 20'));
-  if (!miEl.value.trim() || isNaN(mi) || mi < 10 || mi > 500)
-    errors.push(markError(miEl, 'Max Iterations must be between 10 and 500'));
+  if (!miEl.value.trim() || isNaN(mi) || mi < 1 || mi > 50)
+    errors.push(markError(miEl, 'Max Iterations must be between 1 and 50'));
+  if (!spEl.value.trim() || isNaN(sp) || sp < 100000 || sp > 10000000)
+    errors.push(markError(spEl, 'Spins per Iteration must be between 100 000 and 10 000 000'));
 
   const rtp  = parseFloat(rtpEl.value.replace(',', '.'));
   const rtpD = parseFloat(rtpDEl.value.replace(',', '.'));
   const hr   = parseFloat(hrEl.value.replace(',', '.'));
   const hrD  = parseFloat(hrDEl.value.replace(',', '.'));
+  const mp   = parseFloat(mpEl.value.replace(',', '.'));
 
   if (isNaN(rtp) || rtp <= 0 || rtp > 100)
     errors.push(markError(rtpEl, 'Target RTP must be > 0 and ≤ 100'));
@@ -336,6 +406,8 @@ function validateAiRequest() {
     errors.push(markError(hrEl, 'Target Hit Rate must be > 0 and ≤ 100'));
   if (isNaN(hrD) || hrD < 0 || hrD >= hr)
     errors.push(markError(hrDEl, 'Hit Rate Delta must be ≥ 0 and < Target Hit Rate'));
+  if (isNaN(mp) || mp < 0)
+    errors.push(markError(mpEl, 'Max Payout must be ≥ 0 (0 = uncapped)'));
 
   const VALID_VOLATILITIES = ['LOW','CASUAL','HIGH','VERY_HIGH','EXTREME','ULTRA_EXTREME'];
   if (!volEl.value.trim() || !VALID_VOLATILITIES.includes(volEl.value))
@@ -426,6 +498,8 @@ function previewAiRequest() {
 }
 let _aiPollInterval  = null;
 let _aiOutputEditor  = null;
+let _aiExecutionId   = null;
+let _aiPollInFlight  = false;
 
 function _aiSetRunning(running) {
   document.getElementById('ai-run-btn').disabled  = running;
@@ -438,9 +512,11 @@ function _aiShowMessage(html, isError) {
   const body = document.getElementById('ai-output-body');
   const cmWrap = document.getElementById('ai-output-cm-wrap');
   const copyBtn = document.getElementById('ai-copy-btn');
+  const infoBtn = document.getElementById('ai-info-btn');
   body.style.display = '';
   cmWrap.style.display = 'none';
   if (copyBtn) copyBtn.style.display = 'none';
+  if (infoBtn) infoBtn.style.display = 'none';
   body.innerHTML = html;
   if (isError) body.style.color = 'var(--error)';
   else body.style.color = '';
@@ -450,10 +526,12 @@ function _aiShowEditor(json) {
   const body = document.getElementById('ai-output-body');
   const cmWrap = document.getElementById('ai-output-cm-wrap');
   const copyBtn = document.getElementById('ai-copy-btn');
+  const infoBtn = document.getElementById('ai-info-btn');
 
   body.style.display = 'none';
   cmWrap.style.display = 'flex';
   if (copyBtn) copyBtn.style.display = '';
+  if (infoBtn) infoBtn.style.display = '';
 
   const pretty = _aiCompactJson(json);
 
@@ -497,8 +575,11 @@ async function runAiAgent() {
   }
 
   const req = collectAiRequest();
+  _aiExecutionId = null; // clear any stale id from a prior run before starting a new one
   _aiSetRunning(true);
   _aiShowMessage('<span class="ai-output-empty">Submitting…</span>');
+  const iterLogEl = document.getElementById('ai-iter-log');
+  if (iterLogEl) { iterLogEl.style.display = 'none'; iterLogEl.innerHTML = ''; }
 
   try {
     const res = await fetch('/api/agent/generate', {
@@ -510,27 +591,42 @@ async function runAiAgent() {
     if (!res.ok) {
       _aiSetRunning(false);
       _aiShowMessage(
-        `<span style="font-size:0.72rem">Error ${res.status}</span><pre style="font-size:0.72rem;white-space:pre-wrap">${JSON.stringify(data, null, 2)}</pre>`,
+        `<span style="font-size:0.72rem">Error ${res.status}</span><pre style="font-size:0.72rem;white-space:pre-wrap">${_aiEsc(JSON.stringify(data, null, 2))}</pre>`,
         true
       );
       return;
     }
     _aiExecutionId = data.executionId;
     _aiShowMessage(`<span class="ai-output-empty">Running… (id: ${_aiExecutionId})</span>`);
-    _aiPollInterval = setInterval(_aiPoll, 1500);
+    _aiPollInterval = setInterval(_aiPoll, 800);
   } catch (e) {
     _aiSetRunning(false);
-    _aiShowMessage(`<span style="font-size:0.72rem">Network error: ${e.message}</span>`, true);
+    _aiShowMessage(`<span style="font-size:0.72rem">Network error: ${_aiEsc(e.message)}</span>`, true);
   }
 }
 
 async function _aiPoll() {
   if (!_aiExecutionId) return;
+  if (_aiPollInFlight) return; // a previous poll is still running — skip this tick
+  _aiPollInFlight = true;
   try {
     const res = await fetch(`/api/agent/executions/${_aiExecutionId}`);
     if (!res.ok) return;
     const data = await res.json();
     const status = data.status;
+
+    // Always render iteration logs if present (works during RUNNING and terminal)
+    if (data.iterations && data.iterations.length > 0) {
+      _aiRenderIterations(data.iterations, status, data.initialPlan, data.initialState);
+      // Keep status message visible in body while running
+      if (status === 'RUNNING' && data.statusMessage) {
+        _aiShowMessage(`<span class="ai-output-empty" style="font-size:0.7rem">${_aiEsc(data.statusMessage)}</span>`);
+      }
+    } else if (status === 'RUNNING') {
+      const msg = data.statusMessage || '⏳ Starting…';
+      _aiShowMessage(`<span class="ai-output-empty">${_aiEsc(msg)}</span>`);
+    }
+
     if (status === 'RUNNING') return; // still going
 
     // terminal state
@@ -542,18 +638,332 @@ async function _aiPoll() {
       try {
         _aiShowEditor(JSON.parse(data.result));
       } catch {
-        _aiShowMessage(`<pre style="font-size:0.72rem;white-space:pre-wrap">${data.result}</pre>`);
+        _aiShowMessage(`<pre style="font-size:0.72rem;white-space:pre-wrap">${_aiEsc(data.result)}</pre>`);
       }
     } else if (status === 'CANCELLED') {
       _aiShowMessage('<span class="ai-output-empty" style="color:var(--text2)">Agent cancelled.</span>');
     } else {
       _aiShowMessage(
-        `<span style="font-size:0.72rem;color:var(--error)">Status: ${status}</span>` +
-        (data.error ? `<pre style="font-size:0.72rem;white-space:pre-wrap;color:var(--error)">${data.error}</pre>` : ''),
+        `<span style="font-size:0.72rem;color:var(--error)">Status: ${_aiEsc(status)}</span>` +
+        (data.error ? `<pre style="font-size:0.72rem;white-space:pre-wrap;color:var(--error)">${_aiEsc(data.error)}</pre>` : ''),
         true
       );
     }
   } catch { /* network hiccup — keep polling */ }
+  finally { _aiPollInFlight = false; }
+}
+
+function _aiRenderIterations(iterations, status, initialPlan, initialState) {
+  const iterLog = document.getElementById('ai-iter-log');
+  if (!iterLog) return;
+  iterLog.style.display = '';
+  const running = status === 'RUNNING';
+  const last = iterations[iterations.length - 1];
+  let html = `<div style="font-size:0.7rem;padding:0.4rem 0">`;
+
+  // ── Initial simulation state ────────────────────────────────────────────
+  if (initialState && typeof initialState === 'object') {
+    const scalarKeys = ['screenWidth','screenHeight','minMatch','symsPerReel','targetVolatility','winVecDecay','noWinSetCount','winSetCount'];
+    const scalarPairs = scalarKeys
+      .filter(k => initialState[k] !== undefined)
+      .map(k => `<span style="margin-right:10px"><span style="color:var(--text2)">${_aiEsc(k)}:</span> <strong>${_aiEsc(String(initialState[k]))}</strong></span>`)
+      .join('');
+    const weightsJson = initialState.weights ? JSON.stringify(initialState.weights) : null;
+    const paytableJson = initialState.paytable ? JSON.stringify(initialState.paytable, null, 2) : null;
+    const detailId = 'ai-init-state-detail';
+    html += `<div style="padding:4px 6px;margin-bottom:6px;background:var(--surface2,var(--border));border-radius:4px;font-size:0.67rem">
+      <div style="display:flex;align-items:center;gap:6px;line-height:1.8;flex-wrap:wrap">
+        <span style="color:var(--text2);font-size:0.63rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0">Initial state</span>
+        ${scalarPairs}
+        <button class="icon-btn" style="width:auto;height:16px;padding:0 5px;font-size:0.6rem;flex-shrink:0" onclick="(function(btn){var d=document.getElementById('${detailId}');var open=d.style.display!=='none';d.style.display=open?'none':'block';btn.textContent=open?'▶ weights/paytable':'▼ weights/paytable';})(this)">▶ weights/paytable</button>
+      </div>
+      <div id="${detailId}" style="display:none;margin-top:4px">
+        ${weightsJson ? `<div style="margin-bottom:4px"><span style="color:var(--text2)">weights:</span> <code style="font-size:0.65rem;word-break:break-all">${_aiEsc(weightsJson)}</code></div>` : ''}
+        ${paytableJson ? `<div><span style="color:var(--text2)">paytable:</span><pre style="margin:2px 0 0;font-size:0.63rem;line-height:1.4;overflow-x:auto;white-space:pre-wrap">${_aiEsc(paytableJson)}</pre></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  if (running) {
+    html += `<div style="color:var(--text2);margin-bottom:0.35rem">⏳ Iteration <strong>${last.iteration}</strong> / ${last.maxIterations} running…</div>`;
+  }
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.68rem;table-layout:fixed">`;
+  html += `<thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+    <th style="text-align:left;padding:2px 5px;width:2.5rem">#</th>
+    <th style="text-align:right;padding:2px 5px;width:4rem">RTP %</th>
+    <th style="text-align:right;padding:2px 5px;width:4rem">HR %</th>
+    <th style="text-align:right;padding:2px 5px;width:4.5rem">Std Dev</th>
+    <th style="text-align:center;padding:2px 5px;width:3.5rem">Combo</th>
+    <th style="text-align:left;padding:2px 5px">LLM patch</th>
+  </tr></thead><tbody>`;
+  _aiPatchMap = {};
+  _aiDistMap = {};
+  for (const it of iterations) {
+    const rowStyle = it.converged ? 'color:var(--success,#4caf50)' : '';
+    const patchKeys = it.llmPatch
+      ? Object.keys(it.llmPatch).filter(k => k !== 'maxIterations' && k !== 'seed').join(', ') || '—'
+      : '—';
+    if (it.llmPatch) _aiPatchMap[it.iteration] = JSON.stringify(it.llmPatch, null, 2);
+    const hasDist = it.hitDistribution && Object.keys(it.hitDistribution).length > 0;
+    if (hasDist) _aiDistMap[it.iteration] = it.hitDistribution;
+    // Every iteration (including #0 plan) has an LLM call → always show 📋
+    const debugBtn = `<button class="icon-btn" title="Inspect LLM prompt+response" style="width:auto;height:18px;padding:0 4px;font-size:0.65rem;flex-shrink:0" onclick="_aiShowDebug('${_aiExecutionId}',${it.iteration})">📋</button>`;
+    const patchCell = it.iteration === 0
+      ? `<div style="display:flex;align-items:center;gap:3px;min-width:0">
+           <span style="color:var(--text2);font-size:0.65rem;flex:1">initial plan</span>${debugBtn}
+         </div>`
+      : it.llmPatch
+        ? `<div style="display:flex;align-items:center;gap:3px;min-width:0">
+             <button class="icon-btn" style="width:auto;height:auto;padding:2px 5px;font-size:0.65rem;text-align:left;border-bottom:1px dashed var(--text2);border-radius:0;max-width:100%;white-space:normal;word-break:break-word;flex:1;min-width:0" title="${_aiEsc(patchKeys)}" onclick="_aiShowPatch(${it.iteration})">${_aiEsc(patchKeys)}</button>${debugBtn}
+           </div>`
+        : `<div style="display:flex;align-items:center;gap:3px;min-width:0"><span style="color:var(--text2);flex:1">—</span>${debugBtn}</div>`;
+    const stdDev = (typeof it.stdDev === 'number') ? it.stdDev.toFixed(2) : '—';
+    const comboCell = hasDist
+      ? `<button class="icon-btn" title="Reveal win-combo distribution" style="width:auto;height:18px;padding:0 5px;font-size:0.7rem" onclick="_aiShowDist(${it.iteration})">📊</button>`
+      : `<span style="color:var(--text2)">—</span>`;
+    html += `<tr style="${rowStyle};border-bottom:1px solid var(--border)">
+      <td style="padding:2px 5px;font-weight:600">${it.converged ? '✓ ' : ''}${it.iteration}</td>
+      <td style="text-align:right;padding:2px 5px">${it.rtp.toFixed(2)}</td>
+      <td style="text-align:right;padding:2px 5px">${it.hitRate.toFixed(2)}</td>
+      <td style="text-align:right;padding:2px 5px">${stdDev}</td>
+      <td style="text-align:center;padding:2px 5px">${comboCell}</td>
+      <td style="padding:2px 5px">${patchCell}</td>
+    </tr>`;
+  }
+  html += `</tbody></table></div>`;
+  iterLog.innerHTML = html;
+  // scroll to bottom to show latest
+  iterLog.scrollTop = iterLog.scrollHeight;
+}
+
+let _aiDebugData = null;
+let _aiPatchMap = {};
+let _aiDistMap = {};
+let _aiDebugReqToken = 0;
+
+const _AI_PATCH_KEY_DOCS = {
+  weights: 'Probability of picking each reel set on a spin (win sets + no-win sets). Values sum to ~1.0; raising a win set’s share pushes RTP up, raising a no-win set’s share pushes it down.',
+  paytable: 'Payout multipliers per symbol, keyed as symbolId → { matchCount: multiplier }. A value of 4.0 at matchCount 3 means "3-in-a-row of this symbol pays 4× the bet". Bigger multipliers = higher RTP and volatility.',
+  winVecDecay: 'How fast a symbol thins out along a winning strip (0.40–0.95). Lower = symbols cluster more → longer/bigger wins → higher RTP & volatility. Changing it rebuilds the win strips.',
+  symsPerReel: 'Total tiles per reel (64–512). More tiles = finer probability control but rarer exact combos. Changing it rebuilds the strips.',
+  targetVolatility: 'Volatility band (LOW … ULTRA_EXTREME). Changing it triggers a full rebuild of paytable + strips to match the new risk profile.',
+  seed: 'RNG seed for the next simulation — changes which random spins are drawn, not the math. Not shown in the summary column.',
+  maxIterations: 'Hard cap on loop iterations (set in the UI, not tunable by the LLM). Not shown in the summary column.',
+  error: 'The LLM call failed this iteration; the message is the raw error. No patch was applied.'
+};
+
+function _aiPatchLegend(patchJson) {
+  let keys = [];
+  try { keys = Object.keys(JSON.parse(patchJson)); } catch (e) { return ''; }
+  const rows = keys.map(k => {
+    const doc = _AI_PATCH_KEY_DOCS[k] || 'Unknown key.';
+    return `<div style="padding:5px 0;border-bottom:1px solid var(--border)">
+              <code style="color:var(--accent);font-weight:600">${_aiEsc(k)}</code>
+              <div style="color:var(--text2);margin-top:2px">${_aiEsc(doc)}</div>
+            </div>`;
+  }).join('');
+  return `
+    <div style="padding:0.5rem 1rem 0.7rem;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div style="color:var(--text2);margin-bottom:6px">
+        A <strong>patch</strong> is the minimal set of changes the AI made this iteration — only the keys below were touched.
+        It was chosen <em>after</em> simulating the previous strips, then applied and re-simulated on the next pass.
+      </div>
+      ${rows}
+    </div>`;
+}
+
+function _aiShowPatch(iteration) {
+  const patchJson = _aiPatchMap[iteration];
+  if (!patchJson) return;
+  document.getElementById('ai-patch-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'ai-patch-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(80vw,640px);max-height:70vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.9rem;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">LLM Patch — Iteration ${iteration}</span>
+        <button class="icon-btn danger" onclick="document.getElementById('ai-patch-modal').remove()" title="Close">✕</button>
+      </div>
+      ${_aiPatchLegend(patchJson)}
+      <div style="padding:0.35rem 1rem 0.1rem;font-size:0.68rem;color:var(--text2);flex-shrink:0">Raw patch JSON (exact values applied):</div>
+      <pre id="ai-patch-body" style="margin:0;padding:0.4rem 1rem 0.9rem;font-size:0.73rem;line-height:1.5;overflow:auto;flex:1;white-space:pre;color:var(--text);tab-size:2"></pre>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  document.getElementById('ai-patch-body').textContent = patchJson;
+}
+
+function _aiShowIterInfo() {
+  document.getElementById('ai-iter-info-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'ai-iter-info-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+
+  const sections = [
+    {
+      col: '#',
+      src: 'Java: <code>IterationLog.iteration</code>',
+      desc: 'The loop counter. Row <strong>#0</strong> is the initial simulation of the LLM-planned paytable and weights — before any iterate patch is applied. Rows #1+ are the tune-loop iterations. A ✓ prefix means that iteration reached the target RTP and hit-rate within tolerance — the run converged and stopped early.'
+    },
+    {
+      col: 'RTP %',
+      src: 'Java: <code>IterationLog.rtp</code> ← <code>SimStats.rtp()</code>',
+      desc: 'Return-to-Player measured by the simulation on this iteration\'s reel strips. Computed as total payout ÷ total bet across <em>spinsPerIter</em> random spins (default 1,000,000). This is the actual RTP of the current strips, not the target. Green row = within target ± delta.'
+    },
+    {
+      col: 'HR %',
+      src: 'Java: <code>IterationLog.hitRate</code> ← <code>SimStats.hitRate()</code>',
+      desc: 'Hit-rate: percentage of spins that produced at least one winning line. Also measured from the same simulation run. A hit-rate of 30% means 1 in ~3 spins returns something.'
+    },
+    {
+      col: 'Std Dev',
+      src: 'Java: <code>IterationLog.stdDev</code> ← <code>SimStats.stdDev()</code>',
+      desc: 'Standard deviation of the per-spin payout distribution, expressed as a multiple of the bet. Higher = more volatile (bigger swings). A value of 5.0 means typical per-spin payout varies by ±5× the bet around the mean. Computed as √(variance) from the same simulation batch.'
+    },
+    {
+      col: 'Combo 📊',
+      src: 'Java: <code>IterationLog.hitDistribution</code> ← <code>SimStats.hitDistribution()</code>',
+      desc: 'Per-symbol, per-match-length win breakdown from the simulation. Click 📊 to expand. Shows for each symbol how often each length (3-of-a-kind, 4-of-a-kind, …) hit, as a percentage of all spins and raw count. Useful for spotting if a single combo dominates RTP. "—" means no wins were recorded.'
+    },
+    {
+      col: 'LLM patch',
+      src: 'Java: <code>IterationLog.llmPatch</code> ← <code>LlmService.iterate()</code> → OpenAI GPT-4o-mini',
+      desc: `The minimal JSON diff the AI decided to apply <em>after</em> seeing this iteration's simulation results. The text shows only the changed key names (e.g. <code>weights, paytable</code>). Click the text for the full patch with values; click 📋 for the full prompt+response debug.
+             <br><br>
+             <strong>How the LLM decides:</strong> it receives the current mutable state, the simulation output (RTP, hit-rate, distribution), the gap vs. target, the last 3 iteration patches (so it can avoid repeating failures), and the skill documentation (8 Markdown files in <code>skills/ltr/</code> that encode the reel-math rules). GPT-4o-mini reasons over all of that and returns a JSON object with only the keys it wants to change.
+             <br><br>
+             <strong>Patchable keys and what they mean:</strong>
+             <ul style="margin:6px 0 0 0;padding-left:1.2em">
+               <li><code>weights</code> — full array of reel-set probabilities (must sum to 1.0). Shifting weight toward win sets raises RTP; shifting toward no-win sets lowers it. Always the full array — partial is rejected.</li>
+               <li><code>paytable</code> — <code>symbolId → { matchCount: multiplier }</code>. Each value is the <em>new absolute multiplier</em> for that combo (e.g. <code>{"5":{"3":4.0}}</code> = symbol 5, 3-in-a-row, pays exactly 4× bet). Only the symbols/lengths that need changing are included.</li>
+               <li><code>winVecDecay</code> — how steeply symbol tiles thin out along a winning strip (0.40–0.95). Lower = more clustering → more long wins → higher RTP and volatility. <em>Triggers a strip rebuild.</em></li>
+               <li><code>symsPerReel</code> — total tiles per reel (64–512). More tiles = finer probability granularity. <em>Triggers a strip rebuild.</em></li>
+               <li><code>targetVolatility</code> — changes the volatility band (LOW … ULTRA_EXTREME), which rescales the whole paytable and win strips. <em>Triggers a full rebuild.</em></li>
+             </ul>
+             <br>
+             <strong>Instant vs. rebuild:</strong> weight/paytable changes take effect immediately (no strip regeneration). winVecDecay, symsPerReel, and targetVolatility cause all reel strips to be rebuilt from scratch before the next simulation.
+             <br><br>
+             <strong>"—"</strong> means either the run converged (no patch needed), maxIterations was reached, or the LLM was unavailable.`
+    }
+  ];
+
+  let rows = sections.map(s => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+        <code style="color:var(--accent);font-weight:700;font-size:0.78rem">${s.col}</code>
+        <span style="color:var(--text2);font-size:0.65rem">${s.src}</span>
+      </div>
+      <div style="color:var(--text);font-size:0.7rem;line-height:1.5">${s.desc}</div>
+    </div>`).join('');
+
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(90vw,680px);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.9rem;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Agent output — column guide</span>
+        <button class="icon-btn danger" onclick="document.getElementById('ai-iter-info-modal').remove()" title="Close">✕</button>
+      </div>
+      <div style="padding:0.5rem 1rem 1rem;overflow:auto;flex:1">${rows}</div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function _aiShowDist(iteration) {
+  const dist = _aiDistMap[iteration];
+  if (!dist) return;
+  document.getElementById('ai-dist-modal')?.remove();
+
+  let rows = '';
+  for (const [symLabel, byCount] of Object.entries(dist)) {
+    const counts = Object.entries(byCount)
+      .map(([cnt, v]) => {
+        const pct = (v && typeof v.hitRatePct === 'number') ? v.hitRatePct : 0;
+        const hits = (v && typeof v.hits === 'number') ? v.hits : 0;
+        return `<span style="display:inline-block;margin:1px 6px 1px 0;white-space:nowrap">
+                  <strong>${_aiEsc(cnt)}</strong>: ${pct.toFixed(4)}%<span style="color:var(--text2)"> (${hits})</span>
+                </span>`;
+      })
+      .join('');
+    rows += `<div style="padding:4px 0;border-bottom:1px solid var(--border)">
+               <div style="font-weight:600;color:var(--text);margin-bottom:2px">${_aiEsc(symLabel)}</div>
+               <div style="font-size:0.7rem">${counts || '<span style="color:var(--text2)">—</span>'}</div>
+             </div>`;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'ai-dist-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(80vw,640px);max-height:70vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.9rem;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Win-combo distribution — Iteration ${iteration}</span>
+        <button class="icon-btn danger" onclick="document.getElementById('ai-dist-modal').remove()" title="Close">✕</button>
+      </div>
+      <div style="margin:0;padding:0.6rem 1rem;overflow:auto;flex:1;color:var(--text)">${rows || '<span style="color:var(--text2)">No distribution data.</span>'}</div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+async function _aiShowDebug(executionId, iteration) {
+  let modal = document.getElementById('ai-debug-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ai-debug-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(96vw,1100px);height:min(92vh,860px);display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.9rem;border-bottom:1px solid var(--border);flex-shrink:0">
+          <span id="ai-debug-title" style="font-size:0.8rem;font-weight:600;color:var(--text)"></span>
+          <button class="icon-btn danger" onclick="document.getElementById('ai-debug-modal').remove()" title="Close">✕</button>
+        </div>
+        <div style="padding:0.5rem 0.9rem;border-bottom:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0">
+          <button id="ai-debug-tab-prompt" class="icon-btn" style="width:auto;height:auto;padding:0.25rem 0.7rem;font-size:0.72rem" onclick="_aiDebugTab('prompt')">Prompt</button>
+          <button id="ai-debug-tab-response" class="icon-btn" style="width:auto;height:auto;padding:0.25rem 0.7rem;font-size:0.72rem" onclick="_aiDebugTab('response')">Response</button>
+        </div>
+        <pre id="ai-debug-body" style="margin:0;padding:0.8rem 1rem;font-size:0.73rem;line-height:1.5;overflow:auto;flex:1;white-space:pre-wrap;word-break:break-word;color:var(--text);tab-size:2">Loading…</pre>
+      </div>`;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('ai-debug-title').textContent = `LLM Debug — Iteration ${iteration}`;
+  document.getElementById('ai-debug-body').textContent = 'Loading…';
+  modal.style.display = 'flex';
+  _aiDebugData = null;
+  const reqToken = ++_aiDebugReqToken;
+
+  try {
+    const res = await fetch(`/api/agent/executions/${executionId}/debug/${iteration}`);
+    if (reqToken !== _aiDebugReqToken) return; // a newer open superseded this one — ignore
+    if (!res.ok) { document.getElementById('ai-debug-body').textContent = 'Debug file not found.'; return; }
+    const parsed = await res.json();
+    if (reqToken !== _aiDebugReqToken) return; // superseded while awaiting body
+    _aiDebugData = parsed;
+    _aiDebugTab('prompt');
+  } catch (e) {
+    if (reqToken !== _aiDebugReqToken) return;
+    document.getElementById('ai-debug-body').textContent = 'Error: ' + e.message;
+  }
+}
+
+function _aiDebugTab(tab) {
+  if (!_aiDebugData) return;
+  const body = document.getElementById('ai-debug-body');
+  const promptBtn = document.getElementById('ai-debug-tab-prompt');
+  const responseBtn = document.getElementById('ai-debug-tab-response');
+  if (tab === 'prompt') {
+    body.textContent = _aiDebugData.prompt || '(empty)';
+    promptBtn.style.background = 'var(--accent,#6c63ff)';  promptBtn.style.color = '#fff';
+    responseBtn.style.background = '';  responseBtn.style.color = '';
+  } else {
+    let responseText = _aiDebugData.response || '(empty)';
+    try { responseText = JSON.stringify(JSON.parse(responseText), null, 2); } catch { /* not JSON */ }
+    body.textContent = responseText;
+    responseBtn.style.background = 'var(--accent,#6c63ff)';  responseBtn.style.color = '#fff';
+    promptBtn.style.background = '';  promptBtn.style.color = '';
+  }
 }
 
 async function cancelAiAgent() {
