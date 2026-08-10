@@ -694,14 +694,14 @@ function _aiRenderIterations(iterations, status, initialPlan, initialState) {
     <th style="text-align:right;padding:2px 5px;width:4rem">HR %</th>
     <th style="text-align:right;padding:2px 5px;width:4.5rem">Std Dev</th>
     <th style="text-align:center;padding:2px 5px;width:3.5rem">Combo</th>
-    <th style="text-align:left;padding:2px 5px">LLM patch</th>
+    <th style="text-align:left;padding:2px 5px">Agent tools</th>
   </tr></thead><tbody>`;
   _aiPatchMap = {};
   _aiDistMap = {};
   for (const it of iterations) {
     const rowStyle = it.converged ? 'color:var(--success,#4caf50)' : '';
     const patchKeys = it.llmPatch
-      ? Object.keys(it.llmPatch).filter(k => k !== 'maxIterations' && k !== 'seed').join(', ') || '—'
+      ? (it.llmPatch.toolCalls ? it.llmPatch.toolCalls.join(', ') : Object.keys(it.llmPatch).filter(k => k !== 'totalCalls' && k !== 'toolCallDetails').join(', ')) || '—'
       : '—';
     if (it.llmPatch) _aiPatchMap[it.iteration] = JSON.stringify(it.llmPatch, null, 2);
     const hasDist = it.hitDistribution && Object.keys(it.hitDistribution).length > 0;
@@ -773,25 +773,78 @@ function _aiPatchLegend(patchJson) {
 }
 
 function _aiShowPatch(iteration) {
-  const patchJson = _aiPatchMap[iteration];
-  if (!patchJson) return;
+  const patch = _aiPatchMap[iteration];
+  if (!patch) return;
   document.getElementById('ai-patch-modal')?.remove();
+
+  let patchObj = {};
+  try { patchObj = JSON.parse(patch); } catch (e) {}
+
+  const details = patchObj.toolCallDetails || [];
+  const totalCalls = patchObj.totalCalls || details.length;
+
+  // Build tool call timeline
+  const TOOL_COLORS = {
+    runSimulation:  '#4caf50',
+    tuneWeights:    '#2196f3',
+    patchPaytable:  '#ff9800',
+    rebuildStrips:  '#e91e63',
+    getTargets:     '#9e9e9e',
+    getCurrentState:'#9e9e9e'
+  };
+
+  let timelineHtml = '';
+  if (details.length > 0) {
+    timelineHtml = details.map(d => {
+      const color = TOOL_COLORS[d.tool] || '#9e9e9e';
+      const isOk  = String(d.result || '').startsWith('OK');
+      const isErr = String(d.result || '').startsWith('ERROR');
+      const resColor = isErr ? 'var(--danger,#f44336)' : isOk ? 'var(--success,#4caf50)' : 'var(--text2)';
+      const argsHtml = d.args && d.args.trim() && d.args !== '""'
+        ? `<pre style="margin:3px 0 0 0;padding:3px 6px;background:var(--bg);border-radius:4px;font-size:0.67rem;white-space:pre-wrap;word-break:break-word;color:var(--text);max-height:6rem;overflow:auto">${_aiEsc(d.args)}</pre>`
+        : '';
+      return `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <div style="flex-shrink:0;width:1.5rem;text-align:right;color:var(--text2);font-size:0.65rem;padding-top:2px">#${d.seq}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="background:${color};color:#fff;border-radius:3px;padding:1px 5px;font-size:0.65rem;font-weight:600;flex-shrink:0">${_aiEsc(d.tool)}</span>
+            <span style="font-size:0.67rem;color:${resColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_aiEsc(d.result)}">${_aiEsc(d.result)}</span>
+          </div>
+          ${argsHtml}
+        </div>
+      </div>`;
+    }).join('');
+  } else if (patchObj.toolCalls) {
+    // Fallback: only names available
+    timelineHtml = patchObj.toolCalls.map((t, i) => {
+      const color = TOOL_COLORS[t] || '#9e9e9e';
+      return `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">
+        <div style="flex-shrink:0;width:1.5rem;text-align:right;color:var(--text2);font-size:0.65rem;padding-top:2px">#${i+1}</div>
+        <span style="background:${color};color:#fff;border-radius:3px;padding:1px 5px;font-size:0.65rem;font-weight:600">${_aiEsc(t)}</span>
+      </div>`;
+    }).join('');
+  } else {
+    timelineHtml = `<div style="color:var(--text2);font-size:0.73rem;padding:8px 0">No tool call details available.</div>`;
+  }
+
   const modal = document.createElement('div');
   modal.id = 'ai-patch-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(80vw,640px);max-height:70vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:min(80vw,640px);max-height:75vh;display:flex;flex-direction:column;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.9rem;border-bottom:1px solid var(--border);flex-shrink:0">
-        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">LLM Patch — Iteration ${iteration}</span>
+        <span style="font-size:0.78rem;font-weight:600;color:var(--text)">Agent Tool Calls — Iteration ${iteration} <span style="font-weight:400;color:var(--text2)">(${totalCalls} calls)</span></span>
         <button class="icon-btn danger" onclick="document.getElementById('ai-patch-modal').remove()" title="Close">✕</button>
       </div>
-      ${_aiPatchLegend(patchJson)}
-      <div style="padding:0.35rem 1rem 0.1rem;font-size:0.68rem;color:var(--text2);flex-shrink:0">Raw patch JSON (exact values applied):</div>
-      <pre id="ai-patch-body" style="margin:0;padding:0.4rem 1rem 0.9rem;font-size:0.73rem;line-height:1.5;overflow:auto;flex:1;white-space:pre;color:var(--text);tab-size:2"></pre>
+      <div style="padding:0.3rem 1rem 0.15rem;font-size:0.67rem;color:var(--text2);flex-shrink:0">
+        Each row is one tool call. The agent calls these autonomously in a ReAct loop until convergence.
+      </div>
+      <div style="overflow:auto;flex:1;padding:0 1rem 0.8rem">
+        ${timelineHtml}
+      </div>
     </div>`;
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
-  document.getElementById('ai-patch-body').textContent = patchJson;
 }
 
 function _aiShowIterInfo() {
@@ -827,24 +880,22 @@ function _aiShowIterInfo() {
       desc: 'Per-symbol, per-match-length win breakdown from the simulation. Click 📊 to expand. Shows for each symbol how often each length (3-of-a-kind, 4-of-a-kind, …) hit, as a percentage of all spins and raw count. Useful for spotting if a single combo dominates RTP. "—" means no wins were recorded.'
     },
     {
-      col: 'LLM patch',
-      src: 'Java: <code>IterationLog.llmPatch</code> ← <code>LlmService.iterate()</code> → OpenAI GPT-4o-mini',
-      desc: `The minimal JSON diff the AI decided to apply <em>after</em> seeing this iteration's simulation results. The text shows only the changed key names (e.g. <code>weights, paytable</code>). Click the text for the full patch with values; click 📋 for the full prompt+response debug.
+      col: 'Agent tools',
+      src: 'Java: <code>IterationLog.llmPatch.toolCallDetails</code> ← <code>LtrTuningTools</code> @Tool calls via LangChain4j AiServices',
+      desc: `The sequence of tool calls the agent made in this iteration's ReAct loop. Click the cell to see a timeline — each call shows the tool name, the arguments passed, and the result returned.
              <br><br>
-             <strong>How the LLM decides:</strong> it receives the current mutable state, the simulation output (RTP, hit-rate, distribution), the gap vs. target, the last 3 iteration patches (so it can avoid repeating failures), and the skill documentation (8 Markdown files in <code>skills/ltr/</code> that encode the reel-math rules). GPT-4o-mini reasons over all of that and returns a JSON object with only the keys it wants to change.
+             <strong>How it works:</strong> one <code>TuningAgent</code> instance is created per outer iteration, wired to a stateful <code>LtrTuningTools</code> that holds the live <code>MutableState</code>. The agent calls tools autonomously until it decides convergence is reached or it has exhausted its reasoning budget (~8 cycles).
              <br><br>
-             <strong>Patchable keys and what they mean:</strong>
+             <strong>Available tools and what they do:</strong>
              <ul style="margin:6px 0 0 0;padding-left:1.2em">
-               <li><code>weights</code> — full array of reel-set probabilities (must sum to 1.0). Shifting weight toward win sets raises RTP; shifting toward no-win sets lowers it. Always the full array — partial is rejected.</li>
-               <li><code>paytable</code> — <code>symbolId → { matchCount: multiplier }</code>. Each value is the <em>new absolute multiplier</em> for that combo (e.g. <code>{"5":{"3":4.0}}</code> = symbol 5, 3-in-a-row, pays exactly 4× bet). Only the symbols/lengths that need changing are included.</li>
-               <li><code>winVecDecay</code> — how steeply symbol tiles thin out along a winning strip (0.40–0.95). Lower = more clustering → more long wins → higher RTP and volatility. <em>Triggers a strip rebuild.</em></li>
-               <li><code>symsPerReel</code> — total tiles per reel (64–512). More tiles = finer probability granularity. <em>Triggers a strip rebuild.</em></li>
-               <li><code>targetVolatility</code> — changes the volatility band (LOW … ULTRA_EXTREME), which rescales the whole paytable and win strips. <em>Triggers a full rebuild.</em></li>
+               <li><code style="color:#4caf50">runSimulation</code> — runs N spins and returns rtp, hitRate, maxWin, volatilityLabel. The agent calls this after every adjustment to verify the effect.</li>
+               <li><code style="color:#2196f3">tuneWeights</code> — replaces the full reel-set weight array. Values are normalised to sum=1.0. Raising win-set weights → higher RTP; raising no-win weights → lower RTP / lower hit-rate.</li>
+               <li><code style="color:#ff9800">patchPaytable</code> — updates multipliers for specific symbols: <code>{ symbolId: { matchCount: multiplier } }</code>. Each value is the new absolute payout for that combo. Only changed symbols/lengths need to be included.</li>
+               <li><code style="color:#e91e63">rebuildStrips</code> — triggers a full reel strip rebuild with new symsPerReel, winVecDecay, or targetVolatility. Expensive — agent uses this only when weights+paytable adjustments are stuck.</li>
+               <li><code style="color:#9e9e9e">getTargets</code> / <code style="color:#9e9e9e">getCurrentState</code> — read-only tools the agent uses to inspect current state before deciding what to change.</li>
              </ul>
              <br>
-             <strong>Instant vs. rebuild:</strong> weight/paytable changes take effect immediately (no strip regeneration). winVecDecay, symsPerReel, and targetVolatility cause all reel strips to be rebuilt from scratch before the next simulation.
-             <br><br>
-             <strong>"—"</strong> means either the run converged (no patch needed), maxIterations was reached, or the LLM was unavailable.`
+             <strong>"—"</strong> means iteration 0 (initial plan), or the LLM was unavailable, or no tool calls were recorded.`
     }
   ];
 

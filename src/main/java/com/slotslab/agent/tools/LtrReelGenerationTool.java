@@ -411,12 +411,25 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         List<LtrTuningTools.ToolCallRecord> calls = tools.getToolCallLog();
         if (calls.isEmpty()) return null;
         Map<String, Object> summary = new LinkedHashMap<>();
+        // Short key list for the table cell (exclude internal runSimulation markers)
         List<String> keys = new ArrayList<>();
         for (LtrTuningTools.ToolCallRecord call : calls) {
             if (!call.tool().startsWith("+")) keys.add(call.tool());
         }
         if (!keys.isEmpty()) summary.put("toolCalls", keys);
         summary.put("totalCalls", tools.getToolCallCount());
+        // Full detail for the inspect modal
+        List<Map<String, Object>> details = new ArrayList<>();
+        int seq = 1;
+        for (LtrTuningTools.ToolCallRecord call : calls) {
+            Map<String, Object> d = new LinkedHashMap<>();
+            d.put("seq",    seq++);
+            d.put("tool",   call.tool());
+            d.put("args",   call.args());
+            d.put("result", call.result());
+            details.add(d);
+        }
+        summary.put("toolCallDetails", details);
         return summary;
     }
 
