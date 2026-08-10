@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.slotslab.agent.execution.ExecutionTrace;
 import com.slotslab.agent.llm.LlmService;
+import com.slotslab.agent.llm.LtrTuningTools;
+import com.slotslab.agent.llm.TuningAgent;
 import com.slotslab.agent.model.AgentContext;
 import com.slotslab.agent.model.AgentRequest;
 import com.slotslab.agent.model.GeneratedReels;
@@ -20,19 +22,18 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * Single-loop LTR reel generation tool.
+ * LTR reel generation tool — ReAct (tool-use) architecture.
  *
  * Flow:
- *   1. LLM Plan (1 call) → initial structural params
- *   2. Build strips, paytable, seed weights
- *   3. Loop up to maxIterations:
- *        a. Simulate spinsPerIter spins
- *        b. Check convergence → exit if met
- *        c. LLM Iterate (1 call) → JSON patch
- *        d. Apply patch:
- *             - weights / paytable → instant
- *             - winVecDecay / symsPerReel / targetVolatility → rebuild strips
- *   4. Return best result
+ *   1. LLM Plan (1 call, json_object mode) → initial structural params + paytable + weights
+ *   2. Build strips from plan
+ *   3. Simulate iteration 0 — check early convergence
+ *   4. For each remaining iteration:
+ *        a. Create LtrTuningTools (stateful tool-holder for this iteration)
+ *        b. Create TuningAgent backed by AiServices + tools
+ *        c. Agent calls runSimulation / tuneWeights / patchPaytable / rebuildStrips autonomously
+ *        d. After agent returns, read last sim stats from tools; log to trace
+ *   5. Return best result across all iterations
  */
 @Component
 public class LtrReelGenerationTool implements AgentReelGenerationTool {
@@ -56,14 +57,14 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
                                   RestrictionBuilder restrictionBuilder,
                                   LlmService llmService,
                                   ObjectMapper mapper) {
-        this.countInit        = countInit;
-        this.noWinFactory     = noWinFactory;
-        this.winFactory       = winFactory;
-        this.paytableGen      = paytableGen;
-        this.weightTuner      = weightTuner;
+        this.countInit          = countInit;
+        this.noWinFactory       = noWinFactory;
+        this.winFactory         = winFactory;
+        this.paytableGen        = paytableGen;
+        this.weightTuner        = weightTuner;
         this.restrictionBuilder = restrictionBuilder;
-        this.llmService       = llmService;
-        this.mapper           = mapper;
+        this.llmService         = llmService;
+        this.mapper             = mapper;
     }
 
     @Override
@@ -89,9 +90,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
                 if (context != null) context.getTrace().setStatusMessage("🤖 LLM planning initial parameters…");
                 String planJson = llmService.plan(request, context);
                 Map<String, Object> planned = mapper.readValue(planJson, new TypeReference<>() {});
-                // LLM plan overrides defaults but user params take priority for symbols/lines
                 planned.forEach((k, v) -> params.putIfAbsent(k, v));
-                // symbols and lines: always use LLM's if user didn't supply them
                 if (!request.parameters().containsKey("symbols") && planned.containsKey("symbols"))
                     params.put("symbols", planned.get("symbols"));
                 if (!request.parameters().containsKey("lines") && planned.containsKey("lines"))
@@ -106,18 +105,16 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             }
         }
 
-        // ── Step 2: Parse params and build initial state ─────────────────────
+        // ── Step 2: Build initial state ──────────────────────────────────────
         if (context != null) context.getTrace().setStatusMessage("⚙️ Building reel strips…");
         MutableState state = MutableState.from(params, request);
         state.rebuild(countInit, noWinFactory, winFactory, paytableGen, weightTuner, request);
 
-        // Override formula-derived paytable/weights with LLM plan values if present
+        // Apply LLM plan paytable + weights on top of formula-built state
         Map<String, Object> planned = (Map<String, Object>) params.get("__planned__");
         if (planned != null) {
             if (planned.containsKey("paytable")) {
-                Map<String, Object> fakePatch = new HashMap<>();
-                fakePatch.put("paytable", planned.get("paytable"));
-                applyPaytablePatch(fakePatch, state, request);
+                applyPaytablePatch(planned, state, request);
                 log.info("[ltr] LLM plan paytable applied");
             }
             if (planned.containsKey("weights")) {
@@ -137,16 +134,16 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         if (context != null) context.getTrace().setInitialState(buildStateMap(state));
 
         final int maxIterations = toInt(params.get("maxIterations"), 5);
-        long spinsPerIter  = toLong(params.get("spinsPerIter"), ReelSetWeightTuner.DEFAULT_SPINS);
-        long seed          = toLong(params.get("seed"), 42L);
+        long spinsPerIter = toLong(params.get("spinsPerIter"), ReelSetWeightTuner.DEFAULT_SPINS);
+        long seed         = toLong(params.get("seed"), 42L);
 
-        log.info("[ltr] starting single loop: maxIterations={} spinsPerIter={} " +
+        log.info("[ltr] starting ReAct loop: maxIterations={} spinsPerIter={} " +
                  "screenWidth={} screenHeight={} minMatch={} symsPerReel={} volatility={} noWinSets={}",
                 maxIterations, spinsPerIter,
                 state.screenWidth, state.screenHeight, state.minMatch,
                 state.symsPerReel, state.volatility, state.noWinSets.size());
 
-        // ── Iteration 0: simulate initial state (LLM plan result) ───────────
+        // ── Iteration 0: simulate initial plan result ────────────────────────
         if (context != null) context.getTrace().setStatusMessage("🎰 Simulating initial state (iteration 0)…");
         ReelSetWeightTuner.SimStats iter0Stats = weightTuner.simulate(
                 state.allReelSets(), state.weights, state.paytable,
@@ -157,8 +154,8 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             context.getTrace().addIterationLog(
                     iterLog(0, maxIterations, iter0Stats, state.symbols, false, null));
 
-        double bestRtpDist = Math.abs(iter0Stats.rtp() - request.targetRtp())
-                           + Math.abs(iter0Stats.hitRate() - request.targetHitRate());
+        double bestRtpDist   = Math.abs(iter0Stats.rtp() - request.targetRtp())
+                             + Math.abs(iter0Stats.hitRate() - request.targetHitRate());
         double[] bestWeights = state.weights.clone();
         Map<Integer, Map<Integer, Double>> bestPaytable = deepCopyPaytable(state.paytable);
         ReelSetWeightTuner.SimStats bestStats = iter0Stats;
@@ -170,7 +167,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             return buildResult(state, iter0Stats, true, request);
         }
 
-        // ── Step 3: Single LLM-driven loop ───────────────────────────────────
+        // ── Step 3: ReAct tuning loop ─────────────────────────────────────────
         boolean converged = false;
 
         for (int iter = 1; iter <= maxIterations; iter++) {
@@ -179,92 +176,81 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
 
             if (context != null)
                 context.getTrace().setStatusMessage(
-                    String.format("🎰 Simulating iteration %d / %d…", iter, maxIterations));
+                    String.format("🤖 Agent tuning iteration %d / %d…", iter, maxIterations));
 
-            ReelSetWeightTuner.SimStats stats = weightTuner.simulate(
-                    state.allReelSets(), state.weights, state.paytable,
-                    state.symbols, state.lines,
-                    state.minMatch, state.screenWidth, state.screenHeight,
+            // Build tools for this iteration — they hold a reference to the shared state
+            LtrTuningTools tools = new LtrTuningTools(
+                    state, request,
+                    weightTuner, countInit, noWinFactory, winFactory, paytableGen,
+                    mapper, context,
                     spinsPerIter, seed + iter);
 
-            double rtpDist = Math.abs(stats.rtp() - request.targetRtp())
-                           + Math.abs(stats.hitRate() - request.targetHitRate());
+            ReelSetWeightTuner.SimStats iterStats = null;
+            Map<String, Object> toolSummary = null;
+
+            if (llmService.isAvailable()) {
+                try {
+                    TuningAgent agent = llmService.createTuningAgent(tools);
+
+                    String situation = buildSituationPrompt(state, iter, maxIterations, request);
+                    String agentSummary = agent.tune(situation);
+
+                    log.info("[ltr] iter={} agent summary: {}", iter, agentSummary);
+
+                    // The last runSimulation() call inside agent populated lastStats
+                    iterStats = tools.getLastStats();
+
+                    // Build a patch summary from tool calls for the trace
+                    toolSummary = buildToolCallSummary(tools);
+
+                    if (context != null) {
+                        context.getTrace().setStatusMessage(
+                            String.format("🎰 Post-agent simulation for iteration %d…", iter));
+                    }
+
+                } catch (Exception e) {
+                    log.warn("[ltr] ReAct agent failed at iter={}: {}", iter, e.getMessage());
+                    toolSummary = Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown");
+                }
+            }
+
+            // If agent didn't run a simulation or failed, run one now to get current stats
+            if (iterStats == null) {
+                iterStats = weightTuner.simulate(
+                        state.allReelSets(), state.weights, state.paytable,
+                        state.symbols, state.lines,
+                        state.minMatch, state.screenWidth, state.screenHeight,
+                        spinsPerIter, seed + iter);
+            }
+
+            double rtpDist = Math.abs(iterStats.rtp() - request.targetRtp())
+                           + Math.abs(iterStats.hitRate() - request.targetHitRate());
             if (rtpDist < bestRtpDist) {
                 bestRtpDist  = rtpDist;
                 bestWeights  = state.weights.clone();
                 bestPaytable = deepCopyPaytable(state.paytable);
-                bestStats    = stats;
+                bestStats    = iterStats;
             }
 
-            boolean rtpOk = Math.abs(stats.rtp() - request.targetRtp()) <= request.rtpDelta();
-            boolean hrOk  = Math.abs(stats.hitRate() - request.targetHitRate()) <= request.hitRateDelta();
+            boolean rtpOk = Math.abs(iterStats.rtp() - request.targetRtp()) <= request.rtpDelta();
+            boolean hrOk  = Math.abs(iterStats.hitRate() - request.targetHitRate()) <= request.hitRateDelta();
 
-            log.info("[ltr] iter={}/{} rtp={} hr={} converged={}/{}",
+            log.info("[ltr] iter={}/{} rtp={} hr={} toolCalls={} converged={}/{}",
                     iter, maxIterations,
-                    String.format("%.2f", stats.rtp()),
-                    String.format("%.2f", stats.hitRate()),
+                    String.format("%.2f", iterStats.rtp()),
+                    String.format("%.2f", iterStats.hitRate()),
+                    tools.getToolCallCount(),
                     rtpOk, hrOk);
+
+            if (context != null)
+                context.getTrace().addIterationLog(
+                        iterLog(iter, maxIterations, iterStats, state.symbols,
+                                rtpOk && hrOk, toolSummary));
 
             if (rtpOk && hrOk) {
                 converged = true;
                 log.info("[ltr] converged at iter={}", iter);
-                if (context != null)
-                    context.getTrace().addIterationLog(
-                            iterLog(iter, maxIterations, stats, state.symbols, true, null));
                 break;
-            }
-            if (iter == maxIterations) {
-                if (context != null)
-                    context.getTrace().addIterationLog(
-                            iterLog(iter, maxIterations, stats, state.symbols, false, null));
-                break;
-            }
-
-            // ── LLM iterate call ────────────────────────────────────────────
-            if (!llmService.isAvailable()) {
-                log.info("[ltr] LLM unavailable — no patch applied for iter={}", iter);
-                if (context != null)
-                    context.getTrace().addIterationLog(
-                            iterLog(iter, maxIterations, stats, state.symbols, false, null));
-                continue;
-            }
-
-            List<String> violations = buildViolations(stats, request);
-            String stateJson = buildStateJson(state, stats);
-
-            try {
-                if (context != null)
-                    context.getTrace().setStatusMessage(
-                        String.format("🤖 LLM patching after iteration %d…", iter));
-                String patchJson = llmService.iterate(
-                        request, context,
-                        iter, buildSimJson(stats, state.symbols),
-                        violations, stateJson, maxIterations);
-                Map<String, Object> patch = mapper.readValue(patchJson, new TypeReference<>() {});
-                log.info("[ltr] LLM patch keys: {}", patch.keySet());
-
-                if (context != null)
-                    context.getTrace().addIterationLog(
-                            iterLog(iter, maxIterations, stats, state.symbols, false, patch));
-
-                boolean needsRebuild = applyPatch(patch, state, request, seed + iter);
-                if (needsRebuild) {
-                    log.info("[ltr] structural patch — rebuilding strips");
-                    state.rebuild(countInit, noWinFactory, winFactory, paytableGen, weightTuner, request);
-                    // Re-apply paytable patch on top of freshly built paytable
-                    if (patch.containsKey("paytable")) {
-                        applyPaytablePatch(patch, state, request);
-                    }
-                }
-                if (patch.containsKey("seed")) {
-                    seed = toLong(patch.get("seed"), seed);
-                }
-            } catch (Exception e) {
-                log.warn("[ltr] LLM iterate failed at iter={}: {}", iter, e.getMessage());
-                if (context != null)
-                    context.getTrace().addIterationLog(
-                            iterLog(iter, maxIterations, stats, state.symbols, false,
-                                    Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown")));
             }
         }
 
@@ -281,59 +267,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         return buildResult(state, bestStats, converged, request);
     }
 
-    // ── patch application ─────────────────────────────────────────────────────
-
-    @SuppressWarnings("unchecked")
-    private boolean applyPatch(Map<String, Object> patch, MutableState state,
-                                AgentRequest request, long seed) {
-        boolean rebuild = false;
-
-        if (patch.containsKey("weights")) {
-            Object raw = patch.get("weights");
-            if (raw instanceof List<?> list) {
-                double[] w = new double[list.size()];
-                for (int i = 0; i < list.size(); i++) {
-                    w[i] = ((Number) list.get(i)).doubleValue();
-                }
-                if (w.length == state.weights.length) {
-                    weightTuner.normalise(w);
-                    state.weights = w;
-                    log.info("[ltr] weights patched ({} values)", w.length);
-                } else {
-                    log.warn("[ltr] weights patch length mismatch: got {} expected {}",
-                            w.length, state.weights.length);
-                }
-            }
-        }
-
-        if (patch.containsKey("paytable")) {
-            applyPaytablePatch(patch, state, request);
-        }
-
-        if (patch.containsKey("winVecDecay")) {
-            double d = ((Number) patch.get("winVecDecay")).doubleValue();
-            if (d >= 0.40 && d <= 0.95 && d != state.winVecDecay) {
-                state.winVecDecay = d;
-                rebuild = true;
-            }
-        }
-        if (patch.containsKey("symsPerReel")) {
-            int s = ((Number) patch.get("symsPerReel")).intValue();
-            if (s >= 64 && s <= 512 && s != state.symsPerReel) {
-                state.symsPerReel = s;
-                rebuild = true;
-            }
-        }
-        if (patch.containsKey("targetVolatility")) {
-            String v = String.valueOf(patch.get("targetVolatility"));
-            if (!v.equals(state.volatility)) {
-                state.volatility = v;
-                rebuild = true;
-            }
-        }
-
-        return rebuild;
-    }
+    // ── paytable patch (used for plan override) ───────────────────────────────
 
     @SuppressWarnings("unchecked")
     private void applyPaytablePatch(Map<String, Object> patch, MutableState state, AgentRequest request) {
@@ -358,36 +292,35 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             }
         }
         if (request.maxPayout() > 0) paytableGen.capPaytable(state.paytable, request.maxPayout());
-        log.info("[ltr] paytable re-applied after rebuild for {} symbols", ptPatch.size());
     }
 
     // ── MutableState ──────────────────────────────────────────────────────────
 
-    static class MutableState {
-        int screenWidth, screenHeight, minMatch, symsPerReel;
-        double winVecDecay;
-        String volatility;
-        List<SymbolDef> symbols;
-        List<int[]> lines;
-        double[] weights;
-        Map<Integer, Map<Integer, Double>> paytable;
+    public static class MutableState {
+        public int screenWidth, screenHeight, minMatch, symsPerReel;
+        public double winVecDecay;
+        public String volatility;
+        public List<SymbolDef> symbols;
+        public List<int[]> lines;
+        public double[] weights;
+        public Map<Integer, Map<Integer, Double>> paytable;
 
         // built strips
-        List<int[][]> noWinSets;
-        List<WinReelSetFactory.WinReelEntry> winEntries;
+        public List<int[][]> noWinSets;
+        public List<WinReelSetFactory.WinReelEntry> winEntries;
 
-        List<int[][]> allReelSets() {
+        public List<int[][]> allReelSets() {
             List<int[][]> all = new ArrayList<>(noWinSets);
             winEntries.stream().map(WinReelSetFactory.WinReelEntry::reelSet).forEach(all::add);
             return all;
         }
 
-        List<int[][]> winSets() {
+        public List<int[][]> winSets() {
             return winEntries.stream().map(WinReelSetFactory.WinReelEntry::reelSet).toList();
         }
 
         @SuppressWarnings("unchecked")
-        static MutableState from(Map<String, Object> params, AgentRequest request) {
+        public static MutableState from(Map<String, Object> params, AgentRequest request) {
             MutableState s = new MutableState();
             s.screenWidth  = toInt(params.get("screenWidth"),  5);
             s.screenHeight = toInt(params.get("screenHeight"), 3);
@@ -402,19 +335,19 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             return s;
         }
 
-        void rebuild(SymbolCountInitialiser countInit,
+        public void rebuild(SymbolCountInitialiser countInit,
                      SpiralNoWinReelSetFactory noWinFactory,
                      WinReelSetFactory winFactory,
                      PaytableGenerator paytableGen,
                      ReelSetWeightTuner weightTuner,
                      AgentRequest request) {
             int[] baseCounts = countInit.initialise(symbols, volatility, symsPerReel);
-            noWinSets   = noWinFactory.create(baseCounts, screenWidth, minMatch);
-            winEntries  = Double.isNaN(winVecDecay)
-                        ? winFactory.create(noWinSets, symbols, baseCounts, screenWidth, volatility)
-                        : winFactory.createWithDecay(noWinSets, symbols, baseCounts, screenWidth, winVecDecay);
-            paytable    = paytableGen.generate(symbols, minMatch, screenWidth, volatility, request.targetHitRate(), request.maxPayout());
-            weights     = weightTuner.seedWeights(noWinSets, winSets(), symbols, request.targetRtp());
+            noWinSets  = noWinFactory.create(baseCounts, screenWidth, minMatch);
+            winEntries = Double.isNaN(winVecDecay)
+                       ? winFactory.create(noWinSets, symbols, baseCounts, screenWidth, volatility)
+                       : winFactory.createWithDecay(noWinSets, symbols, baseCounts, screenWidth, winVecDecay);
+            paytable   = paytableGen.generate(symbols, minMatch, screenWidth, volatility, request.targetHitRate(), request.maxPayout());
+            weights    = weightTuner.seedWeights(noWinSets, winSets(), symbols, request.targetRtp());
         }
 
         private static List<SymbolDef> parseSymbols(List<Map<String, Object>> raw) {
@@ -437,26 +370,54 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
             return lines;
         }
 
-        private static int toInt(Object v, int def) {
+        public static int toInt(Object v, int def) {
             if (v instanceof Number n) return n.intValue();
             if (v instanceof String s) { try { return Integer.parseInt(s); } catch (NumberFormatException ignored) {} }
             return def;
         }
     }
 
-    // ── violations ───────────────────────────────────────────────────────────
+    // ── prompt builder ────────────────────────────────────────────────────────
 
-    private List<String> buildViolations(ReelSetWeightTuner.SimStats stats, AgentRequest request) {
-        List<String> v = new ArrayList<>();
-        double rtpGap = stats.rtp() - request.targetRtp();
-        if (Math.abs(rtpGap) > request.rtpDelta())
-            v.add(String.format("RTP gap: actual=%.2f%% target=%.2f%% (gap=%.2f%%, delta=±%.2f%%)",
-                    stats.rtp(), request.targetRtp(), rtpGap, request.rtpDelta()));
-        double hrGap = stats.hitRate() - request.targetHitRate();
-        if (Math.abs(hrGap) > request.hitRateDelta())
-            v.add(String.format("HitRate gap: actual=%.2f%% target=%.2f%% (gap=%.2f%%, delta=±%.2f%%)",
-                    stats.hitRate(), request.targetHitRate(), hrGap, request.hitRateDelta()));
-        return v;
+    private String buildSituationPrompt(MutableState state, int iter, int maxIter,
+                                         AgentRequest request) {
+        Map<String, Object> s = buildStateMap(state);
+        String stateJson;
+        try { stateJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(s); }
+        catch (Exception e) { stateJson = s.toString(); }
+
+        return String.format("""
+            Iteration %d of %d.
+
+            Targets: RTP=%.2f%%±%.2f%%  hitRate=%.2f%%±%.2f%%
+            MaxPayout: %s
+
+            Current state:
+            %s
+
+            Use getTargets() and getCurrentState() for full details.
+            Call runSimulation() first to see current RTP, then adjust and verify.
+            """,
+            iter, maxIter,
+            request.targetRtp(), request.rtpDelta(),
+            request.targetHitRate(), request.hitRateDelta(),
+            request.maxPayout() > 0 ? request.maxPayout() + "×" : "uncapped",
+            stateJson);
+    }
+
+    // ── tool call summary for trace ───────────────────────────────────────────
+
+    private Map<String, Object> buildToolCallSummary(LtrTuningTools tools) {
+        List<LtrTuningTools.ToolCallRecord> calls = tools.getToolCallLog();
+        if (calls.isEmpty()) return null;
+        Map<String, Object> summary = new LinkedHashMap<>();
+        List<String> keys = new ArrayList<>();
+        for (LtrTuningTools.ToolCallRecord call : calls) {
+            if (!call.tool().startsWith("+")) keys.add(call.tool());
+        }
+        if (!keys.isEmpty()) summary.put("toolCalls", keys);
+        summary.put("totalCalls", tools.getToolCallCount());
+        return summary;
     }
 
     // ── JSON helpers ──────────────────────────────────────────────────────────
@@ -480,13 +441,6 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         return s;
     }
 
-    private String buildStateJson(MutableState state, ReelSetWeightTuner.SimStats lastSim) {
-        Map<String, Object> s = buildStateMap(state);
-        try { return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(s); }
-        catch (Exception e) { return s.toString(); }
-    }
-
-    /** Builds a labelled win-combo distribution map from sim stats, or null if none. */
     private Map<String, Object> buildHitDistMap(ReelSetWeightTuner.SimStats stats, List<SymbolDef> symbols) {
         if (stats.hitDistribution() == null || stats.hitDistribution().isEmpty()) return null;
         Map<String, Object> dist = new LinkedHashMap<>();
@@ -511,7 +465,6 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         return dist;
     }
 
-    /** Builds a per-iteration trace record carrying stats + optional LLM patch. */
     private ExecutionTrace.IterationLog iterLog(int iter, int maxIterations,
                                                 ReelSetWeightTuner.SimStats stats,
                                                 List<SymbolDef> symbols,
@@ -533,9 +486,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         sim.put("volatilityLabel", stats.volatilityLabel());
         sim.put("spins",           stats.spins());
         Map<String, Object> dist = buildHitDistMap(stats, symbols);
-        if (dist != null) {
-            sim.put("hitDistribution", dist);
-        }
+        if (dist != null) sim.put("hitDistribution", dist);
         root.put("simulation", sim);
         try { return mapper.writeValueAsString(root); }
         catch (Exception e) { return "{}"; }
@@ -580,9 +531,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
         sim.put("volatilityLabel", stats.volatilityLabel());
         sim.put("spins",           stats.spins());
         Map<String, Object> dist = buildHitDistMap(stats, state.symbols);
-        if (dist != null && !dist.isEmpty()) {
-            sim.put("hitDistribution", dist);
-        }
+        if (dist != null && !dist.isEmpty()) sim.put("hitDistribution", dist);
         response.put("simulation", sim);
         response.put("paytable", state.paytable);
 
