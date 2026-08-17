@@ -26,35 +26,32 @@
 }
 
 /* ── Reel set chances ── */
-#rtp-chances-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 0.5rem;
-}
-.rtp-chance-row {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0;
-  min-width: 0;
-}
-.rtp-chance-label {
-  font-size: 0.7rem;
-  color: var(--text2);
-  font-weight: 600;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rtp-chance-input {
-  width: 62px !important;
+.rtp-chances-input {
+  width: 100%;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.78rem;
-  flex-shrink: 0;
+  box-sizing: border-box;
 }
-.rtp-chance-pct { font-size: 0.7rem; color: var(--text3); width: 10px; flex-shrink: 0; }
+.rtp-chances-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  margin-top: 0.35rem;
+}
+.rtp-chance-legend-item {
+  font-size: 0.68rem;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.rtp-chance-legend-idx {
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 0.15rem;
+}
+.rtp-chance-legend-active {
+  color: var(--accent);
+  font-weight: 700;
+}
 .rtp-chance-total {
   font-size: 0.7rem;
   font-weight: 700;
@@ -63,6 +60,7 @@
 }
 .rtp-chance-total.ok  { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
 .rtp-chance-total.err { color: var(--error);   background: color-mix(in srgb, var(--error)   12%, transparent); }
+.rtp-chance-row { display: flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0; min-width: 0; }
 
 /* ── Screen / payline definitions ── */
 .rtp-lines-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.6rem; }
@@ -113,7 +111,24 @@
   border-bottom: 1px solid var(--border);
 }
 .rtp-sym-row:last-child { border-bottom: none; }
-.rtp-sym-id { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-align: center; }
+.rtp-sym-id {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-align: center;
+  width: 36px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  padding: 0 2px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.rtp-sym-id:hover, .rtp-sym-id:focus {
+  border-color: var(--accent);
+  background: var(--surface2);
+  outline: none;
+}
 
 .rtp-sym-row input[type=text],
 .rtp-sym-row input[type=number] { height: 28px; font-size: 0.78rem; }
@@ -156,4 +171,11 @@
   border-radius: 2px;
   transition: width .3s ease;
   width: 0%;
+}
+
+/* ── Screen & Paytable JSON editor ── */
+#rtp-sim-json-editor .CodeMirror {
+  min-height: 320px;
+  height: auto;
+  max-height: 60vh;
 }

@@ -1,13 +1,13 @@
 /* ── RTP Simulation ── */
 
-async function pushRtpHistory(label, resultHtml, payload) {
+async function pushRtpHistory(label, resultHtml, payload, r) {
   const now = new Date();
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const id = Date.now().toString();
   await fetch('/api/history/simulate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, strategy: label, time, result: resultHtml, config: JSON.stringify(payload) })
+    body: JSON.stringify({ id, strategy: label, time, result: resultHtml, config: JSON.stringify({ payload, r }) })
   });
   await fetch(`/api/history/simulate/resize?size=${getMaxHistory()}`, { method: 'PUT' });
   await loadRtpHistory();
@@ -46,9 +46,22 @@ function renderRtpHistory(entries) {
       const body = document.getElementById('rtp-result-body');
       body.innerHTML = entry.result;
       _initComboSections(body);
+      _rtpResultJsonMode = false;
+      _rtpResultCardHtml = null;
       if (entry.config) {
-        try { restoreRtpForm(JSON.parse(entry.config)); } catch(e) {}
+        try {
+          const cfg = JSON.parse(entry.config);
+          // New format: { payload, r } — old format: payload directly
+          const payload = cfg.payload || cfg;
+          const r = cfg.r || null;
+          _lastRtpResult = r ? { r, payload } : null;
+          restoreRtpForm(payload);
+        } catch(e) { _lastRtpResult = null; }
       }
+      const jsonBtn = document.getElementById('rtp-result-json-btn');
+      const cardBtn = document.getElementById('rtp-result-card-btn');
+      if (jsonBtn) { jsonBtn.style.display = ''; jsonBtn.classList.remove('active'); }
+      if (cardBtn) cardBtn.style.display = 'none';
       setStatus('rtp', true, t('rtp.restored'));
     };
     list.appendChild(item);
@@ -68,6 +81,93 @@ async function clearRtpHistory() {
   renderRtpHistory([]);
 }
 
+let _lastRtpResult = null;   // { r, payload } — stored after each successful simulation
+let _rtpResultJsonMode = false;
+let _rtpResultCardHtml = null;
+
+function toggleRtpResultJson() {
+  if (!_lastRtpResult) { showToast('No raw result data — re-run the simulation to enable JSON view', true); return; }
+  const body    = document.getElementById('rtp-result-body');
+  const jsonBtn = document.getElementById('rtp-result-json-btn');
+  const cardBtn = document.getElementById('rtp-result-card-btn');
+  _rtpResultJsonMode = !_rtpResultJsonMode;
+  if (_rtpResultJsonMode) {
+    _rtpResultCardHtml = body.innerHTML;
+    const { r } = _lastRtpResult;
+    const out = Object.assign({}, r);
+    if (Array.isArray(r.comboBreakdown)) {
+      out.comboBreakdown = r.comboBreakdown
+        .map(c => ({
+          tileId:          c.symbolId,
+          length:          c.matchLabel != null ? c.matchLabel : c.matchCount,
+          hits:            c.hitCount,
+          hitRate:         (c.hitCount / r.totalSpins * 100).toFixed(4) + '%',
+          multiplier:      +(c.totalPayout / c.hitCount / r.betSize).toFixed(4),
+          rtpContribution: (c.totalPayout / r.totalSpins * 100).toFixed(4) + '%',
+        }))
+        .sort((a, b) => a.tileId - b.tileId);
+    }
+    const json = JSON.stringify(out, null, 2);
+    body.innerHTML = `
+      <div class="rtp-json-toolbar">
+        <button class="icon-btn" onclick="_copyRtpJson(this)" title="Copy JSON" style="display:flex;align-items:center;gap:0.3rem;width:auto;padding:0 6px;font-size:0.68rem">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+        <button class="icon-btn" onclick="_expandAllRtpJson(true)" title="Expand all" style="width:auto;padding:0 6px;font-size:0.68rem">Expand all</button>
+        <button class="icon-btn" onclick="_expandAllRtpJson(false)" title="Collapse all" style="width:auto;padding:0 6px;font-size:0.68rem">Collapse all</button>
+      </div>
+      <div class="rtp-result-json-tree" id="rtp-json-tree">${_buildJsonTree(out)}</div>`;
+    body.dataset.jsonRaw = json;
+    if (jsonBtn) jsonBtn.style.display = 'none';
+    if (cardBtn) cardBtn.style.display = '';
+  } else {
+    body.innerHTML = _rtpResultCardHtml;
+    if (jsonBtn) jsonBtn.style.display = '';
+    if (cardBtn) cardBtn.style.display = 'none';
+  }
+}
+
+function _copyRtpJson(btn) {
+  const body = document.getElementById('rtp-result-body');
+  const json = body.dataset.jsonRaw || '';
+  navigator.clipboard.writeText(json).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = btn.innerHTML.replace('Copy', '✓ Copied');
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  });
+}
+
+function _expandAllRtpJson(expand) {
+  document.querySelectorAll('#rtp-json-tree details').forEach(d => { d.open = expand; });
+}
+
+function _buildJsonTree(val, indent) {
+  indent = indent || 0;
+  const pad = '  '.repeat(indent);
+  const padI = '  '.repeat(indent + 1);
+  if (val === null) return '<span class="jt-null">null</span>';
+  if (typeof val === 'boolean') return `<span class="jt-bool">${val}</span>`;
+  if (typeof val === 'number') return `<span class="jt-num">${val}</span>`;
+  if (typeof val === 'string') return `<span class="jt-str">"${escapeHtml(val)}"</span>`;
+  if (Array.isArray(val)) {
+    if (val.length === 0) return '<span class="jt-brace">[]</span>';
+    const items = val.map((v, i) =>
+      `<div class="jt-row">${padI}${_buildJsonTree(v, indent + 1)}${i < val.length - 1 ? '<span class="jt-punct">,</span>' : ''}</div>`
+    ).join('');
+    return `<details open><summary class="jt-brace">[<span class="jt-count">${val.length}</span>]</summary>${items}<span class="jt-brace">]</span></details>`;
+  }
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return '<span class="jt-brace">{}</span>';
+    const items = keys.map((k, i) =>
+      `<div class="jt-row">${padI}<span class="jt-key">"${escapeHtml(k)}"</span><span class="jt-punct">: </span>${_buildJsonTree(val[k], indent + 1)}${i < keys.length - 1 ? '<span class="jt-punct">,</span>' : ''}</div>`
+    ).join('');
+    return `<details open><summary class="jt-brace">{<span class="jt-count">${keys.length}</span>}</summary>${items}<span class="jt-brace">}</span></details>`;
+  }
+  return escapeHtml(String(val));
+}
+
 function collectRtpRequest() {
   const errors = [];
 
@@ -80,19 +180,27 @@ function collectRtpRequest() {
 
   const chances = [];
   let chanceSum = 0;
-  _latestReelSets.forEach((_, i) => {
-    const el = document.getElementById('rtp-chance-' + i);
-    const v = parseFloat(el?.value);
-    if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': ' + t('rtp.chance_gte0')); return; }
-    chances.push({ setIndex: i, chance: v });
-    chanceSum += v;
-  });
-  if (Math.abs(chanceSum - 100) > 0.05)
-    errors.push(t('rtp.chances_sum') + ' (current: ' + chanceSum.toFixed(1) + '%)');
-
-  const screenWidth  = parseInt(document.getElementById('rtp-screen-width').value);
-  const screenHeight = parseInt(document.getElementById('rtp-screen-height').value);
-  const minMatch     = parseInt(document.getElementById('rtp-min-match').value);
+  const chancesInput = document.getElementById('rtp-chances-input');
+  const chanceVals = chancesInput ? chancesInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (chanceVals.length !== _latestReelSets.length) {
+    errors.push(t('rtp.chances_count') || ('Expected ' + _latestReelSets.length + ' chances, got ' + chanceVals.length));
+  } else {
+    chanceVals.forEach((raw, i) => {
+      const v = parseFloat(raw);
+      if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': ' + t('rtp.chance_gte0')); return; }
+      chances.push({ setIndex: i, chance: v });
+      chanceSum += v;
+    });
+    const roundedSum = Math.round(chanceSum * 1000000) / 1000000;
+    if (roundedSum !== 100)
+      errors.push(t('rtp.chances_sum') + ' (current: ' + roundedSum + '%)');
+  }
+  const _swEl = document.getElementById('rtp-screen-width');
+  const _shEl = document.getElementById('rtp-screen-height');
+  const _mmEl = document.getElementById('rtp-min-match');
+  const screenWidth  = parseInt(_swEl.value  || _swEl.placeholder);
+  const screenHeight = parseInt(_shEl.value  || _shEl.placeholder);
+  const minMatch     = parseInt(_mmEl.value  || _mmEl.placeholder);
   if (isNaN(screenWidth)  || screenWidth  < 1) errors.push(t('rtp.width_gte1'));
   if (isNaN(screenHeight) || screenHeight < 1) errors.push(t('rtp.height_gte1'));
   if (isNaN(minMatch) || minMatch < 1) errors.push(t('rtp.min_match_gte1'));
@@ -148,10 +256,19 @@ function collectRtpRequest() {
   });
 
   const symbols = [];
+  if (_rtpSymJsonMode && _rtpSymJsonCm) {
+    try {
+      const parsed = JSON.parse(_rtpSymJsonCm.getValue());
+      const norm = _normalizeRtpPayload(Object.assign({ screenWidth, minMatch }, parsed));
+      (norm.symbols || []).forEach(s => symbols.push(s));
+    } catch(e) {
+      errors.push('Symbol Config JSON parse error: ' + e.message);
+    }
+  } else {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const symId = parseInt(row.dataset.symId);
     const type = row.querySelector('select').value;
-    const ptRaw = row.querySelector('input[type=text]').value.trim().replace(/^n\/a$/i, '');
+    const ptRaw = row.querySelector('.rtp-paytable-input').value.trim().replace(/^n\/a$/i, '');
     const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
     const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
@@ -195,6 +312,7 @@ function collectRtpRequest() {
     }
     symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence, contactsIntervalSetName });
   });
+  }
 
   if (symbols.length === 0) errors.push(t('rtp.at_least_one_symbol'));
 
@@ -287,6 +405,11 @@ async function runRtp() {
 
   btn.disabled = true;
   setStatus('rtp', null, t('rtp.running'));
+  _rtpResultJsonMode = false;
+  const jsonBtn = document.getElementById('rtp-result-json-btn');
+  const cardBtn = document.getElementById('rtp-result-card-btn');
+  if (jsonBtn) jsonBtn.style.display = 'none';
+  if (cardBtn) cardBtn.style.display = 'none';
 
   const body = document.getElementById('rtp-result-body');
   body.innerHTML = `
@@ -307,10 +430,17 @@ async function runRtp() {
       body.innerHTML = `<div class="rtp-placeholder"><span style="color:var(--error)">${escapeHtml(d.error)}</span></div>`;
     } else {
       const r = JSON.parse(d.result);
+      _lastRtpResult = { r, payload };
+      _rtpResultJsonMode = false;
+      _rtpResultCardHtml = null;
       renderRtpResult(body, r, payload);
+      const jsonBtn = document.getElementById('rtp-result-json-btn');
+      const cardBtn = document.getElementById('rtp-result-card-btn');
+      if (jsonBtn) { jsonBtn.style.display = ''; }
+      if (cardBtn) cardBtn.style.display = 'none';
       setStatus('rtp', true, t('rtp.done'));
       const label = `${r.rtpPercent.toFixed(2)}% · ${payload.strategy} · ${(r.totalSpins/1e6).toFixed(1)}M`;
-      await pushRtpHistory(label, body.innerHTML, payload);
+      await pushRtpHistory(label, body.innerHTML, payload, r);
     }
   } catch(e) {
     setStatus('rtp', false, t('rtp.network_error'));
@@ -633,4 +763,535 @@ function _comboVal(c, col, totalSpins, betSize) {
     case 5: return c.totalPayout / totalSpins;
     default: return 0;
   }
+}
+
+/* ── Screen & Paytable JSON mode ── */
+let _rtpSimJsonMode = false;
+let _rtpSimJsonCm = null;
+
+function _getRtpSimJsonCm() {
+  if (_rtpSimJsonCm) return _rtpSimJsonCm;
+  const el = document.getElementById('rtp-sim-json-editor');
+  _rtpSimJsonCm = CodeMirror(el, {
+    mode: { name: 'javascript', json: true },
+    theme: 'rsg',
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    styleSelectedText: true,
+    indentUnit: 2,
+    tabSize: 2,
+    extraKeys: {
+      'Cmd-S':  cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Ctrl-S': cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Cmd-E':  cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Ctrl-E': cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Cmd-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Ctrl-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Cmd-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+      'Ctrl-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+    },
+  });
+  return _rtpSimJsonCm;
+}
+
+function _buildRtpSimConfigFromForm() {
+  const screenWidth = parseInt(document.getElementById('rtp-screen-width')?.value) || null;
+  const screenHeight= parseInt(document.getElementById('rtp-screen-height')?.value) || null;
+  const minMatch    = parseInt(document.getElementById('rtp-min-match')?.value) || null;
+
+  const lineDefinitions = [];
+  document.querySelectorAll('.rtp-line-row').forEach(row => {
+    const inp = row.querySelector('.rtp-line-input');
+    const raw = inp ? inp.value.trim() : '';
+    if (raw) lineDefinitions.push(raw.split(',').map(s => parseInt(s.trim(), 10)));
+  });
+
+  const cfg = {
+    screen: { cols: screenWidth, rows: screenHeight },
+    minMatch,
+    lineDefinitions,
+  };
+
+  return cfg;
+}
+
+function _prettyRtpSimConfig(cfg) {
+  // Serialize lineDefinitions 2 per row
+  const lineDefs = cfg.lineDefinitions;
+  const lineDefsPlaceholder = '__LINE_DEFS__';
+  const cfgCopy = Object.assign({}, cfg, {lineDefinitions: lineDefsPlaceholder});
+  let text = JSON.stringify(cfgCopy, null, 2);
+  // Build compact inner items then group 2 per line
+  const items = lineDefs.map(line => '[' + line.join(',') + ']');
+  const rows = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2).join(', '));
+  const compact = rows.length === 0 ? '[]'
+    : '[\n    ' + rows.join(',\n    ') + '\n  ]';
+  text = text.replace('"' + lineDefsPlaceholder + '"', compact);
+  return text;
+}
+
+function toggleRtpSimJsonMode() {
+  _rtpSimJsonMode = !_rtpSimJsonMode;
+  const formBody  = document.getElementById('rtp-sim-form-body');
+  const editorEl  = document.getElementById('rtp-sim-json-editor');
+  const errEl     = document.getElementById('rtp-sim-json-error');
+  const jsonBtn   = document.getElementById('rtp-sim-json-mode-btn');
+  const formBtn   = document.getElementById('rtp-sim-form-mode-btn');
+  const formOnlyBtns = document.getElementById('line-defs-header-btns');
+
+  if (_rtpSimJsonMode) {
+    const cfg = _buildRtpSimConfigFromForm();
+    const text = _prettyRtpSimConfig(cfg);
+    formBody.style.display  = 'none';
+    editorEl.style.display  = '';
+    errEl.style.display     = 'none';
+    jsonBtn.style.display   = 'none';
+    formBtn.style.display   = '';
+    _getRtpSimJsonCm().setValue(text);
+    // Guard: ensure reel-json-active (generate tab's expand class) is not accidentally
+    // applied to this card — it collapses the card height to 2px in a flex column
+    const _simCard = document.getElementById('line-defs-card');
+    if (_simCard) _simCard.classList.remove('reel-json-active');
+    setTimeout(() => {
+      _getRtpSimJsonCm().refresh();
+      const scrollContainer = document.querySelector('.form-scroll');
+      const card = document.getElementById('line-defs-card');
+      if (card) card.classList.remove('reel-json-active');
+      if (scrollContainer && card) {
+        scrollContainer.scrollTop = card.offsetTop - 8;
+      }
+    }, 50);
+    // Hide other header buttons when in JSON mode
+    if (formOnlyBtns) Array.from(formOnlyBtns.children).forEach(btn => {
+      if (btn.id !== 'rtp-sim-json-mode-btn' && btn.id !== 'rtp-sim-form-mode-btn') {
+        btn.dataset._jsHide = btn.style.display || '';
+        btn.style.display = 'none';
+      }
+    });
+  } else {
+    const raw = _rtpSimJsonCm ? _rtpSimJsonCm.getValue().trim() : '';
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed !== 'object' || Array.isArray(parsed))
+          throw new Error('Expected a JSON object');
+        restoreRtpForm(_normalizeRtpPayload(parsed));
+      } catch (e) {
+        const { loc, hint } = _jsonParseError(raw, e);
+        errEl.textContent = 'JSON parse error' + loc + hint + ': ' + e.message;
+        errEl.style.display = '';
+        _rtpSimJsonMode = true;
+        return;
+      }
+    }
+    formBody.style.display  = '';
+    editorEl.style.display  = 'none';
+    errEl.style.display     = 'none';
+    jsonBtn.style.display   = '';
+    formBtn.style.display   = 'none';
+    if (formOnlyBtns) Array.from(formOnlyBtns.children).forEach(btn => {
+      if (btn.id !== 'rtp-sim-json-mode-btn' && btn.id !== 'rtp-sim-form-mode-btn') {
+        const prev = btn.dataset._jsHide;
+        if (prev !== undefined) { btn.style.display = prev; delete btn.dataset._jsHide; }
+      }
+    });
+  }
+}
+
+/* ── Symbol Config JSON mode ── */
+let _rtpSymJsonMode = false;
+let _rtpSymJsonCm = null;
+// Round-trip-preserved metadata fields (not consumed by the sim engine)
+let _symJsonMeta = {};  // symbolNames, paytableType, symbols.blank, symbols.locked
+
+function _getRtpSymJsonCm() {
+  if (_rtpSymJsonCm) return _rtpSymJsonCm;
+  const el = document.getElementById('rtp-sym-json-editor');
+  _rtpSymJsonCm = CodeMirror(el, {
+    mode: { name: 'javascript', json: true },
+    theme: 'rsg',
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    styleSelectedText: true,
+    indentUnit: 2,
+    tabSize: 2,
+    extraKeys: {
+      'Cmd-S':  cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Ctrl-S': cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Cmd-E':  cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Ctrl-E': cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Cmd-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Ctrl-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Cmd-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+      'Ctrl-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+    },
+  });
+  return _rtpSymJsonCm;
+}
+
+function _buildSymConfigFromForm() {
+  const normal = [], wild = [], scatter = [];
+  const payTable = {}, wildMultipliers = {}, wildMultipliersAggregations = {};
+
+  document.querySelectorAll('.rtp-sym-row').forEach(row => {
+    const symId = parseInt(row.dataset.symId);
+    const type  = row.querySelector('select').value;
+
+    if (type === 'NORMAL')  normal.push(symId);
+    else if (type === 'WILD')    wild.push(symId);
+    else if (type === 'SCATTER') scatter.push(symId);
+
+    if (type !== 'SCATTER') {
+      const ptRaw = row.querySelector('.rtp-paytable-input').value.trim();
+      if (ptRaw && !/^n\/a$/i.test(ptRaw)) {
+        const vals = ptRaw.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+        if (vals.length > 0) {
+          const fmt = v => Math.round(v * 10) / 10;
+          const strat = document.getElementById('rtp-strategy')?.value || 'LTR';
+          const isIntervalBased = strat === 'SCATTERS' || strat === 'CLUSTERS';
+          if (isIntervalBased) {
+            const mEl = document.getElementById('rtp-min-match');
+            const minMatch = parseInt((mEl && (mEl.value || mEl.placeholder)) || 3);
+            const entry = {};
+            vals.forEach((v, i) => { entry[String(minMatch + i)] = fmt(v); });
+            payTable[String(symId)] = entry;
+          } else {
+            payTable[String(symId)] = vals.map(fmt);
+          }
+        }
+      }
+    }
+
+    if (type === 'WILD') {
+      const aggSel = row.querySelector('.rtp-wild-agg');
+      const agg = aggSel ? aggSel.value : 'NONE';
+      if (agg === 'SEQUENCE') {
+        const seqRaw = row.querySelector('.rtp-wild-seq').value.trim();
+        if (seqRaw) {
+          const seq = seqRaw.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+          wildMultipliers[String(symId)] = seq;
+        } else {
+          wildMultipliers[String(symId)] = 0.0;
+        }
+      } else {
+        wildMultipliers[String(symId)] = agg === 'NONE' ? 0.0 : (parseFloat(row.querySelector('.rtp-wild-mult').value) || 1.0);
+      }
+      const aggExport = agg === 'ADD' ? 'ADDITIVE' : agg === 'MULTIPLY' ? 'MULTIPLICATIVE' : agg;
+      wildMultipliersAggregations[String(symId)] = aggExport;
+    }
+  });
+
+  const strat = document.getElementById('rtp-strategy')?.value || 'LTR';
+  const paytableType = (strat === 'SCATTERS' || strat === 'CLUSTERS') ? 'INTERVAL_BASED' : 'STRICT';
+
+  const meta = _symJsonMeta || {};
+  const obj = {
+    symbols: {
+      normal,
+      wild,
+      scatter,
+      blank:  meta.blank  || [],
+      locked: meta.locked || [],
+    },
+  };
+  if (meta.symbolNames && Object.keys(meta.symbolNames).length > 0) {
+    obj.symbolNames = meta.symbolNames;
+  }
+  if (Object.keys(wildMultipliers).length > 0) {
+    obj.wildMultipliers = wildMultipliers;
+    obj.wildMultipliersAggregations = wildMultipliersAggregations;
+  }
+  obj.paytableType = paytableType;
+  if (Object.keys(payTable).length > 0) obj.payTable = payTable;
+
+  return obj;
+}
+
+function _prettySymConfig(obj) {
+  // Emit compact arrays for symbol id lists; collapse payTable entry objects to one line
+  let text = JSON.stringify(obj, null, 2);
+  // Collapse numeric arrays (symbol id arrays) onto one line
+  text = text.replace(/\[\s*\n(\s*\d+,?\s*\n)+\s*\]/g, m => {
+    const items = m.slice(1, -1).trim().split(/\s*,?\s*\n\s*/).map(s => s.replace(/,+$/, '').trim()).filter(Boolean);
+    return '[' + items.join(', ') + ']';
+  });
+  // Collapse payTable STRICT array entries ("1": [0.5, 2.0, ...]) onto one line with their key
+  text = text.replace(/"(\d+)":\s*\[\s*\n([\s\S]*?)\]/g, (m, key, inner) => {
+    const items = inner.trim().split(/\s*,?\s*\n\s*/).map(s => s.replace(/,+$/, '').trim()).filter(Boolean);
+    return '"' + key + '": [' + items.join(', ') + ']';
+  });
+  // Collapse payTable INTERVAL_BASED entry objects { "3": 2.0, ... } onto one line
+  text = text.replace(/\{[\s\n]*("\d+":\s*[\d.]+[\s\n,]*)+\}/g, m =>
+    '{' + m.slice(1,-1).trim().replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ') + '}');
+  // Format all payout numbers inside payTable entries to 1 decimal place (e.g. 5 → 5.0, 2.5 → 2.5)
+  // Match only unquoted numbers (values, not JSON string keys)
+  text = text.replace(/("payTable"\s*:\s*\{)([\s\S]*?)(\n\s*\})/g, (_, open, body, close) => {
+    const formatted = body.replace(/(?<!")(\b\d+(?:\.\d+)?\b)(?!")/g, (n) => {
+      const f = parseFloat(n);
+      return isNaN(f) ? n : f.toFixed(1);
+    });
+    return open + formatted + close;
+  });
+  return text;
+}
+
+function toggleRtpSymJsonMode() {
+  _rtpSymJsonMode = !_rtpSymJsonMode;
+  const formBody  = document.getElementById('rtp-sym-form-body');
+  const editorEl  = document.getElementById('rtp-sym-json-editor');
+  const errEl     = document.getElementById('rtp-sym-json-error');
+  const jsonBtn   = document.getElementById('rtp-sym-json-mode-btn');
+  const formBtn   = document.getElementById('rtp-sym-form-mode-btn');
+  const formOnlyBtns = document.getElementById('sym-config-header-btns');
+
+  if (_rtpSymJsonMode) {
+    const symbols = _buildSymConfigFromForm();
+    const text = _prettySymConfig(symbols);
+    formBody.style.display  = 'none';
+    editorEl.style.display  = '';
+    errEl.style.display     = 'none';
+    jsonBtn.style.display   = 'none';
+    formBtn.style.display   = '';
+    _getRtpSymJsonCm().setValue(text);
+    setTimeout(() => {
+      _getRtpSymJsonCm().refresh();
+      const scrollContainer = document.querySelector('.form-scroll');
+      const card = document.getElementById('sym-config-card');
+      if (scrollContainer && card) scrollContainer.scrollTop = card.offsetTop - 8;
+    }, 50);
+    if (formOnlyBtns) Array.from(formOnlyBtns.children).forEach(btn => {
+      if (btn.id !== 'rtp-sym-json-mode-btn' && btn.id !== 'rtp-sym-form-mode-btn') {
+        btn.dataset._jsHide = btn.style.display || '';
+        btn.style.display = 'none';
+      }
+    });
+  } else {
+    const raw = _rtpSymJsonCm ? _rtpSymJsonCm.getValue().trim() : '';
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+
+        if (Array.isArray(parsed)) {
+          // Legacy flat-array format
+          document.getElementById('rtp-symbol-rows').innerHTML = '';
+          _symRowCounter = 0;
+          parsed.forEach(sym => {
+            const row = addSymbolRow(sym.symbolId);
+            const typeSel = row.querySelector('select');
+            typeSel.value = sym.type || 'NORMAL';
+            onSymbolTypeChange(typeSel);
+            if (sym.type !== 'SCATTER') {
+              row.querySelector('.rtp-paytable-input').value = (sym.paytable || []).join(', ');
+            }
+            if (sym.type === 'WILD') {
+              const aggSel = row.querySelector('.rtp-wild-agg');
+              aggSel.value = sym.wildAggregation || 'NONE';
+              onWildAggChange(aggSel);
+              row.querySelector('.rtp-wild-mult').value = sym.wildMultiplier ?? 1;
+              if (sym.wildAggregation === 'SEQUENCE') {
+                row.querySelector('.rtp-wild-seq').value = (sym.wildSequence || []).join(', ');
+              }
+            }
+          });
+        } else if (parsed && typeof parsed === 'object' && parsed.symbols) {
+          // New structured format: {symbols, symbolNames, wildMultipliers, payTable, paytableType}
+          _symJsonMeta = {
+            blank:  (parsed.symbols.blank  || []).slice(),
+            locked: (parsed.symbols.locked || []).slice(),
+            symbolNames:  parsed.symbolNames  || null,
+            paytableType: parsed.paytableType || null,
+          };
+          // Delegate to _normalizeRtpPayload which already handles this exact shape
+          const mEl = document.getElementById('rtp-min-match');
+          const normalized = _normalizeRtpPayload({
+            symbols: parsed.symbols,
+            payTable: parsed.payTable || {},
+            wildMultipliers: parsed.wildMultipliers || {},
+            wildMultipliersAggregations: parsed.wildMultipliersAggregations || {},
+            minMatch: parseInt((mEl && (mEl.value || mEl.placeholder)) || 3),
+            screenWidth: null,  // let paytable key range determine maxCount, not screen width
+          });
+          document.getElementById('rtp-symbol-rows').innerHTML = '';
+          _symRowCounter = 0;
+          (normalized.symbols || []).forEach(sym => {
+            const row = addSymbolRow(sym.symbolId);
+            const typeSel = row.querySelector('select');
+            typeSel.value = sym.type || 'NORMAL';
+            onSymbolTypeChange(typeSel);
+            if (sym.type !== 'SCATTER') {
+              row.querySelector('.rtp-paytable-input').value = (sym.paytable || []).join(', ');
+            }
+            if (sym.type === 'WILD') {
+              const aggSel = row.querySelector('.rtp-wild-agg');
+              const aggMap = { 'NONE': 'NONE', 'ADD': 'ADD', 'ADDITIVE': 'ADD', 'MULTIPLY': 'MULTIPLY', 'MULTIPLICATIVE': 'MULTIPLY', 'SEQUENCE': 'SEQUENCE' };
+              aggSel.value = aggMap[sym.wildAggregation] ?? 'NONE';
+              onWildAggChange(aggSel);
+              if (aggSel.value !== 'NONE' && aggSel.value !== 'SEQUENCE') {
+                row.querySelector('.rtp-wild-mult').value = sym.wildMultiplier ?? 1;
+              }
+            }
+          });
+        } else {
+          throw new Error('Expected a JSON array of symbol objects or a structured symbol config object');
+        }
+        updateSymConfigToggleBtn();
+      } catch (e) {
+        const { loc, hint } = _jsonParseError(raw, e);
+        errEl.textContent = 'JSON parse error' + loc + hint + ': ' + e.message;
+        errEl.style.display = '';
+        _rtpSymJsonMode = true;
+        return;
+      }
+    }
+    formBody.style.display  = '';
+    editorEl.style.display  = 'none';
+    errEl.style.display     = 'none';
+    jsonBtn.style.display   = '';
+    formBtn.style.display   = 'none';
+    if (formOnlyBtns) Array.from(formOnlyBtns.children).forEach(btn => {
+      if (btn.id !== 'rtp-sym-json-mode-btn' && btn.id !== 'rtp-sym-form-mode-btn') {
+        const prev = btn.dataset._jsHide;
+        if (prev !== undefined) { btn.style.display = prev; delete btn.dataset._jsHide; }
+      }
+    });
+  }
+}
+
+// ── GDK config normalizer ────────────────────────────────────────────────────
+// Converts a GDK-style BaseSlotConfig JSON into a Slots Lab restoreRtpForm payload.
+// Also passes through payloads that are already in Slots Lab format unchanged.
+function _normalizeRtpPayload(p) {
+  const out = Object.assign({}, p);
+
+  // screen: {cols, rows} → screenWidth / screenHeight
+  if (p.screen && typeof p.screen === 'object' && !Array.isArray(p.screen)) {
+    if (out.screenWidth  == null) out.screenWidth  = p.screen.cols ?? p.screen.width  ?? null;
+    if (out.screenHeight == null) out.screenHeight = p.screen.rows ?? p.screen.height ?? null;
+  }
+
+  // strategy: GDK uses e.g. "CLUSTERS_PAY" — map to Slots Lab names
+  if (out.strategy) {
+    const stratMap = {
+      'LINES_PAY': 'LTR', 'LINES_PAY_LTR': 'LTR', 'LINES_PAY_RTL': 'RTL',
+      'LINES_PAY_BW': 'BW', 'LINES_PAY_SL': 'SL', 'LINES_PAY_ADJ': 'ADJ',
+      'WAYS_PAY': 'WAYS', 'MEGAWAYS_PAY': 'MEGAWAYS',
+      'SCATTERS_PAY': 'SCATTERS', 'CLUSTERS_PAY': 'CLUSTERS',
+    };
+    out.strategy = stratMap[out.strategy] ?? out.strategy;
+  }
+
+  // symbols: GDK uses {"normal": [1,2,3], "wild": [10], "scatter": [14]}
+  // + separate payTable, wildMultipliers, wildMultipliersAggregations maps
+  if (p.symbols && !Array.isArray(p.symbols) && typeof p.symbols === 'object') {
+    const normalIds  = (p.symbols.normal  || []).map(Number);
+    const wildIds    = (p.symbols.wild    || []).map(Number);
+    const scatterIds = (p.symbols.scatter || []).map(Number);
+
+    const minMatch = parseInt(out.minMatch) || 3;
+    const screenWidth = parseInt(out.screenWidth) || null;
+
+    // payTable can be STRICT: {symId: [m1, m2, ...]}  or  INTERVAL_BASED: {symId: {count: mult}}
+    const rawPayTable = p.payTable || p.paytable || {};
+
+    function resolvePaytable(symId, type) {
+      const entry = rawPayTable[symId] ?? rawPayTable[String(symId)];
+      if (!entry) return [];
+      if (Array.isArray(entry)) return entry.map(Number);  // STRICT: already a flat array
+      if (typeof entry === 'object') {
+        // INTERVAL_BASED: {count: mult} — convert to dense array from minMatch
+        const maxCount = screenWidth || Math.max(...Object.keys(entry).map(Number));
+        const arr = [];
+        for (let c = minMatch; c <= maxCount; c++) {
+          const v = entry[c] ?? entry[String(c)] ?? null;
+          if (v !== null) arr.push(Number(v));
+          else if (arr.length > 0) arr.push(0);
+        }
+        // Trim trailing zeros
+        while (arr.length && arr[arr.length - 1] === 0) arr.pop();
+        return arr;
+      }
+      return [];
+    }
+
+    const syms = [];
+    const allIds = [...new Set([...normalIds, ...wildIds, ...scatterIds])].sort((a, b) => a - b);
+    for (const id of allIds) {
+      let type = 'NORMAL';
+      if (wildIds.includes(id)) type = 'WILD';
+      else if (scatterIds.includes(id)) type = 'SCATTER';
+      const sym = { symbolId: id, type, paytable: resolvePaytable(id, type) };
+      if (type === 'WILD') {
+        const wm = p.wildMultipliers;
+        const wa = p.wildMultipliersAggregations;
+        sym.wildMultiplier  = (wm && (wm[id] ?? wm[String(id)])) ?? 1;
+        const aggRaw = wa && (wa[id] ?? wa[String(id)]);
+        const aggMap = { 'NONE': 'NONE', 'ADD': 'ADD', 'ADDITIVE': 'ADD', 'MULTIPLY': 'MULTIPLY', 'MULTIPLICATIVE': 'MULTIPLY', 'SEQUENCE': 'SEQUENCE' };
+        sym.wildAggregation = aggRaw ? (aggMap[aggRaw] ?? 'NONE') : 'NONE';
+      }
+      syms.push(sym);
+    }
+    out.symbols = syms;
+  } else if (Array.isArray(p.symbols)) {
+    // Slots Lab native format — normalise paytable entries if any are interval-based objects
+    const minMatch = parseInt(out.minMatch) || 3;
+    const screenWidth = parseInt(out.screenWidth) || null;
+    out.symbols = p.symbols.map(sym => {
+      if (sym.paytable && typeof sym.paytable === 'object' && !Array.isArray(sym.paytable)) {
+        const entry = sym.paytable;
+        const maxCount = screenWidth || Math.max(...Object.keys(entry).map(Number));
+        const arr = [];
+        for (let c = minMatch; c <= maxCount; c++) {
+          const v = entry[c] ?? entry[String(c)] ?? null;
+          if (v !== null) arr.push(Number(v));
+          else if (arr.length > 0) arr.push(0);
+        }
+        while (arr.length && arr[arr.length - 1] === 0) arr.pop();
+        return Object.assign({}, sym, { paytable: arr });
+      }
+      return sym;
+    });
+  }
+
+  return out;
 }

@@ -6,6 +6,7 @@ function toggleTheme() {
   document.getElementById('icon-moon').style.display = isDark  ? '' : 'none';
   document.getElementById('icon-sun').style.display  = !isDark ? '' : 'none';
   [genOutput, convInput, convOutput].forEach(cm => cm && cm.refresh());
+  if (_reelJsonCm) _reelJsonCm.refresh();
 }
 
 /* ── CodeMirror ── */

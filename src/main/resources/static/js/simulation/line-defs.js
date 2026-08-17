@@ -40,131 +40,74 @@ function updateLineCount() {
 function updateLineDefsToggleBtn() {
   const btn = document.getElementById('linedefs-toggle-btn');
   if (!btn) return;
-  // rtp-screen-width is derived from reels — excluded so button state reflects only user-fillable fields
-  const screenInputs = ['rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
-  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
-    || Array.from(document.querySelectorAll('.rtp-line-input')).some(inp => inp.value.trim() !== '');
-  btn.innerHTML = hasValues
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.title = hasValues ? 'Clear all line definitions' : 'Fill with 10 default lines';
-  btn.classList.toggle('danger', hasValues);
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = 'Fill with default lines';
+  btn.classList.remove('danger');
 }
 
 function toggleLineDefs() {
-  const lineInputs = document.querySelectorAll('.rtp-line-input');
-  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
   const fillableIds = ['rtp-screen-height', 'rtp-min-match'];
-  const fillableInputs = fillableIds.map(id => document.getElementById(id));
-  const hasValues = fillableInputs.some(inp => inp && inp.value.trim() !== '')
-    || Array.from(lineInputs).some(inp => inp.value.trim() !== '');
-  if (hasValues) {
-    fillableInputs.forEach(inp => { if (inp) inp.value = ''; });
-    lineInputs.forEach(inp => { inp.value = ''; });
-    updateLineDefsToggleBtn();
-  } else {
-    fillableInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
-    const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
-    const h = parseInt(document.getElementById('rtp-screen-height').value || document.getElementById('rtp-screen-height').placeholder) || 3;
-    const defaultLines = generateDefaultLines(w, h);
-    const container = document.getElementById('rtp-lines-list');
-    container.innerHTML = '';
-    _lineCounter = 0;
-    defaultLines.forEach(val => {
-      addLineDef('');
-      const inputs = container.querySelectorAll('.rtp-line-input');
-      const inp = inputs[inputs.length - 1];
-      inp.placeholder = val;
-      inp.value = val;
-    });
-    updateLineDefsToggleBtn();
-  }
+  fillableIds.forEach(id => { const el = document.getElementById(id); if (el && !el.value.trim()) el.value = el.placeholder; });
+  const w = parseInt(document.getElementById('rtp-screen-width').value) || 5;
+  const h = parseInt(document.getElementById('rtp-screen-height').value || document.getElementById('rtp-screen-height').placeholder) || 3;
+  const defaultLines = generateDefaultLines(w, h);
+  const container = document.getElementById('rtp-lines-list');
+  container.innerHTML = '';
+  _lineCounter = 0;
+  defaultLines.forEach(val => {
+    addLineDef('');
+    const inputs = container.querySelectorAll('.rtp-line-input');
+    const inp = inputs[inputs.length - 1];
+    inp.placeholder = val;
+    inp.value = val;
+  });
+  updateLineDefsToggleBtn();
 }
 
 function updateScatterDefsToggleBtn() {
   const btn = document.getElementById('scatterdefs-toggle-btn');
   if (!btn) return;
-  const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
-  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
-    || Array.from(document.querySelectorAll('#interval-sets-container .scatter-from, #interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
-  btn.innerHTML = hasValues
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.title = hasValues ? 'Clear all values' : 'Fill interval fields with default values';
-  btn.classList.toggle('danger', hasValues);
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = 'Fill interval fields with default values';
+  btn.classList.remove('danger');
 }
 
 function toggleScatterDefs() {
   const screenInputs = ['rtp-screen-width', 'rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
   const intervalInputs = document.querySelectorAll('#interval-sets-container .scatter-from, #interval-sets-container .scatter-to');
-  const hasValues = screenInputs.some(inp => inp && inp.value.trim() !== '')
-    || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
-  if (hasValues) {
-    screenInputs.forEach(inp => { if (inp) inp.value = ''; });
-    intervalInputs.forEach(inp => { inp.value = ''; inp.style.color = ''; inp.style.borderColor = ''; });
-  } else {
-    screenInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
-    intervalInputs.forEach(inp => { if (inp.placeholder) inp.value = inp.placeholder; });
-  }
+  screenInputs.forEach(inp => { if (inp && !inp.value.trim()) inp.value = inp.placeholder; });
+  intervalInputs.forEach(inp => { if (!inp.value.trim() && inp.placeholder) inp.value = inp.placeholder; });
   updateScatterDefsToggleBtn();
 }
 
 function toggleClusterDefs() {
-  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
   const fillableInputs = ['rtp-screen-height', 'rtp-min-match'].map(id => document.getElementById(id));
   const intervalInputs = document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to');
-  const hasValues = fillableInputs.some(inp => inp && inp.value.trim() !== '')
-    || Array.from(intervalInputs).some(inp => inp.value.trim() !== '');
-  if (hasValues) {
-    fillableInputs.forEach(inp => { if (inp) inp.value = ''; });
-    intervalInputs.forEach(inp => { inp.value = ''; inp.style.color = ''; inp.style.borderColor = ''; });
-  } else {
-    fillableInputs.forEach(inp => { if (inp) inp.value = inp.placeholder; });
-    intervalInputs.forEach(inp => { if (inp.placeholder) inp.value = inp.placeholder; });
-  }
+  fillableInputs.forEach(inp => { if (inp && !inp.value.trim()) inp.value = inp.placeholder; });
+  intervalInputs.forEach(inp => { if (!inp.value.trim() && inp.placeholder) inp.value = inp.placeholder; });
   updateScreenDimsToggleBtn();
 }
 
 function updateSymConfigToggleBtn() {
   const btn = document.getElementById('symconfig-toggle-btn');
   if (!btn) return;
-  const hasValues = Array.from(document.querySelectorAll('#rtp-symbol-rows .rtp-paytable-input')).some(inp => inp.value.trim() !== '');
-  btn.innerHTML = hasValues
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.title = hasValues ? 'Clear all paytable values' : 'Fill paytable fields with default values';
-  btn.classList.toggle('danger', hasValues);
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = 'Fill paytable fields with default values';
+  btn.classList.remove('danger');
 }
 
 function toggleSymConfig() {
   const inputs = document.querySelectorAll('#rtp-symbol-rows .rtp-paytable-input');
-  const hasValues = Array.from(inputs).some(inp => inp.value.trim() !== '');
-  if (hasValues) {
-    inputs.forEach(inp => { if (!inp.disabled) inp.value = ''; });
-  } else {
-    inputs.forEach(inp => { if (!inp.disabled && inp.placeholder && inp.placeholder !== 'n/a') inp.value = inp.placeholder; });
-  }
+  inputs.forEach(inp => { if (!inp.disabled && !inp.value.trim() && inp.placeholder && inp.placeholder !== 'n/a') inp.value = inp.placeholder; });
   updateSymConfigToggleBtn();
 }
 
 function updateScreenDimsToggleBtn() {
   const btn = document.getElementById('screendims-toggle-btn');
   if (!btn) return;
-  const strat = document.getElementById('rtp-strategy')?.value;
-  // rtp-screen-width is derived from loaded reels — excluded from button state
-  const ids = ['rtp-screen-height', 'rtp-min-match'];
-  let hasValues = ids.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
-  if (strat === 'CLUSTERS') {
-    hasValues = hasValues || Array.from(document.querySelectorAll('#clusters-interval-sets-container .scatter-from, #clusters-interval-sets-container .scatter-to')).some(inp => inp.value.trim() !== '');
-  }
-  if (strat === 'MEGAWAYS') {
-    hasValues = hasValues || Array.from(document.querySelectorAll('.mw-height-input')).some(inp => inp.value.trim() !== '');
-  }
-  btn.innerHTML = hasValues
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.title = hasValues ? 'Clear screen dimension fields' : 'Fill screen dimension fields with default values';
-  btn.classList.toggle('danger', hasValues);
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = 'Fill screen dimension fields with default values';
+  btn.classList.remove('danger');
 }
 
 function toggleScreenDims() {
@@ -173,24 +116,13 @@ function toggleScreenDims() {
     toggleClusterDefs();
     return;
   }
-  // rtp-screen-width is derived from loaded reels — never cleared or filled by this toggle
   const fillableIds = ['rtp-screen-height', 'rtp-min-match'];
-  const hasValues = fillableIds.some(id => { const el = document.getElementById(id); return el && el.value.trim() !== ''; });
   fillableIds.forEach(id => {
     const el = document.getElementById(id);
-    if (!el) return;
-    if (hasValues) {
-      el.value = '';
-    } else if (el.placeholder) {
-      el.value = el.placeholder;
-    }
+    if (el && !el.value.trim() && el.placeholder) el.value = el.placeholder;
   });
   if (strat === 'MEGAWAYS') {
-    if (hasValues) {
-      document.querySelectorAll('.mw-height-input').forEach(inp => { inp.value = ''; });
-    } else {
-      fillMegawaysHeightDefaults();
-    }
+    fillMegawaysHeightDefaults();
   }
   updateScreenDimsToggleBtn();
 }
@@ -236,25 +168,12 @@ function updateSpinTestPlaceholders() {
 function updateSpinScreenFillBtn() {
   const btn = document.getElementById('spin-screen-fill-btn');
   if (!btn) return;
-  const screenEl = document.getElementById('spin-test-screen');
-  const hasValues = screenEl && screenEl.value.trim() !== '';
-  btn.innerHTML = hasValues
-    ? `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
-    : `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
-  btn.title = hasValues ? 'Clear screen override' : 'Use placeholders as defaults';
-  btn.classList.toggle('danger', hasValues);
+  btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+  btn.title = 'Use placeholders as defaults';
+  btn.classList.remove('danger');
 }
 
 function fillSpinTestDefaults() {
-  const screenEl = document.getElementById('spin-test-screen');
-  const hasValues = screenEl && screenEl.value.trim() !== '';
-
-  if (hasValues) {
-    if (screenEl) screenEl.value = '';
-    updateSpinScreenFillBtn();
-    return;
-  }
-
   const strat = document.getElementById('rtp-strategy')?.value || 'LTR';
   const isContacts = strat === 'SCATTERS';
   const isClusters = strat === 'CLUSTERS';
@@ -295,6 +214,7 @@ function fillSpinTestDefaults() {
   if (!symHasValues) toggleSymConfig();
 
   updateSpinTestPlaceholders();
+  const screenEl = document.getElementById('spin-test-screen');
   if (screenEl && !screenEl.value.trim() && screenEl.placeholder) {
     screenEl.value = screenEl.placeholder;
   }

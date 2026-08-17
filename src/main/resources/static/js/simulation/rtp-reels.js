@@ -3,7 +3,7 @@
 let _latestReelSets = null;
 let _rtpSymbolCounter = 0;
 
-function storeGeneratedReels(reelSetsJson) {
+function storeGeneratedReels(reelSetsJson, fromHistory) {
   try {
     _latestReelSets = JSON.parse(reelSetsJson);
     const firstRs = _latestReelSets[0];
@@ -13,7 +13,11 @@ function storeGeneratedReels(reelSetsJson) {
     }
     syncRtpChances();
     syncMegawaysHeights();
-    syncRtpSymbolsFromReels();
+    if (fromHistory) {
+      syncRtpSymbolsFromHistory();
+    } else {
+      syncRtpSymbolsFromReels();
+    }
     updateSpinTestPlaceholders();
   } catch(e) {
     // ignore parse errors (non-JSON output)
@@ -42,11 +46,11 @@ function restoreRtpForm(payload) {
     syncMegawaysHeights();
   }
   if (payload.reelSetChances) {
-    payload.reelSetChances.forEach((c, i) => {
-      const el = document.getElementById('rtp-chance-' + i);
-      if (el) el.value = c.chance;
-    });
-    updateChanceTotal();
+    const input = document.getElementById('rtp-chances-input');
+    if (input) {
+      input.value = payload.reelSetChances.map(c => c.chance).join(', ');
+      updateChanceTotal();
+    }
   }
   if (payload.megawaysReelHeightChances) {
     payload.megawaysReelHeightChances.forEach((setData, s) => {
@@ -85,8 +89,9 @@ function restoreRtpForm(payload) {
   set('rtp-screen-width', payload.screenWidth);
   set('rtp-screen-height', payload.screenHeight);
   set('rtp-min-match', payload.minMatch);
-  // 6. Symbols last — populated after onStrategyChange so wild-field visibility is set but values
-  //    are written by us, not reset by the strategy handler
+  // 6. Symbols last — only replace when the payload actually carries symbol data.
+  //    Restoring from a Screen-only JSON (line defs / screen dims) must not wipe existing symbols.
+  if (payload.symbols && payload.symbols.length > 0) {
   document.getElementById('rtp-symbol-rows').innerHTML = '';
   _symRowCounter = 0;
   (payload.symbols || []).forEach(sym => {
@@ -111,47 +116,61 @@ function restoreRtpForm(payload) {
       }
     }
   });
+  }
 }
 
 function syncRtpChances() {
-  const container = document.getElementById('rtp-chances-list');
+  const input  = document.getElementById('rtp-chances-input');
+  const legend = document.getElementById('rtp-chances-legend');
   if (!_latestReelSets || _latestReelSets.length === 0) {
-    container.innerHTML = '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">' + t('rtp.generate_reels_first') + '</span>';
+    if (input)  { input.value = ''; input.placeholder = t('rtp.generate_reels_first'); input.readOnly = true; }
+    if (legend) legend.innerHTML = '';
+    const el = document.getElementById('rtp-chance-total');
+    if (el) { el.textContent = ''; el.className = 'rtp-chance-total'; }
     return;
   }
   const n = _latestReelSets.length;
-  const equalShare = Math.floor(1000 / n) / 10;
-  const remainder = +(100 - equalShare * n).toFixed(1);
+  const base  = Math.floor(1000 / n) / 10;
+  const extra = Math.round((100 - base * n) * 10);
+  const values = _latestReelSets.map((_, i) =>
+    (i > 0 && i <= extra) ? +(base + 0.1).toFixed(1) : +base.toFixed(1)
+  );
 
-  container.innerHTML = '';
-  _latestReelSets.forEach((rs, i) => {
-    const share = i === n - 1 ? +(equalShare + remainder).toFixed(1) : equalShare;
-    const row = document.createElement('div');
-    row.className = 'rtp-chance-row';
-    row.innerHTML = `
-      <span class="rtp-chance-label">${rs.setName || 'ReelSet#' + i}</span>
-      <input type="number" class="rtp-chance-input" id="rtp-chance-${i}"
-             value="${share}" min="0" max="100" step="0.1"
-             oninput="updateChanceTotal()"/>
-      <span class="rtp-chance-pct">%</span>
-    `;
-    container.appendChild(row);
-  });
+  if (input) {
+    input.readOnly = false;
+    input.placeholder = '';
+    input.value = values.join(', ');
+  }
+  if (legend) {
+    legend.innerHTML = _latestReelSets
+      .map((rs, i) => `<span class="rtp-chance-legend-item" id="rtp-chance-legend-${i}"><span class="rtp-chance-legend-idx">${i}:</span> ${rs.setName || 'ReelSet#' + i}</span>`)
+      .join('');
+  }
   updateChanceTotal();
 }
 
 function updateChanceTotal() {
-  if (!_latestReelSets) return;
-  let sum = 0;
-  _latestReelSets.forEach((_, i) => {
-    const el = document.getElementById('rtp-chance-' + i);
-    if (el) sum += parseFloat(el.value) || 0;
-  });
-  const el = document.getElementById('rtp-chance-total');
-  const rounded = Math.round(sum * 10) / 10;
-  el.textContent = rounded.toFixed(1) + '%';
-  const ok = Math.abs(rounded - 100) < 0.05;
+  const input = document.getElementById('rtp-chances-input');
+  const el    = document.getElementById('rtp-chance-total');
+  if (!el) return;
+  if (!input || !_latestReelSets) { el.textContent = ''; el.className = 'rtp-chance-total'; return; }
+  const vals = input.value.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+  const sum  = vals.reduce((a, b) => a + b, 0);
+  const rounded = Math.round(sum * 1000000) / 1000000;
+  el.textContent = rounded + '%';
+  const ok = rounded === 100;
   el.className = 'rtp-chance-total ' + (ok ? 'ok' : 'err');
+}
+
+function highlightActiveChanceIndex(input) {
+  if (!_latestReelSets) return;
+  const pos = input.selectionStart;
+  const before = input.value.slice(0, pos);
+  const activeIdx = (before.match(/,/g) || []).length;
+  _latestReelSets.forEach((_, i) => {
+    const el = document.getElementById('rtp-chance-legend-' + i);
+    if (el) el.classList.toggle('rtp-chance-legend-active', i === activeIdx);
+  });
 }
 
 function syncRtpSymbolsFromReels() {
@@ -171,11 +190,119 @@ function syncRtpSymbolsFromReels() {
   }
   refreshSymbolRowNumbers();
 
+  // Re-tier all NORMAL rows by junior/senior split so placeholders reflect pay grade.
+  // Done after all addSymbolRow calls so internal updatePaytablePlaceholders calls
+  // (which use the real symId) don't clobber the tier-based placeholders we set here.
+  const normalRows = Array.from(document.querySelectorAll('.rtp-sym-row'))
+    .filter(row => row.querySelector('select')?.value === 'NORMAL')
+    .sort((a, b) => parseInt(a.dataset.symId) - parseInt(b.dataset.symId));
+  const N = normalRows.length;
+  if (N > 0) {
+    const juniorCount = Math.ceil(N / 2);
+    const wEl = document.getElementById('rtp-screen-width');
+    const mEl = document.getElementById('rtp-min-match');
+    const w = parseInt((wEl && (wEl.value || wEl.placeholder)) || 5);
+    const m = parseInt((mEl && (mEl.value || mEl.placeholder)) || 3);
+    const realIds = normalRows.map(row => row.dataset.symId);
+    normalRows.forEach((row, idx) => {
+      const isJunior = idx < juniorCount;
+      const posInGroup = isJunior ? idx : idx - juniorCount;
+      const groupCount = isJunior ? juniorCount : N - juniorCount;
+      row.dataset.symId = isJunior
+        ? Math.min(7, 5 + Math.round((posInGroup / Math.max(groupCount - 1, 1)) * 2))
+        : Math.min(4, 3 + Math.round((posInGroup / Math.max(groupCount - 1, 1)) * 1));
+    });
+    updatePaytablePlaceholders(w, m);
+    normalRows.forEach((row, idx) => { row.dataset.symId = realIds[idx]; });
+  }
+
   const firstRs = _latestReelSets[0];
-  const w = firstRs.reelSet.length;
+  const reelW = firstRs.reelSet.length;
   if (document.querySelectorAll('.rtp-line-row').length === 0) {
     const h = parseInt(document.getElementById('rtp-screen-height').value) || 3;
-    for (const line of generateDefaultLines(w, h)) {
+    for (const line of generateDefaultLines(reelW, h)) {
+      addLineDef(line);
+    }
+  }
+}
+
+function syncRtpSymbolsFromHistory() {
+  if (!_latestReelSets || _latestReelSets.length === 0) return;
+  const foundIds = new Set();
+  for (const rs of _latestReelSets) {
+    for (const reel of rs.reelSet) {
+      for (const sym of reel) foundIds.add(sym);
+    }
+  }
+  const sorted = [...foundIds].sort((a, b) => a - b);
+  const maxId = sorted.length > 0 ? sorted[sorted.length - 1] : 0;
+  const N = maxId; // number of NORMAL symbols
+
+  document.getElementById('rtp-symbol-rows').innerHTML = '';
+  _symRowCounter = 0;
+
+  const juniorCount = Math.ceil(N / 2);
+  const seniorCount = Math.floor(N / 2);
+
+  // Tier symIds: junior rows use high symId numbers (low pay), senior use low (high pay).
+  // We spread across the 5 available tiers (3..7) proportionally.
+  function tierSymId(pos, count, isJunior) {
+    if (count === 0) return isJunior ? 7 : 3;
+    if (isJunior) {
+      // Junior: spread from symId 7 down to 5 (low-paying end)
+      // pos 0 = least junior → symId 5, pos count-1 = most junior → symId 7
+      return Math.min(7, 5 + Math.round((pos / Math.max(count - 1, 1)) * 2));
+    } else {
+      // Senior: spread from symId 3 up to 4 (high-paying end)
+      // pos 0 = most senior → symId 3, pos count-1 = least senior → symId 4
+      return Math.min(4, 3 + Math.round((pos / Math.max(count - 1, 1)) * 1));
+    }
+  }
+
+  const normalRows = [];
+  for (let id = 1; id <= N; id++) {
+    const row = addSymbolRow(id);
+    const sel = row.querySelector('select');
+    sel.value = 'NORMAL';
+    onSymbolTypeChange(sel);
+    normalRows.push(row);
+  }
+
+  const wildRow = addSymbolRow(maxId + 1);
+  const wildSel = wildRow.querySelector('select');
+  wildSel.value = 'WILD';
+  onSymbolTypeChange(wildSel);
+
+  const scatterRow = addSymbolRow(maxId + 2);
+  const scatterSel = scatterRow.querySelector('select');
+  scatterSel.value = 'SCATTER';
+  onSymbolTypeChange(scatterSel);
+
+  // Assign tier symIds to normal rows, compute placeholders, then restore real IDs.
+  // Done after WILD/SCATTER so addSymbolRow's internal updatePaytablePlaceholders
+  // calls don't overwrite the tier-based placeholders on normal rows.
+  const wEl = document.getElementById('rtp-screen-width');
+  const mEl = document.getElementById('rtp-min-match');
+  const w = parseInt((wEl && (wEl.value || wEl.placeholder)) || 5);
+  const m = parseInt((mEl && (mEl.value || mEl.placeholder)) || 3);
+
+  normalRows.forEach((row, idx) => {
+    const isJunior = idx < juniorCount;
+    const posInGroup = isJunior ? idx : idx - juniorCount;
+    const groupCount = isJunior ? juniorCount : seniorCount;
+    const tid = tierSymId(posInGroup, groupCount, isJunior);
+    row.dataset.symId = tid;
+  });
+  updatePaytablePlaceholders(w, m);
+  normalRows.forEach((row, idx) => { row.dataset.symId = idx + 1; });
+
+  refreshSymbolRowNumbers();
+
+  const firstRs = _latestReelSets[0];
+  const rw = firstRs.reelSet.length;
+  if (document.querySelectorAll('.rtp-line-row').length === 0) {
+    const h = parseInt(document.getElementById('rtp-screen-height').value) || 3;
+    for (const line of generateDefaultLines(rw, h)) {
       addLineDef(line);
     }
   }

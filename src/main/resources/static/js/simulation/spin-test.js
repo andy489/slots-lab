@@ -17,15 +17,20 @@ function buildSpinTestPayload() {
   const chances = [];
   let chanceSum = 0;
   if (!hasFixedScreen) {
-    _latestReelSets.forEach((_, i) => {
-      const el = document.getElementById('rtp-chance-' + i);
-      const v  = parseFloat(el?.value);
-      if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': ' + t('rtp.spin_chance_gte0')); return; }
-      chances.push({ setIndex: i, chance: v });
-      chanceSum += v;
-    });
-    if (Math.abs(chanceSum - 100) > 0.05)
-      errors.push(t('rtp.spin_chances_sum') + ' (current: ' + chanceSum.toFixed(1) + '%)');
+    const chancesInput = document.getElementById('rtp-chances-input');
+    const chanceVals = chancesInput ? chancesInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+    if (chanceVals.length !== _latestReelSets.length) {
+      errors.push('Expected ' + _latestReelSets.length + ' chances, got ' + chanceVals.length + '. Configure in the Simulation tab.');
+    } else {
+      chanceVals.forEach((raw, i) => {
+        const v = parseFloat(raw);
+        if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': ' + t('rtp.spin_chance_gte0')); return; }
+        chances.push({ setIndex: i, chance: v });
+        chanceSum += v;
+      });
+      if (Math.abs(chanceSum - 100) > 0.05)
+        errors.push(t('rtp.spin_chances_sum') + ' (current: ' + chanceSum.toFixed(1) + '%)');
+    }
   }
 
   const _wEl = document.getElementById('rtp-screen-width');

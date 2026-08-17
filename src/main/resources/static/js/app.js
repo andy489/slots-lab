@@ -43,7 +43,7 @@ function addReelSet(data, scroll) {
 
   card.innerHTML = `
     <div class="reel-set-card-header">
-      <span class="reel-set-name">Reel Set #${idx}</span>
+      <input class="reel-set-name-input" value="Reel Set #${idx}" spellcheck="false">
       <div style="display:flex;gap:0.35rem;align-items:center">
         <button class="icon-btn" id="${id}-toggle-btn" onclick="toggleDefaultsClear('${id}')" title="Fill all fields with default values">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -212,8 +212,7 @@ function removeReelSet(id) {
 }
 
 function renumberReelSets() {
-  const names = document.querySelectorAll('.reel-set-name');
-  names.forEach((el, i) => { el.textContent = 'Reel Set #' + i; });
+  // Names are now user-editable inputs — no auto-renumber.
 }
 
 /* ── Guarded add restriction ── */
@@ -799,7 +798,7 @@ function openInfo() {
   document.getElementById('info-modal').classList.add('open');
 }
 function closeInfo() { document.getElementById('info-modal').classList.remove('open'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeInfo(); closeImportCounts(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeInfo(); } });
 
 /* ── RTP Tab ── */
 
@@ -853,11 +852,11 @@ function restoreRtpForm(payload) {
   }
   // Reel set chances
   if (payload.reelSetChances) {
-    payload.reelSetChances.forEach((c, i) => {
-      const el = document.getElementById('rtp-chance-' + i);
-      if (el) el.value = c.chance;
-    });
-    updateChanceTotal();
+    const input = document.getElementById('rtp-chances-input');
+    if (input) {
+      input.value = payload.reelSetChances.map(c => c.chance).join(', ');
+      updateChanceTotal();
+    }
   }
   // Line definitions
   document.getElementById('rtp-lines-list').innerHTML = '';
@@ -904,8 +903,10 @@ function clearGenerateResult() {
   setStatus('gen', false, '');
   _latestReelSets = null;
   // Reset RTP tab
-  document.getElementById('rtp-chances-list').innerHTML =
-    '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>';
+  const chancesInput = document.getElementById('rtp-chances-input');
+  if (chancesInput) { chancesInput.value = ''; chancesInput.readOnly = true; chancesInput.placeholder = 'Generate reels first'; }
+  const chancesLegend = document.getElementById('rtp-chances-legend');
+  if (chancesLegend) chancesLegend.innerHTML = '';
   document.getElementById('rtp-chance-total').textContent = '';
   document.getElementById('rtp-chance-total').className = 'rtp-chance-total';
   document.getElementById('rtp-symbol-rows').innerHTML = '';
@@ -927,43 +928,45 @@ function clearGenerateResult() {
 
 /* Build reel set chance rows from latest reels */
 function syncRtpChances() {
-  const container = document.getElementById('rtp-chances-list');
+  const input  = document.getElementById('rtp-chances-input');
+  const legend = document.getElementById('rtp-chances-legend');
   if (!_latestReelSets || _latestReelSets.length === 0) {
-    container.innerHTML = '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">Generate reels first</span>';
+    if (input)  { input.value = ''; input.readOnly = true; input.placeholder = 'Generate reels first'; }
+    if (legend) legend.innerHTML = '';
+    const el = document.getElementById('rtp-chance-total');
+    if (el) { el.textContent = ''; el.className = 'rtp-chance-total'; }
     return;
   }
   const n = _latestReelSets.length;
-  const equalShare = Math.floor(1000 / n) / 10; // 1 decimal
-  const remainder = +(100 - equalShare * n).toFixed(1);
+  const base  = Math.floor(1000 / n) / 10;
+  const extra = Math.round((100 - base * n) * 10);
+  const values = _latestReelSets.map((_, i) =>
+    (i > 0 && i <= extra) ? +(base + 0.1).toFixed(1) : +base.toFixed(1)
+  );
 
-  container.innerHTML = '';
-  _latestReelSets.forEach((rs, i) => {
-    const share = i === n - 1 ? +(equalShare + remainder).toFixed(1) : equalShare;
-    const row = document.createElement('div');
-    row.className = 'rtp-chance-row';
-    row.innerHTML = `
-      <span class="rtp-chance-label">${rs.setName || 'ReelSet#' + i}</span>
-      <input type="number" class="rtp-chance-input" id="rtp-chance-${i}"
-             value="${share}" min="0" max="100" step="0.1"
-             oninput="updateChanceTotal()"/>
-      <span class="rtp-chance-pct">%</span>
-    `;
-    container.appendChild(row);
-  });
+  if (input) {
+    input.readOnly = false;
+    input.placeholder = '';
+    input.value = values.join(', ');
+  }
+  if (legend) {
+    legend.innerHTML = _latestReelSets
+      .map((rs, i) => `<span class="rtp-chance-legend-item" id="rtp-chance-legend-${i}"><span class="rtp-chance-legend-idx">${i}:</span> ${rs.setName || 'ReelSet#' + i}</span>`)
+      .join('');
+  }
   updateChanceTotal();
 }
 
 function updateChanceTotal() {
-  if (!_latestReelSets) return;
-  let sum = 0;
-  _latestReelSets.forEach((_, i) => {
-    const el = document.getElementById('rtp-chance-' + i);
-    if (el) sum += parseFloat(el.value) || 0;
-  });
-  const el = document.getElementById('rtp-chance-total');
-  const rounded = Math.round(sum * 10) / 10;
-  el.textContent = rounded.toFixed(1) + '%';
-  const ok = Math.abs(rounded - 100) < 0.05;
+  const input = document.getElementById('rtp-chances-input');
+  const el    = document.getElementById('rtp-chance-total');
+  if (!el) return;
+  if (!input || !_latestReelSets) { el.textContent = ''; el.className = 'rtp-chance-total'; return; }
+  const vals = input.value.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+  const sum  = vals.reduce((a, b) => a + b, 0);
+  const rounded = Math.round(sum * 1000000) / 1000000;
+  el.textContent = rounded + '%';
+  const ok = rounded === 100;
   el.className = 'rtp-chance-total ' + (ok ? 'ok' : 'err');
 }
 
@@ -1007,7 +1010,7 @@ function addSymbolRow(symbolId) {
   row.dataset.symId = id;
   row.id = 'rtp-sym-' + rid;
   row.innerHTML = `
-    <span class="rtp-sym-id">${id}</span>
+    <input type="text" class="rtp-sym-id" value="${id}" title="Symbol ID" oninput="_syncSymId(this)">
     <select onchange="onSymbolTypeChange(this)">
       <option value="NORMAL">Normal</option>
       <option value="WILD">Wild</option>
@@ -1099,7 +1102,7 @@ function addSymbolRow(symbolId) {
 
 function onSymbolTypeChange(sel) {
   const row = sel.closest('.rtp-sym-row');
-  const ptInput = row.querySelector('input[type=text]');
+  const ptInput = row.querySelector('.rtp-paytable-input');
   const wildFields = row.querySelector('.rtp-wild-fields');
   const setSel = row.querySelector('.rtp-interval-set-sel');
   const isWild = sel.value === 'WILD';
@@ -1163,8 +1166,8 @@ function removeSymbolRow(rowId) {
 
 function refreshSymbolRowNumbers() {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
-    const lbl = row.querySelector('.rtp-sym-id');
-    if (lbl) lbl.textContent = row.dataset.symId;
+    const inp = row.querySelector('.rtp-sym-id');
+    if (inp) inp.value = row.dataset.symId;
   });
 }
 
@@ -1981,7 +1984,7 @@ function collectRtpRequest() {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const symId = parseInt(row.dataset.symId);
     const type = row.querySelector('select').value;
-    const ptRaw = row.querySelector('input[type=text]').value.trim().replace(/^n\/a$/i, '');
+    const ptRaw = row.querySelector('.rtp-paytable-input').value.trim().replace(/^n\/a$/i, '');
     const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
     const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
@@ -2422,51 +2425,6 @@ function _comboVal(c, col, totalSpins, betSize) {
   }
 }
 
-/* ── Import from COUNT ── */
-function openImportCounts() {
-  document.getElementById('import-counts-input').value = '';
-  document.getElementById('import-counts-error').style.display = 'none';
-  document.getElementById('import-counts-modal').classList.add('open');
-  setTimeout(() => document.getElementById('import-counts-input').focus(), 50);
-}
-function closeImportCounts() {
-  document.getElementById('import-counts-modal').classList.remove('open');
-}
-function applyImportCounts() {
-  const raw = document.getElementById('import-counts-input').value.trim();
-  const errEl = document.getElementById('import-counts-error');
-  errEl.style.display = 'none';
-
-  let parsed;
-  try { parsed = JSON.parse(raw); } catch (e) {
-    errEl.textContent = 'Invalid JSON: ' + e.message;
-    errEl.style.display = '';
-    return;
-  }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    errEl.textContent = 'Expected a non-empty JSON array.';
-    errEl.style.display = '';
-    return;
-  }
-  for (const rs of parsed) {
-    if (!Array.isArray(rs.reelSetTileCounts)) {
-      errEl.textContent = 'Each entry must have a "reelSetTileCounts" array.';
-      errEl.style.display = '';
-      return;
-    }
-  }
-
-  const list = document.getElementById('reel-set-list');
-  list.innerHTML = '';
-  reelSetCounter = 0;
-  reelRowCounter = 0;
-
-  for (const rs of parsed) {
-    addReelSet({ tilesCounts: rs.reelSetTileCounts, restrictions: [] }, false);
-  }
-
-  closeImportCounts();
-}
 
 // Init: add default payline placeholder rows without filling screen inputs
 (function initDefaultPaylines() {
@@ -2500,37 +2458,75 @@ function buildSpinTestPayload() {
   // Reuse rtp form fields for the shared configuration
   const chances = [];
   let chanceSum = 0;
-  _latestReelSets.forEach((_, i) => {
-    const el = document.getElementById('rtp-chance-' + i);
-    const v  = parseFloat(el?.value);
-    if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': chance must be >= 0'); return; }
-    chances.push({ setIndex: i, chance: v });
-    chanceSum += v;
-  });
-  if (Math.abs(chanceSum - 100) > 0.05)
-    errors.push('Reel set chances must sum to 100.0% (current: ' + chanceSum.toFixed(1) + '%). Configure in the Simulation tab.');
+  const chancesInput = document.getElementById('rtp-chances-input');
+  const chanceVals = chancesInput ? chancesInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (chanceVals.length !== _latestReelSets.length) {
+    errors.push('Expected ' + _latestReelSets.length + ' chances, got ' + chanceVals.length + '. Configure in the Simulation tab.');
+  } else {
+    chanceVals.forEach((raw, i) => {
+      const v = parseFloat(raw);
+      if (isNaN(v) || v < 0) { errors.push('Reel set ' + i + ': chance must be >= 0'); return; }
+      chances.push({ setIndex: i, chance: v });
+      chanceSum += v;
+    });
+    if (Math.abs(chanceSum - 100) > 0.05)
+      errors.push('Reel set chances must sum to 100.0% (current: ' + chanceSum.toFixed(1) + '%). Configure in the Simulation tab.');
+  }
 
-  const screenWidth  = parseInt(document.getElementById('rtp-screen-width')?.value);
-  const screenHeight = parseInt(document.getElementById('rtp-screen-height')?.value);
-  const minMatch     = parseInt(document.getElementById('rtp-min-match')?.value);
+  // When Screen/Match JSON mode is active, form fields are hidden — parse the editor directly
+  let screenWidth, screenHeight, minMatch;
+  if (typeof _rtpSimJsonMode !== 'undefined' && _rtpSimJsonMode && typeof _rtpSimJsonCm !== 'undefined' && _rtpSimJsonCm) {
+    try {
+      const parsed = JSON.parse(_rtpSimJsonCm.getValue());
+      const norm = typeof _normalizeRtpPayload === 'function' ? _normalizeRtpPayload(parsed) : parsed;
+      screenWidth  = parseInt(norm.screenWidth  ?? parsed.screen?.cols ?? parsed.screen?.width);
+      screenHeight = parseInt(norm.screenHeight ?? parsed.screen?.rows ?? parsed.screen?.height);
+      minMatch     = parseInt(norm.minMatch);
+    } catch(e) { /* leave as NaN — errors reported below */ }
+  } else {
+    const _swEl = document.getElementById('rtp-screen-width');
+    const _shEl = document.getElementById('rtp-screen-height');
+    const _mmEl = document.getElementById('rtp-min-match');
+    screenWidth  = parseInt(_swEl?.value  || _swEl?.placeholder);
+    screenHeight = parseInt(_shEl?.value  || _shEl?.placeholder);
+    minMatch     = parseInt(_mmEl?.value  || _mmEl?.placeholder);
+  }
   if (isNaN(screenWidth)  || screenWidth  < 1) errors.push('Screen width not set — configure in Simulation tab');
   if (isNaN(screenHeight) || screenHeight < 1) errors.push('Screen height not set — configure in Simulation tab');
   if (isNaN(minMatch) || minMatch < 1)         errors.push('Min Match not set — configure in Simulation tab');
 
   const lineDefinitions = [];
-  document.querySelectorAll('.rtp-line-row').forEach((row) => {
-    const nums = row.querySelector('.rtp-line-input').value.trim().split(',').map(s => parseInt(s.trim(), 10));
-    if (!nums.some(isNaN)) lineDefinitions.push(nums);
-  });
   const _spinTestStrat = document.getElementById('rtp-strategy')?.value;
-  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS')
+  if (typeof _rtpSimJsonMode !== 'undefined' && _rtpSimJsonMode && typeof _rtpSimJsonCm !== 'undefined' && _rtpSimJsonCm) {
+    try {
+      const parsed = JSON.parse(_rtpSimJsonCm.getValue());
+      const norm = typeof _normalizeRtpPayload === 'function' ? _normalizeRtpPayload(parsed) : parsed;
+      (norm.lineDefinitions || []).forEach(line => lineDefinitions.push(line));
+    } catch(e) { /* ignore */ }
+  } else {
+    document.querySelectorAll('.rtp-line-row').forEach((row) => {
+      const nums = row.querySelector('.rtp-line-input').value.trim().split(',').map(s => parseInt(s.trim(), 10));
+      if (!nums.some(isNaN)) lineDefinitions.push(nums);
+    });
+  }
+  if (lineDefinitions.length === 0 && _spinTestStrat !== 'WAYS' && _spinTestStrat !== 'SCATTERS'
+      && _spinTestStrat !== 'CLUSTERS' && _spinTestStrat !== 'MEGAWAYS')
     errors.push('No line definitions — configure in Simulation tab');
 
   const symbols = [];
+  if (typeof _rtpSymJsonMode !== 'undefined' && _rtpSymJsonMode && typeof _rtpSymJsonCm !== 'undefined' && _rtpSymJsonCm) {
+    try {
+      const parsed = JSON.parse(_rtpSymJsonCm.getValue());
+      const norm = typeof _normalizeRtpPayload === 'function' ? _normalizeRtpPayload(Object.assign({ screenWidth, minMatch }, parsed)) : parsed;
+      (norm.symbols || []).forEach(s => symbols.push(s));
+    } catch(e) {
+      errors.push('Symbol Config JSON parse error: ' + e.message);
+    }
+  } else {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
     const symId  = parseInt(row.dataset.symId);
     const type   = row.querySelector('select').value;
-    const ptRaw  = (row.querySelector('input[type=text]').value.trim() || row.querySelector('input[type=text]').placeholder.trim()).replace(/^n\/a$/i, '');
+    const ptRaw  = (row.querySelector('.rtp-paytable-input').value.trim() || row.querySelector('.rtp-paytable-input').placeholder.trim()).replace(/^n\/a$/i, '');
     const paytable = ptRaw ? ptRaw.split(',').map(s => parseFloat(s.trim())) : [];
     const wildMult = parseFloat(row.querySelector('.rtp-wild-mult')?.value) || 1.0;
     const wildAgg  = row.querySelector('.rtp-wild-agg')?.value || 'ADD';
@@ -2539,6 +2535,7 @@ function buildSpinTestPayload() {
     symbols.push({ symbolId: symId, type, paytable, wildMultiplier: wildMult, wildAggregation: wildAgg, wildSequence,
       contactsIntervalSetName: (row.querySelector('.rtp-interval-set-sel')?.value || null) });
   });
+  }
   if (symbols.length === 0) errors.push('No symbols configured — configure in Simulation tab');
 
   if (errors.length > 0) return { errors };

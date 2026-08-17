@@ -265,8 +265,8 @@ public class RtpSimulationService {
             if (rs.size() < sw)
                 throw new IllegalArgumentException("Reel set " + s + " has fewer reels (" + rs.size() + ") than screenWidth (" + sw + ")");
             for (int r = 0; r < sw; r++) {
-                if (rs.get(r).size() < sh)
-                    throw new IllegalArgumentException("Reel set " + s + " reel " + r + " is shorter than screenHeight (" + sh + ")");
+                if (rs.get(r).isEmpty())
+                    throw new IllegalArgumentException("Reel set " + s + " reel " + r + " is empty");
             }
         }
 

@@ -36,17 +36,22 @@ convInput.setValue(prettyCompact([{ setName: 'ReelSet#0', reelSet: [r1, r2, r3] 
 setTimeout(() => { genOutput.refresh(); convInput.refresh(); convOutput.refresh(); }, 0);
 
 /* Escape key closes modals */
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeInfo(); closeImportCounts(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeInfo(); } });
 
 /* Init default payline placeholder rows without filling screen inputs */
-(function initDefaultPaylines() {
+function reinitDefaultPaylinePlaceholders() {
+  const wEl = document.getElementById('rtp-screen-width');
+  const hEl = document.getElementById('rtp-screen-height');
+  const w = parseInt((wEl && (wEl.value || wEl.placeholder)) || 5);
+  const h = parseInt((hEl && (hEl.value || hEl.placeholder)) || 3);
   const container = document.getElementById('rtp-lines-list');
   container.innerHTML = '';
   _lineCounter = 0;
-  generateDefaultLines(5, 3).forEach(ph => {
+  generateDefaultLines(w, h).forEach(ph => {
     addLineDef('');
     const rows = container.querySelectorAll('.rtp-line-input');
     rows[rows.length - 1].placeholder = ph;
   });
   updateLineDefsToggleBtn();
-})();
+}
+reinitDefaultPaylinePlaceholders();

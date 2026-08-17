@@ -73,6 +73,13 @@ public class ConfigValidator {
             throw new IllegalArgumentException(rp + "stackSizes (" + r.stacks().size()
                     + ") and stackChances (" + r.chances().size() + ") must have equal length");
 
+        double chanceSum = r.chances().stream()
+                .mapToDouble(v -> Math.round(v * 1000000.0) / 1000000.0)
+                .sum();
+        chanceSum = Math.round(chanceSum * 1000000.0) / 1000000.0;
+        if (chanceSum != 100.0)
+            throw new IllegalArgumentException(rp + "stackChances must sum to 100 (got " + chanceSum + ")");
+
         if (r.distance() < 0)
             throw new IllegalArgumentException(rp + "minDistance must be >= 0");
     }

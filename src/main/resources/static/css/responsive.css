@@ -156,9 +156,6 @@
   /* ── CodeMirror editors: fixed height so they're scrollable ── */
   .CodeMirror { height: 220px !important; }
 
-  /* ── rtp-chances: single column ── */
-  #rtp-chances-list { grid-template-columns: 1fr; }
-
   /* ── Buttons: minimum tap target ── */
   .run-btn { height: 36px; padding: 0 1.25rem; font-size: 0.78rem; }
   .icon-btn { width: 32px; height: 32px; }

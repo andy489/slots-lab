@@ -13,13 +13,15 @@ function addReelSet(data, scroll) {
     null
   ];
 
+  const defaultName = (data && data.reelSetName) ? data.reelSetName : `${t('gen.reel_set_label')}${idx}`;
+
   const card = document.createElement('div');
   card.className = 'reel-set-card';
   card.id = id;
 
   card.innerHTML = `
     <div class="reel-set-card-header">
-      <span class="reel-set-name">${t('gen.reel_set_label')}${idx}</span>
+      <input class="reel-set-name-input" value="${defaultName.replace(/"/g, '&quot;')}" spellcheck="false">
       <div style="display:flex;gap:0.35rem;align-items:center">
         <button class="icon-btn" id="${id}-toggle-btn" onclick="toggleDefaultsClear('${id}')" title="${t('gen.fill_defaults')}">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -182,9 +184,7 @@ function removeReelSet(id) {
 }
 
 function renumberReelSets() {
-  document.querySelectorAll('#reel-set-list .reel-set-card').forEach((card, i) => {
-    card.querySelector('.reel-set-name').textContent = t('gen.reel_set_label') + i;
-  });
+  // Names are now user-editable inputs — no auto-renumber.
 }
 
 function addRestrictionGuarded(restrictionsId, reelsId) {
@@ -203,6 +203,163 @@ function parseNumArray(str) {
   if (!str || !str.trim()) return [];
   return str.split(',').map(s => parseFloat(s.trim()));
 }
+
+/* ── JSON mode toggle ── */
+let _reelJsonMode = false;
+
+function _jsonParseError(raw, e) {
+  let pos = -1;
+
+  // Chrome new format: "... (line L column C)"
+  const lcMatch = e.message.match(/\(line (\d+) column (\d+)\)/);
+  if (lcMatch) {
+    const loc = ' (line ' + lcMatch[1] + ', col ' + lcMatch[2] + ')';
+    return { loc, hint: '' };
+  }
+
+  // Chrome older format: "... at position N"
+  const posMatch = e.message.match(/at position (\d+)/);
+  if (posMatch) pos = parseInt(posMatch[1], 10);
+
+  // Fallback: last occurrence of the bad token
+  if (pos === -1) {
+    const tokenMatch = e.message.match(/^Unexpected token '(.+?)'/);
+    if (tokenMatch) pos = raw.lastIndexOf(tokenMatch[1]);
+  }
+
+  let loc = '';
+  if (pos !== -1) {
+    const line = raw.slice(0, pos).split('\n').length;
+    const col  = pos - raw.lastIndexOf('\n', pos - 1);
+    loc = ' (line ' + line + ', col ' + col + ')';
+
+    // If bad token is ] or }, check if the previous non-whitespace char is a comma
+    const tokenMatch = e.message.match(/^Unexpected token '(.+?)'/);
+    const token = tokenMatch ? tokenMatch[1] : '';
+    if (token === ']' || token === '}') {
+      const before = raw.slice(0, pos).trimEnd();
+      if (before.endsWith(',')) {
+        const commaPos = before.length - 1;
+        const commaLine = before.split('\n').length;
+        const commaCol  = commaPos - before.lastIndexOf('\n', commaPos - 1);
+        return { loc, hint: ' — trailing comma at line ' + commaLine + ', col ' + commaCol };
+      }
+    }
+  }
+
+  return { loc, hint: '' };
+}
+
+/* ── CodeMirror instance for JSON mode ── */
+let _reelJsonCm = null;
+
+function _getReelJsonCm() {
+  if (_reelJsonCm) return _reelJsonCm;
+  const el = document.getElementById('reel-json-editor');
+  _reelJsonCm = CodeMirror(el, {
+    mode: { name: 'javascript', json: true },
+    theme: 'rsg',
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    styleSelectedText: true,
+    indentUnit: 2,
+    tabSize: 2,
+    extraKeys: {
+      'Cmd-S':  cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Ctrl-S': cm => cm.setCursor({ line: cm.getCursor().line, ch: 0 }),
+      'Cmd-E':  cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Ctrl-E': cm => { const l = cm.getCursor().line; cm.setCursor({ line: l, ch: cm.getLine(l).length }); },
+      'Cmd-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Ctrl-X': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        const line = cm.getCursor().line;
+        const from = { line, ch: 0 };
+        const to   = line < cm.lastLine() ? { line: line + 1, ch: 0 } : { line, ch: cm.getLine(line).length };
+        cm.replaceRange('', from, to);
+      },
+      'Cmd-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+      'Ctrl-C': cm => {
+        if (cm.getSelection()) return CodeMirror.Pass;
+        navigator.clipboard.writeText(cm.getLine(cm.getCursor().line));
+      },
+    },
+  });
+  return _reelJsonCm;
+}
+
+function _reelJsonValue()        { return _reelJsonCm ? _reelJsonCm.getValue() : ''; }
+function _setReelJsonValue(val)  { _getReelJsonCm().setValue(val); }
+
+function toggleReelJsonMode() {
+  _reelJsonMode = !_reelJsonMode;
+  const list      = document.getElementById('reel-set-list');
+  const editorEl  = document.getElementById('reel-json-editor');
+  const errEl     = document.getElementById('reel-json-error');
+  const formBtns  = document.getElementById('reel-form-only-btns');
+  const jsonBtn   = document.getElementById('reel-json-mode-btn');
+  const formBtn   = document.getElementById('reel-form-mode-btn');
+  const card      = editorEl.closest('.section-card');
+
+  if (_reelJsonMode) {
+    const config = _buildConfigFromForm();
+    const text = JSON.stringify(config.reelSets, null, 2)
+      .replace(/\[\s*([\d.,\s]+?)\s*\]/g, m => '[' + m.slice(1, -1).trim().replace(/\s+/g, ' ') + ']')
+      .replace(/\{\s*\n\s*"stackSizes":[^\n]+\n\s*"stackChances":[^\n]+\n\s*"minDistance":[^\n]+\n\s*\}/g,
+        m => m.replace(/\s*\n\s*/g, ' ').replace(/\{ /, '{').replace(/ \}/, '}'));
+    list.style.display    = 'none';
+    editorEl.style.display = '';
+    errEl.style.display   = 'none';
+    formBtns.style.display = 'none';
+    jsonBtn.style.display  = 'none';
+    formBtn.style.display  = '';
+    if (card) card.classList.add('reel-json-active');
+    _setReelJsonValue(text);
+    setTimeout(() => _getReelJsonCm().refresh(), 0);
+  } else {
+    const raw = _reelJsonValue().trim();
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) throw new Error('Expected a JSON array of reel sets');
+        document.getElementById('reel-set-list').innerHTML = '';
+        reelSetCounter = 0;
+        reelRowCounter = 0;
+        parsed.forEach(rs => addReelSet(rs));
+        // Clear inputs that were restored with placeholder values (keep form state clean)
+        document.querySelectorAll('#reel-set-list input[placeholder]').forEach(inp => {
+          if (inp.value === inp.placeholder) inp.value = '';
+        });
+        document.querySelectorAll('#reel-set-list .reel-set-card').forEach(card => updateToggleBtn(card.id));
+      } catch (e) {
+        const { loc, hint } = _jsonParseError(raw, e);
+        errEl.textContent = 'JSON parse error' + loc + hint + ': ' + e.message;
+        errEl.style.display = '';
+        _reelJsonMode = true;
+        return;
+      }
+    }
+    list.style.display     = '';
+    editorEl.style.display = 'none';
+    errEl.style.display    = 'none';
+    formBtns.style.display = '';
+    jsonBtn.style.display  = '';
+    formBtn.style.display  = 'none';
+    if (card) card.classList.remove('reel-json-active');
+  }
+}
+
+function isReelJsonMode() { return _reelJsonMode; }
 
 /* ── Fill/clear toggle ── */
 const CLEAR_ICON = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
@@ -235,7 +392,7 @@ function toggleDefaultsClear(cardId) {
 }
 
 /* ── Build config from form ── */
-function buildConfig() {
+function _buildConfigFromForm() {
   const strategy = document.getElementById('f-strategy').value;
 
   const reelSets = [];
@@ -258,16 +415,70 @@ function buildConfig() {
       };
     });
 
-    reelSets.push({ tilesCounts, restrictions });
+    const idx = reelSets.length + 1;
+    const nameEl = card.querySelector('.reel-set-name-input');
+    const reelSetName = nameEl ? nameEl.value.trim() || `ReelSet#${idx}` : `ReelSet#${idx}`;
+    reelSets.push({ reelSetName, tilesCounts, restrictions });
   });
 
   return { strategy, reelSets };
+}
+
+function buildConfig() {
+  const strategy = document.getElementById('f-strategy').value;
+  if (_reelJsonMode) {
+    const raw = _reelJsonValue().trim();
+    let reelSets;
+    try { reelSets = JSON.parse(raw); } catch (e) { reelSets = []; }
+    return { strategy, reelSets: Array.isArray(reelSets) ? reelSets : [] };
+  }
+  return _buildConfigFromForm();
 }
 
 /* ── Validate ── */
 function validateConfig() {
   clearErrors();
   const errors = [];
+
+  if (_reelJsonMode) {
+    const errEl = document.getElementById('reel-json-error');
+    errEl.style.display = 'none';
+    const raw = _reelJsonValue().trim();
+    if (!raw) {
+      const msg = 'Reel sets JSON is empty';
+      errEl.textContent = msg;
+      errEl.style.display = '';
+      errors.push(msg);
+      return errors;
+    }
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch (e) {
+      const { loc, hint } = _jsonParseError(raw, e);
+      const msg = 'Invalid JSON' + loc + hint + ': ' + e.message;
+      errEl.textContent = msg;
+      errEl.style.display = '';
+      errors.push(msg);
+      return errors;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      const msg = 'Expected a non-empty JSON array of reel sets';
+      errEl.textContent = msg;
+      errEl.style.display = '';
+      errors.push(msg);
+      return errors;
+    }
+    for (let si = 0; si < parsed.length; si++) {
+      const rs = parsed[si];
+      if (!Array.isArray(rs.tilesCounts) || rs.tilesCounts.length === 0) {
+        const msg = 'Reel Set ' + si + ': missing or empty tilesCounts array';
+        errEl.textContent = msg;
+        errEl.style.display = '';
+        errors.push(msg);
+        return errors;
+      }
+    }
+    return errors;
+  }
 
   const reelSetCards = document.querySelectorAll('#reel-set-list .reel-set-card');
   if (reelSetCards.length === 0) {
@@ -388,8 +599,10 @@ function renderHistory(entries) {
       renderHistory(await res.json());
     };
     item.onclick = () => {
-      genOutput.setValue(entry.result);
-      storeGeneratedReels(entry.result);
+      const compacted = entry.result
+        .replace(/\[\s*([\d.,\s]+?)\s*\]/g, m => '[' + m.slice(1, -1).trim().replace(/\s+/g, ' ') + ']');
+      genOutput.setValue(compacted);
+      storeGeneratedReels(entry.result, true);
       if (entry.config) {
         try { restoreGenerateForm(JSON.parse(entry.config)); } catch(e) {}
       }
@@ -421,9 +634,13 @@ function restoreGenerateForm(config) {
   const strat = document.getElementById('f-strategy');
   if (strat && config.strategy) strat.value = config.strategy;
   if (config.reelSets && config.reelSets.length > 0) {
-    document.getElementById('reel-set-list').innerHTML = '';
-    reelSetCounter = 0;
-    config.reelSets.forEach(rs => addReelSet(rs));
+    if (_reelJsonMode) {
+      _setReelJsonValue(JSON.stringify(config.reelSets, null, 2));
+    } else {
+      document.getElementById('reel-set-list').innerHTML = '';
+      reelSetCounter = 0;
+      config.reelSets.forEach(rs => addReelSet(rs));
+    }
   }
 }
 
@@ -431,8 +648,10 @@ function clearGenerateResult() {
   genOutput.setValue('');
   setStatus('gen', false, '');
   _latestReelSets = null;
-  document.getElementById('rtp-chances-list').innerHTML =
-    '<span style="font-size:0.72rem;color:var(--text3);font-style:italic">' + t('rtp.generate_reels_first') + '</span>';
+  const chancesInput = document.getElementById('rtp-chances-input');
+  if (chancesInput) { chancesInput.value = ''; chancesInput.readOnly = true; chancesInput.placeholder = t('rtp.generate_reels_first'); }
+  const chancesLegend = document.getElementById('rtp-chances-legend');
+  if (chancesLegend) chancesLegend.innerHTML = '';
   document.getElementById('rtp-chance-total').textContent = '';
   document.getElementById('rtp-chance-total').className = 'rtp-chance-total';
   document.getElementById('rtp-symbol-rows').innerHTML = '';
@@ -448,6 +667,17 @@ function clearGenerateResult() {
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span>${t('rtp.configure_run')}</span>
       </div>`;
+  }
+}
+
+function importGenOutputToSim(btn) {
+  const val = genOutput.getValue().trim();
+  if (!val) return;
+  storeGeneratedReels(val);
+  if (btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    setTimeout(() => { btn.innerHTML = orig; }, 1200);
   }
 }
 
@@ -482,16 +712,16 @@ function injectReelSetChances() {
     showToast(t('gen.no_reels_inject'), true);
     return;
   }
-  const hasChances = _latestReelSets.some((_, i) => document.getElementById('rtp-chance-' + i));
-  if (!hasChances) {
+  const chancesInput = document.getElementById('rtp-chances-input');
+  if (!chancesInput || chancesInput.readOnly) {
     showToast(t('gen.no_chances_inject'), true);
     return;
   }
+  const chanceVals = chancesInput.value.split(',').map(s => parseFloat(s.trim()));
   const isMegaways = document.getElementById('rtp-strategy')?.value === 'MEGAWAYS';
   const heightChances = isMegaways ? collectMegawaysHeightChances() : null;
   _latestReelSets = _latestReelSets.map((rs, i) => {
-    const el = document.getElementById('rtp-chance-' + i);
-    const chance = el ? parseFloat(el.value) : null;
+    const chance = chanceVals[i];
     const result = { ...rs };
     if (chance != null && !isNaN(chance)) result.chance = chance;
     if (heightChances && heightChances[i]) {
@@ -531,48 +761,4 @@ async function runGenerate() {
   finally { btn.disabled = false; }
 }
 
-/* ── Import tile counts ── */
-function openImportCounts() {
-  document.getElementById('import-counts-input').value = '';
-  document.getElementById('import-counts-error').style.display = 'none';
-  document.getElementById('import-counts-modal').classList.add('open');
-  setTimeout(() => document.getElementById('import-counts-input').focus(), 50);
-}
-function closeImportCounts() {
-  document.getElementById('import-counts-modal').classList.remove('open');
-}
-function applyImportCounts() {
-  const raw = document.getElementById('import-counts-input').value.trim();
-  const errEl = document.getElementById('import-counts-error');
-  errEl.style.display = 'none';
 
-  let parsed;
-  try { parsed = JSON.parse(raw); } catch (e) {
-    errEl.textContent = t('gen.import_invalid_json') + e.message;
-    errEl.style.display = '';
-    return;
-  }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    errEl.textContent = t('gen.import_not_array');
-    errEl.style.display = '';
-    return;
-  }
-  for (const rs of parsed) {
-    if (!Array.isArray(rs.reelSetTileCounts)) {
-      errEl.textContent = t('gen.import_no_counts');
-      errEl.style.display = '';
-      return;
-    }
-  }
-
-  const list = document.getElementById('reel-set-list');
-  list.innerHTML = '';
-  reelSetCounter = 0;
-  reelRowCounter = 0;
-
-  for (const rs of parsed) {
-    addReelSet({ tilesCounts: rs.reelSetTileCounts, restrictions: [] }, false);
-  }
-
-  closeImportCounts();
-}

@@ -15,13 +15,23 @@
   align-items: center;
   justify-content: space-between;
 }
-.reel-set-name {
+.reel-set-name-input {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .08em;
   color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 0;
+  width: 160px;
 }
+.reel-set-name-input:focus {
+  border-bottom-color: var(--accent);
+}
+
 .reel-set-card-body {
   padding: 0.75rem;
   display: flex;
@@ -92,6 +102,39 @@
   flex-shrink: 0;
 }
 .dist-input { width: 70px !important; }
+
+/* ── CodeMirror JSON editor (replaces textarea in JSON mode) ── */
+#reel-json-editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#reel-json-editor .CodeMirror {
+  flex: 1;
+  height: 100%;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  border-radius: 6px;
+}
+
+/* When the Reel Sets card is in JSON mode it should stretch to fill the scroll column */
+.section-card.reel-json-active {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.section-card.reel-json-active .section-card-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 /* ── Reel-applies badge ── */
 .restr-applies {

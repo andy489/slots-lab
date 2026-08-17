@@ -535,6 +535,13 @@ function onScreenSizeChange() {
     inp.value = parts.join(', ');
   });
   syncMegawaysHeights();
+
+  // Reinit payline placeholders when height changes and no values are filled
+  const strat = document.getElementById('rtp-strategy')?.value;
+  if (strat !== 'WAYS' && strat !== 'SCATTERS' && strat !== 'CLUSTERS' && strat !== 'MEGAWAYS') {
+    const hasFilledLines = Array.from(document.querySelectorAll('.rtp-line-input')).some(inp => inp.value.trim() !== '');
+    if (!hasFilledLines) reinitDefaultPaylinePlaceholders();
+  }
 }
 
 function updatePaytablePlaceholders(w, m) {
@@ -678,40 +685,74 @@ function updatePaytablePlaceholders(w, m) {
 }
 
 function generateDefaultLines(width, height) {
-  const lines = [];
-  const mid = Math.floor(height / 2);
-  const top = 0;
-  const bot = height - 1;
+  if (height < 2) return [Array(width).fill(0).join(', ')];
 
-  // Straight rows
-  lines.push(Array(width).fill(mid).join(', '));
-  if (height >= 3) {
-    lines.push(Array(width).fill(top).join(', '));
-    lines.push(Array(width).fill(bot).join(', '));
-  }
-  if (height < 3) return lines;
+  const n = height;
+  const linesCount = (n - 2) * 10;
+  if (linesCount <= 0) return [];
 
-  // Zigzag patterns: only valid when every row index fits within [0, height-1]
-  const patterns = [
-    // V-shape and inverted-V
-    Array.from({length: width}, (_, i) => i % 2 === 0 ? top : mid),
-    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : top),
-    Array.from({length: width}, (_, i) => i % 2 === 0 ? bot : mid),
-    Array.from({length: width}, (_, i) => i % 2 === 0 ? mid : bot),
-    // Concave / convex: edges high, centre low (and vice versa)
-    (() => { const a = Array(width).fill(mid); a[0] = top; a[width-1] = top; return a; })(),
-    (() => { const a = Array(width).fill(mid); a[0] = bot; a[width-1] = bot; return a; })(),
-    // Full diagonal-ish wave
-    Array.from({length: width}, (_, i) => (i % 2 === 0 ? top : bot)),
-  ];
+  const base = Math.floor(linesCount / n);
+  const remainder = linesCount % n;
+  // rowQuota[r] = how many lines start with row r
+  const rowQuota = Array.from({length: n}, (_, r) => base + (r === n - 1 ? remainder : 0));
 
-  const seen = new Set(lines);
-  for (const p of patterns) {
-    if (p.every(v => v >= 0 && v < height)) {
-      const s = p.join(', ');
-      if (!seen.has(s)) { seen.add(s); lines.push(s); }
+  // Generate varied patterns for each starting row
+  function patternsForRow(startRow, quota) {
+    const result = [];
+    const seen = new Set();
+    // Candidate generators (each produces a length-width array of row indices)
+    const candidates = [
+      // straight
+      () => Array(width).fill(startRow),
+      // zigzag with neighbours
+      () => Array.from({length: width}, (_, i) => {
+        const delta = i % 2 === 0 ? 0 : (startRow < n - 1 ? 1 : -1);
+        return Math.min(n - 1, Math.max(0, startRow + delta));
+      }),
+      () => Array.from({length: width}, (_, i) => {
+        const delta = i % 2 === 0 ? 0 : (startRow > 0 ? -1 : 1);
+        return Math.min(n - 1, Math.max(0, startRow + delta));
+      }),
+      // wave: alternates between startRow and startRow±1
+      () => Array.from({length: width}, (_, i) => {
+        const offset = (i % 2 === 0) ? 0 : ((startRow === 0) ? 1 : -1);
+        return Math.min(n - 1, Math.max(0, startRow + offset));
+      }),
+      // edges pinned, middle varies
+      () => { const a = Array(width).fill(startRow); if (width > 2) { const mid = Math.floor(width / 2); a[mid] = Math.min(n - 1, startRow + 1); } return a; },
+      () => { const a = Array(width).fill(startRow); if (width > 2) { const mid = Math.floor(width / 2); a[mid] = Math.max(0, startRow - 1); } return a; },
+      // ascending / descending drift
+      () => Array.from({length: width}, (_, i) => Math.min(n - 1, startRow + Math.floor(i * (n - 1 - startRow) / Math.max(1, width - 1)))),
+      () => Array.from({length: width}, (_, i) => Math.max(0, startRow - Math.floor(i * startRow / Math.max(1, width - 1)))),
+      // chevron up
+      () => { const a = []; const half = Math.ceil(width / 2); for (let i = 0; i < width; i++) { const d = i < half ? i : width - 1 - i; a.push(Math.min(n - 1, startRow + d)); } return a; },
+      // chevron down
+      () => { const a = []; const half = Math.ceil(width / 2); for (let i = 0; i < width; i++) { const d = i < half ? i : width - 1 - i; a.push(Math.max(0, startRow - d)); } return a; },
+      // staircase right
+      () => Array.from({length: width}, (_, i) => Math.min(n - 1, startRow + (i % 2))),
+      // staircase left
+      () => Array.from({length: width}, (_, i) => Math.max(0, startRow - (i % 2))),
+    ];
+    for (const gen of candidates) {
+      if (result.length >= quota) break;
+      const arr = gen();
+      if (!arr.every(v => v >= 0 && v < n)) continue;
+      const s = arr.join(', ');
+      if (!seen.has(s)) { seen.add(s); result.push(s); }
     }
-    if (lines.length >= 10) break;
+    // If still short, fill with straight line duplicates aren't possible so pad with straight
+    while (result.length < quota) {
+      const fallback = Array(width).fill(startRow).join(', ');
+      if (!seen.has(fallback)) { seen.add(fallback); result.push(fallback); }
+      else break;
+    }
+    return result;
+  }
+
+  const lines = [];
+  for (let r = 0; r < n; r++) {
+    const quota = rowQuota[r];
+    if (quota > 0) lines.push(...patternsForRow(r, quota));
   }
   return lines;
 }

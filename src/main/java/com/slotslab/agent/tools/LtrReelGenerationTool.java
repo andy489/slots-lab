@@ -528,7 +528,7 @@ public class LtrReelGenerationTool implements AgentReelGenerationTool {
                 for (int c : reel) reelList.add(c);
                 tilesCounts.add(reelList);
             }
-            reelSets.add(new ReelSet(tilesCounts, List.of(restrictions.get(i))));
+            reelSets.add(new ReelSet(null, tilesCounts, List.of(restrictions.get(i))));
         }
         ReelSetsCollectionData config = new ReelSetsCollectionData(Strategy.SHUFFLE, reelSets);
 

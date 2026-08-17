@@ -1,6 +1,9 @@
 /* ── Symbol configuration ── */
 
 let _symRowCounter = 0;
+function _syncSymId(inp) {
+  inp.closest('.rtp-sym-row').dataset.symId = inp.value;
+}
 function addSymbolRow(symbolId) {
   const rid = _symRowCounter++;
   const id = symbolId != null ? symbolId : (rid + 1);
@@ -10,7 +13,8 @@ function addSymbolRow(symbolId) {
   row.dataset.symId = id;
   row.id = 'rtp-sym-' + rid;
   row.innerHTML = `
-    <span class="rtp-sym-id">${id}</span>
+    <input type="text" class="rtp-sym-id" value="${id}" title="Symbol ID"
+      oninput="_syncSymId(this)">
     <select onchange="onSymbolTypeChange(this)">
       <option value="NORMAL">${t('rtp.sym_normal')}</option>
       <option value="WILD">${t('rtp.sym_wild')}</option>
@@ -90,7 +94,7 @@ function addSymbolRow(symbolId) {
 
 function onSymbolTypeChange(sel) {
   const row = sel.closest('.rtp-sym-row');
-  const ptInput = row.querySelector('input[type=text]');
+  const ptInput = row.querySelector('.rtp-paytable-input');
   const wildFields = row.querySelector('.rtp-wild-fields');
   const setSel = row.querySelector('.rtp-interval-set-sel');
   const isWild = sel.value === 'WILD';
@@ -148,7 +152,7 @@ function removeSymbolRow(rowId) {
 
 function refreshSymbolRowNumbers() {
   document.querySelectorAll('.rtp-sym-row').forEach(row => {
-    const lbl = row.querySelector('.rtp-sym-id');
-    if (lbl) lbl.textContent = row.dataset.symId;
+    const inp = row.querySelector('.rtp-sym-id');
+    if (inp) inp.value = row.dataset.symId;
   });
 }

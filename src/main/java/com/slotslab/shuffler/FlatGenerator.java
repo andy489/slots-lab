@@ -13,13 +13,13 @@ public class FlatGenerator {
         var sb = new StringBuilder("\n[\n");
 
         for (int i = 0; i < reelSets.size(); i++) {
+            ReelSet reelSet = reelSets.get(i);
             var reelJoiner = new StringJoiner(",\n\t\t\t", "\t\t\t", "");
-            for (List<Integer> counts : reelSets.get(i).tilesCounts()) {
+            for (List<Integer> counts : reelSet.tilesCounts()) {
                 reelJoiner.add(flatReel(counts));
             }
-
             sb.append("\t{\n")
-              .append("\t\t\"setName\": \"ReelSet#").append(i).append("\",\n")
+              .append("\t\t\"setName\": \"").append(reelSet.reelSetName() != null ? reelSet.reelSetName() : "ReelSet#" + i).append("\",\n")
               .append("\t\t\"reelSet\": [\n")
               .append(reelJoiner)
               .append("\n\t\t]\n\t}");

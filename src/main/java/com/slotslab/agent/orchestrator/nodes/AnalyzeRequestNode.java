@@ -78,7 +78,7 @@ public class AnalyzeRequestNode implements AgentNode {
             tilesCounts.add(reel);
         }
 
-        ReelSet reelSet = new ReelSet(tilesCounts, Collections.emptyList());
+        ReelSet reelSet = new ReelSet(null, tilesCounts, Collections.emptyList());
         return new ReelSetsCollectionData(strategy, List.of(reelSet));
     }
 
