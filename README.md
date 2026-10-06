@@ -1,7 +1,5 @@
 # Slots Lab
 
-> **Live demo:** https://slots-lab.onrender.com
-
 A professional web application for slot machine reel strip generation, RTP (Return to Player) statistical simulation, single-spin testing, and format conversion. Built for game designers and mathematicians in the gaming industry.
 
 ---
